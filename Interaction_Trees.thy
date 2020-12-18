@@ -19,26 +19,31 @@ lemma rel_map_iff:
 
 codatatype ('e, 'r) itree = 
   Ret 'r | 
-  Tau "('e, 'r) itree" | 
+  Sil "('e, 'r) itree" | 
   Vis "'e \<rightharpoonup> ('e, 'r) itree"
+
+text \<open> Small example \<close>
+
+primcorec accept :: "'e \<Rightarrow> ('e, 's) itree"
+where "accept e = Vis (\<lambda>x. if (x = e) then Some (accept e) else None)"
 
 thm itree.coinduct[simplified]
 
-theorem itree_coind[elim, consumes 1, case_names wform Ret Tau Vis, induct pred: "HOL.eq"]:
+theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes "\<phi> P Q" and
-  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Tau P \<longleftrightarrow> is_Tau Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
   "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
-  "\<And> P Q. \<phi> (Tau P) (Tau Q) \<Longrightarrow> \<phi> P Q" and
+  "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q" and
   "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (dom(F) = dom(G) \<and> (\<forall> x\<in>dom(F). \<phi> (the (F x)) (the (G x))))"
   shows "P = Q"
   using assms
   by (coinduct rule: itree.coinduct, auto simp add: rel_map_iff)
 
-theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Tau Vis, induct pred: "HOL.eq"]:
+theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes phi: "\<phi> P Q" and
-  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Tau P \<longleftrightarrow> is_Tau Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
   "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
-  "\<And> P Q. \<phi> (Tau P) (Tau Q) \<Longrightarrow> \<phi> P Q \<or> P = Q" and
+  "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q \<or> P = Q" and
   "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (dom(F) = dom(G) \<and> (\<forall> x\<in>dom(F). \<phi> (the (F x)) (the (G x)) \<or> (the (F x)) = (the (G x))))"
   shows "P = Q"
   using assms
@@ -52,8 +57,8 @@ type_synonym ('e, 'r) ktree = "'r \<Rightarrow> ('e, 'r) itree"
 primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, 's) itree" where
 "bind_itree u k = 
   (case u of 
-    Ret r \<Rightarrow> Tau (k r) | 
-    Tau t \<Rightarrow> Tau (bind_itree t k) | 
+    Ret r \<Rightarrow> Sil (k r) | 
+    Sil t \<Rightarrow> Sil (bind_itree t k) | 
     Vis t \<Rightarrow> Vis (\<lambda> e.
       case t e of
         None \<Rightarrow> None |
@@ -62,8 +67,8 @@ primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightar
 friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "bind_itree u k = 
   (case u of 
-    Ret r \<Rightarrow> Tau (k r) | 
-    Tau t \<Rightarrow> Tau (bind_itree t k) | 
+    Ret r \<Rightarrow> Sil (k r) | 
+    Sil t \<Rightarrow> Sil (bind_itree t k) | 
     Vis t \<Rightarrow> Vis (\<lambda> e.
       case t e of
         None \<Rightarrow> None |
@@ -72,7 +77,26 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
 
 adhoc_overloading bind bind_itree
 
-lemma bind_Ret: "Ret v \<bind> F = Tau (F v)"
+lemma bind_Ret: "Ret v \<bind> F = Sil (F v)"
   by (simp add: bind_itree.ctr(1))
+
+text \<open> Weak Bisimulation \<close>
+
+coinductive wbisim :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>" 50) where
+wbisim_sym: "P \<approx> Q \<Longrightarrow> Q \<approx> P" |
+wbisim_Ret [intro]: "Ret x \<approx> Ret x" |
+wbisim_Sil [intro]: "P \<approx> Q \<Longrightarrow> Sil P \<approx> Q" |
+wbisim_Vis [intro]: "\<lbrakk> dom(F) = dom(G); \<And> e. e \<in> dom(F) \<Longrightarrow> the (F e) \<approx> the (G e) \<rbrakk> \<Longrightarrow> Vis F \<approx> Vis G"
+
+lemma wbisim_refl: "P \<approx> P"
+  by (coinduction arbitrary: P, auto)
+
+lemma wbisim_trans: "\<lbrakk> P \<approx> Q; Q \<approx> R \<rbrakk> \<Longrightarrow> P \<approx> R"
+  by (coinduction arbitrary: P Q R, auto intro: wbisim_sym)
+
+text \<open> For CCS, weak bisimulation is not a congruence with respect to choice. Hence, Milner creates
+  a derived relation, observation congruence, which adds the requirement that an initial silent
+  action must be matched by a silent action in the other process. This is an issue because $\tau$
+  can resolve a choice in CCS. \<close>
 
 end
