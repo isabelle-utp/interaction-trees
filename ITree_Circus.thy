@@ -251,6 +251,23 @@ trace_of_Nil: "trace_of ([], P) P" |
 trace_of_Sil: "trace_of (tr, P) Q \<Longrightarrow> trace_of (tr, P) (Sil Q)" |
 trace_of_Vis: "\<lbrakk> e \<in> dom F; trace_of (tr, P) (the (F e)) \<rbrakk> \<Longrightarrow> trace_of (e # tr, P) (Vis F)"
 
+text \<open> A failure is recorded when there is a trace leading to a stable interaction tree. At this
+  point, the refusal is calculated. \<close>
+
+definition failure_of :: "('e list \<times> 'e set) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
+"failure_of = (\<lambda> (tr, E) t. \<exists> t'. (trace_of (tr, t') t \<and> is_Vis t' \<and> E \<subseteq> (- dom (un_Vis t'))))"
+
+text \<open> A (minimal) divergence trace is recorded when there is a trace that leads to a divergent state. \<close>
+
+definition min_divergence_of :: "'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
+"min_divergence_of tr t = (\<exists> t'. trace_of (tr, t') t \<and> diverges t')"
+
+lemma "\<not> failure_of t diverge"
+  oops \<comment> \<open> How to prove that @{term diverge} has no failure? \<close>
+
+lemma "min_divergence_of [] diverge"
+  using diverges_diverge min_divergence_of_def trace_of_Nil by auto
+
 inductive div_free' :: "(('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 ret_dfree': "div_free' R (Ret x)" |
 tau_dfree': "div_free' R P \<Longrightarrow> div_free' R (Sil P)" |
