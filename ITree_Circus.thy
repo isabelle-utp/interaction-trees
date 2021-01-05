@@ -43,8 +43,6 @@ translations
   "_assignment x v" <= "_assignment (_spvar x) v"
   "_assignment x v" <= "_assignment x (_UTP v)"
 
-term "x := e"
-
 corec loop :: "('e, 'r) ktree \<Rightarrow> ('e, 'r) ktree" where
 "loop P e = Sil (P e \<bind> loop P)"
 
@@ -52,7 +50,7 @@ lemma bind_diverge: "diverge \<bind> F = diverge"
   by (coinduction, auto simp add: itree.case_eq_if)
 
 definition inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree" where
-"inp c = Vis (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> Some (Ret v) | _ \<Rightarrow> None)"
+"inp c = Vis (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret)"
 
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"

@@ -77,8 +77,14 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
 
 adhoc_overloading bind bind_itree
 
-lemma bind_Ret: "Ret v \<bind> F = Sil (F v)"
+lemma bind_Ret: "Ret v \<bind> k = Sil (k v)"
   by (simp add: bind_itree.ctr(1))
+
+lemma bind_Sil: "Sil t \<bind> k = Sil (t \<bind> k)"
+  by (simp add: bind_itree.ctr)
+
+lemma bind_Vis: "Vis t \<bind> k = Vis (\<lambda> e. t e \<bind> (\<lambda> x. Some (x \<bind> k)))"
+  by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
 
 text \<open> Weak Bisimulation \<close>
 
