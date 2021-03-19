@@ -1,6 +1,6 @@
 theory ITree_Circus
-  imports "Interaction_Trees" "Optics.Optics" "UTP.utp_pred"
-begin recall_syntax
+  imports "Interaction_Trees" "Optics.Optics" "Shallow-Expressions.Shallow_Expressions"
+begin
 
 primcorec diverge :: "('e, 'r) itree" where
 "diverge = Sil diverge"
@@ -25,23 +25,19 @@ corec test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree" where
 lemma "test (\<lambda> s. False) = Stop"
   by (simp add: test.code)
 
-term "[x \<mapsto>\<^sub>s &x + 1, y \<mapsto>\<^sub>s True]"
+term "[x \<leadsto> $x + 1, y \<leadsto> True]"
 
-definition assigns :: "'s usubst \<Rightarrow> ('e, 's) ktree" where
-"assigns \<sigma> = (\<lambda> s. Ret (\<lbrakk>\<sigma>\<rbrakk>\<^sub>e s))"
+definition assigns :: "'s subst \<Rightarrow> ('e, 's) ktree" where
+"assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
 
 syntax
   "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  ("'(_') := '(_')")  
   "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 62)
-  "_mk_usubst"      :: "svids \<Rightarrow> uexprs \<Rightarrow> '\<alpha> usubst"
+  "_mk_usubst"      :: "svids \<Rightarrow> uexprs \<Rightarrow> 's subst"
 
 translations
-  "_mk_usubst \<sigma> (_svid_unit x) v" \<rightleftharpoons> "\<sigma>(&x \<mapsto>\<^sub>s v)"
-  "_mk_usubst \<sigma> (_svid_list x xs) (_uexprs v vs)" \<rightleftharpoons> "(_mk_usubst (\<sigma>(&x \<mapsto>\<^sub>s v)) xs vs)"
-  "_assignment xs vs" => "CONST assigns (_mk_usubst id\<^sub>s xs vs)"
+  "_assignment xs vs" => "CONST assigns (_mk_usubst [\<leadsto>] xs vs)"
   "_assignment x v" <= "CONST assigns (CONST subst_upd id\<^sub>s x v)"
-  "_assignment x v" <= "_assignment (_spvar x) v"
-  "_assignment x v" <= "_assignment x (_UTP v)"
 
 corec loop :: "('e, 'r) ktree \<Rightarrow> ('e, 'r) ktree" where
 "loop P e = Sil (P e \<bind> loop P)"
@@ -187,7 +183,7 @@ lemma Sils_injective: "Sils n P = Sils n Q \<Longrightarrow> P = Q"
 lemma Sils_diverge: "Sils n diverge = diverge"
   by (induct n, simp_all, metis diverge.code)
 
-lemma diverges_diverge: "diverges diverge"
+lemma diverges_diverge [simp]: "diverges diverge"
   by (auto simp add: converges_def Sils_diverge, metis Sils_diverge Sils_injective diverge.disc_iff)
 
 text \<open> If $P$ is not divergent, then it must be prefixed by a finite sequence of taus. \<close>
@@ -245,9 +241,53 @@ next
 qed
 
 inductive trace_of :: "('e list \<times> ('e, 's) itree) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
-trace_of_Nil: "trace_of ([], P) P" | 
+trace_of_Nil [intro]: "trace_of ([], P) P" | 
 trace_of_Sil: "trace_of (tr, P) Q \<Longrightarrow> trace_of (tr, P) (Sil Q)" |
 trace_of_Vis: "\<lbrakk> e \<in> dom F; trace_of (tr, P) (the (F e)) \<rbrakk> \<Longrightarrow> trace_of (e # tr, P) (Vis F)"
+
+inductive_cases
+  trace_ofE [elim]: "trace_of (tr, P) Q"
+
+lemma trace_of_Ret: "trace_of (tr, P) (Ret x) \<Longrightarrow> (tr, P) = ([], Ret x)"
+  by (erule trace_ofE, simp_all)
+
+thm list_induct2
+
+definition "traces P = {t. \<exists> P'. trace_of (t, P') P}"
+
+lemma trace_of_divergent:
+  assumes "trace_of (t, P) Q" "diverges Q"
+  shows "(t, P) = ([], diverge)"
+  using assms(1-2)
+  apply (induct)
+  apply (auto simp add: assms diverges_then_diverge)
+  apply (metis diverge.code itree.inject(2))
+  apply (metis diverge.code itree.inject(2))
+  apply (metis diverge.code itree.simps(9))
+  done
+
+lemma traces_diverge: "traces diverge = {[]}"
+  by (auto simp add: traces_def dest: trace_of_divergent)
+
+lemma trace_of_deadlock: "trace_of (t, P) deadlock \<Longrightarrow> (t, P) = ([], deadlock)"
+  by (auto simp add: deadlock_def)
+
+lemma traces_deadlock: "traces deadlock = {[]}"
+  by (auto simp add: traces_def deadlock_def)
+
+lemma traces_inp: "wb_prism e \<Longrightarrow> traces (inp e) = {[]} \<union> {[build\<^bsub>e\<^esub> x] | x. True}"
+  apply (simp add: traces_def inp_def)
+  apply (auto)
+   apply (erule trace_ofE)
+     apply (simp)
+    apply (erule trace_ofE)
+      apply (simp)
+     apply (simp)
+    apply (simp)
+apply (simp add: fun_eq_iff)
+   apply (smt (verit, best) bind_eq_Some_conv comp_apply domIff itree.distinct(1) itree.distinct(3) option.collapse option.sel prod.inject trace_of.cases wb_prism.build_match)
+  apply (metis (mono_tags, lifting) bind.bind_lunit comp_apply domIff option.simps(3) trace_of.intros(3) trace_of_Nil wb_prism.match_build)
+  done
 
 text \<open> A failure is recorded when there is a trace leading to a stable interaction tree. At this
   point, the refusal is calculated. \<close>
@@ -255,23 +295,36 @@ text \<open> A failure is recorded when there is a trace leading to a stable int
 definition failure_of :: "('e list \<times> 'e set) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 "failure_of = (\<lambda> (tr, E) t. \<exists> t'. (trace_of (tr, t') t \<and> is_Vis t' \<and> E \<subseteq> (- dom (un_Vis t'))))"
 
+definition failures :: "('e, 's) itree \<Rightarrow> ('e list \<times> 'e set) set" where
+"failures P = {f. failure_of f P}"
+
+lemma diverge_no_failures [dest]: "failure_of t diverge \<Longrightarrow> False"
+  apply (simp add: failure_of_def prod.case_eq_if)
+  apply (auto)
+  apply (metis diverge.disc_iff diverges_diverge itree.distinct_disc(6) snd_conv trace_of_divergent)
+  done
+
+lemma deadlock_failure: "failure_of f deadlock \<Longrightarrow> \<exists> E. f = ([], E)"
+  by (auto simp add: failure_of_def prod.case_eq_if, metis eq_fst_iff trace_of_deadlock)
+
+lemma failures_deadlock: "failures deadlock = {([], E) | E. True}"
+  apply (auto simp add: failures_def )
+  apply (meson deadlock_failure prod.inject)
+  apply (metis (mono_tags, lifting) compl_le_swap1 deadlock_def dom_empty empty_subsetI failure_of_def itree.disc(9) itree.sel(3) old.prod.case trace_of_Nil)
+  done
+
 text \<open> A (minimal) divergence trace is recorded when there is a trace that leads to a divergent state. \<close>
 
 definition min_divergence_of :: "'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 "min_divergence_of tr t = (\<exists> t'. trace_of (tr, t') t \<and> diverges t')"
 
-lemma "\<not> failure_of t diverge"
-  oops \<comment> \<open> How to prove that @{term diverge} has no failure? \<close>
-
 lemma "min_divergence_of [] diverge"
-  using diverges_diverge min_divergence_of_def trace_of_Nil by auto
+  by (meson diverges_diverge min_divergence_of_def trace_of_Nil)
 
 inductive div_free' :: "(('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 ret_dfree': "div_free' R (Ret x)" |
 tau_dfree': "div_free' R P \<Longrightarrow> div_free' R (Sil P)" |
 vis_dfree': "(\<And> t. t \<in> ran F \<Longrightarrow> R t) \<Longrightarrow> div_free' R (Vis F)"
-
-thm div_free'.induct
 
 lemma monotonic_div_free': "div_free' x P \<Longrightarrow> x \<le> y \<Longrightarrow> div_free' y P"
   apply (induct rule: div_free'.induct)
@@ -284,6 +337,33 @@ lemma mono_div_free' [mono add]: "x \<le> y \<Longrightarrow> div_free' x \<le> 
   
 coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
 scons: "div_free' div_free P \<Longrightarrow> div_free P"
+
+
+thm "div_free.cases"
+
+thm div_free.cases
+
+thm div_free'.induct
+
+
+lemma "(\<lambda> P. \<forall> t. \<not> min_divergence_of t P) \<le> div_free' (\<lambda> P. \<forall> t. \<not> min_divergence_of t P)"
+  apply (auto)
+  oops
+
+lemma "div_free P \<Longrightarrow> \<not> min_divergence_of t P"
+  oops
+
+lemma "div_free' R P \<Longrightarrow> min_divergence_of t P \<Longrightarrow> False"
+  apply (induct arbitrary: t rule: div_free'.induct)
+  apply (simp add: min_divergence_of_def)
+  apply (metis diverge.code diverges_then_diverge itree.distinct(1) snd_conv trace_of_Ret)
+   apply (metis diverge.sel diverges_diverge diverges_implies_equal itree.distinct(5) itree.sel(2) min_divergence_of_def trace_ofE)
+  oops
+
+lemma "div_free P \<Longrightarrow> min_divergence_of t P \<Longrightarrow> False"
+  apply (erule div_free.cases)
+  apply (simp)
+  oops
 
 (*
 theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
