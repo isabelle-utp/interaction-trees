@@ -318,10 +318,13 @@ text \<open> A (minimal) divergence trace is recorded when there is a trace that
 definition min_divergence_of :: "'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 "min_divergence_of tr P = trace_of (tr, diverge) P"
 
-lemma min_divergence_diverge: "min_divergence_of [] diverge"
+lemma min_divergence_diverge [intro]: "min_divergence_of [] diverge"
   by (meson diverges_diverge min_divergence_of_def trace_of_Nil)
 
 definition "no_divergence P = (\<forall> tr. \<not> min_divergence_of tr P)" 
+
+lemma divergence_diverge [simp]: "no_divergence diverge = False"
+  by (auto simp add: no_divergence_def)
 
 inductive stabilises_to :: "(('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 ret_stbs [intro]: "stabilises_to R (Ret x)" |
@@ -450,46 +453,34 @@ lemma itree_cases:
 lemma trace_of_Sils [intro]: "trace_of ([], P) (Sils n P)"
   by (induct n, auto)
 
-lemma "no_divergence P \<Longrightarrow> stabilises_to no_divergence P"
+lemma no_divergence_Sil: "no_divergence (Sil P) = no_divergence P"
+  by (force simp add: no_divergence)
+
+lemma no_divergence_Sils: "no_divergence (Sils n P) = no_divergence P"
+  by (induct n, simp_all add: no_divergence_Sil)
+
+lemma no_divergence_Vis: "no_divergence (Vis F) = (ran F \<subseteq> Collect no_divergence)"
+  apply (auto simp add: no_divergence)
+  apply (smt (z3) domIff mem_Collect_eq option.sel option.simps(3) ran_def trace_of.intros(3))
+  apply (metis Sils.simps(1) no_divergence stabilises_to_Sils_Vis stabilises_to_no_divergence)
+  done
+
+lemma no_divergence_stabilises_to: "no_divergence P \<Longrightarrow> stabilises_to no_divergence P"
   apply (cases P rule: itree_cases)
-  apply (simp add: stabilises_alt_def' fun_eq_iff no_divergence)
-  apply (auto)
+  apply (simp add: stabilises_alt_def' fun_eq_iff )
+  apply (auto simp add: Sils_Vis_iff no_divergence_Sils no_divergence_Vis)
+  done
 
-    apply (simp add: )
-  
-  apply 
-
-lemma "stabilises_to no_divergence = no_divergence"
-  apply (auto simp add: fun_eq_iff)
-  apply (simp add: stabilises_alt_def' fun_eq_iff)
-  apply (auto)
-  apply (simp add: stabilises_to_no_divergence)
-   apply (simp add: stabilises_to_Sils_RetI stabilises_to_no_divergence)
-  apply (simp add: no_divergence)
-  oops
+lemma stabilises_to_is_no_diverge: "stabilises_to no_divergence = no_divergence"
+  by (auto simp add: fun_eq_iff stabilises_to_no_divergence no_divergence_stabilises_to)
 
 lemma Collect_no_div_lemma: "(\<not> A \<subseteq> Collect no_divergence) = (\<exists> Q \<in> A. \<not> no_divergence Q)"
   by (auto)
 
-lemma "\<not> stabilises_to no_divergence P \<Longrightarrow> \<exists> tr. trace_of (tr, diverge) P"
-  apply (cases P rule: itree_cases)
-  apply (simp add: Collect_no_div_lemma)
-  apply (auto simp add: stabilises_alt_def Collect_no_div_lemma no_divergence)
-  oops
-
-lemma "no_divergence P \<Longrightarrow> stabilises_to no_divergence P"
-  apply (rule ccontr)
-  apply (auto simp add: stabilises_alt_def fun_eq_iff)
-
-  apply (auto simp add: stabilises_)
-  apply (simp add: 
-  apply (coinduction)
-
-lemma "no_divergence \<le> stabilises_to no_divergence"
-  apply (auto)
-
 coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
 scons: "stabilises_to div_free P \<Longrightarrow> div_free P"
+
+print_theorems
 
 lemma div_free_is_upto: "div_free \<le> stabilises_to div_free"
   by (meson div_free.cases predicate1I)
@@ -504,11 +495,20 @@ lemma div_free_coind:
   apply (metis (mono_tags, lifting) mono_stabilises_to predicate1I rev_predicate1D)
   done
 
-thm stabilises_to.induct
-
 lemma "no_divergence \<le> div_free"
   apply (auto)
   apply (rule div_free_coind[of "no_divergence"])
+   apply (auto simp add: stabilises_to_is_no_diverge)
+  done
+
+
+thm div_free.simps
+
+lemma "div_free \<le> no_divergence"
+  apply (auto)
+  apply (rule ccontr)
+  apply (auto simp add: no_divergence_def min_divergence_of_def)
+  oops
 
 
 lemma "div_free P \<Longrightarrow> \<not> min_divergence_of t P"
@@ -517,8 +517,8 @@ lemma "div_free P \<Longrightarrow> \<not> min_divergence_of t P"
 lemma "stabilises_to R P \<Longrightarrow> R = div_free \<Longrightarrow> \<not> min_divergence_of t P"
   apply (induct arbitrary: t rule: stabilises_to.induct)
   apply (simp add: min_divergence_of_def)
-  apply (metis diverge.code diverges_then_diverge itree.distinct(1) snd_conv trace_of_Ret)
-   apply (metis diverge.sel diverges_diverge diverges_implies_equal itree.distinct(5) itree.sel(2) min_divergence_of_def trace_ofE)
+  apply (metis diverge.code itree.distinct(1) snd_conv trace_of_Ret)
+   apply (metis diverge.sel itree.distinct(5) itree.sel(2) min_divergence_of_def trace_ofE)
   apply (auto)
   oops
 
