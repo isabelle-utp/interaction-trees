@@ -166,16 +166,16 @@ translations "CONST stable P" <= "\<not> CONST unstable P"
 lemma "unstable diverge"
   by simp
 
-text \<open> A process converges if it stabilises within a finite number of internal events \<close>
+text \<open> A process stabilises if it stabilises within a finite number of internal events \<close>
 
-definition "converges P = (\<exists> n P'. (P = Sils n P' \<and> stable P'))"
+definition "stabilises P = (\<exists> n P'. (Sils n P' = P \<and> stable P'))"
 
-abbreviation "diverges P \<equiv> (\<not> (converges P))"
+abbreviation "diverges P \<equiv> (\<not> (stabilises P))"
 
-translations "CONST diverges P" <= "\<not> (CONST converges P)"
+translations "CONST diverges P" <= "\<not> (CONST stabilises P)"
 
 lemma diverges_implies_unstable [intro]: "diverges P \<Longrightarrow> unstable P"
-  by (metis Sils.simps(1) converges_def)
+  by (metis Sils.simps(1) stabilises_def)
 
 lemma Sils_injective: "Sils n P = Sils n Q \<Longrightarrow> P = Q"
   by (induct n, simp_all)
@@ -184,7 +184,7 @@ lemma Sils_diverge: "Sils n diverge = diverge"
   by (induct n, simp_all, metis diverge.code)
 
 lemma diverges_diverge [simp]: "diverges diverge"
-  by (auto simp add: converges_def Sils_diverge, metis Sils_diverge Sils_injective diverge.disc_iff)
+  by (auto simp add: stabilises_def Sils_diverge, metis Sils_diverge Sils_injective diverge.disc_iff)
 
 text \<open> If $P$ is not divergent, then it must be prefixed by a finite sequence of taus. \<close>
 
@@ -202,7 +202,7 @@ next
 next
   case (Sil P' Q' P Q)
   then show ?case
-    by (metis Sils.simps(2) converges_def)
+    by (metis Sils.simps(2) stabilises_def)
 next
   case (Vis F G P Q)
   then show ?case
@@ -234,16 +234,16 @@ proof (cases "diverges P")
     by (metis Sils_diverge choice_diverge diverges_then_diverge) 
 next
   case False
-  then obtain n P' where "P = Sils n P'" "stable P'"
-    using converges_def by blast
+  then obtain n P' where "Sils n P' = P" "stable P'"
+    using stabilises_def by blast
   then show ?thesis
-    by (simp add: choice_Sils choice_Sils_stable add.commute)
+    by (metis Sils_Sils add.commute choice_Sils choice_Sils_stable)
 qed
 
 inductive trace_of :: "('e list \<times> ('e, 's) itree) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 trace_of_Nil [intro]: "trace_of ([], P) P" | 
-trace_of_Sil: "trace_of (tr, P) Q \<Longrightarrow> trace_of (tr, P) (Sil Q)" |
-trace_of_Vis: "\<lbrakk> e \<in> dom F; trace_of (tr, P) (the (F e)) \<rbrakk> \<Longrightarrow> trace_of (e # tr, P) (Vis F)"
+trace_of_Sil [intro]: "trace_of (tr, P) Q \<Longrightarrow> trace_of (tr, P) (Sil Q)" |
+trace_of_Vis [intro]: "\<lbrakk> e \<in> dom F; trace_of (tr, P) (the (F e)) \<rbrakk> \<Longrightarrow> trace_of (e # tr, P) (Vis F)"
 
 inductive_cases
   trace_ofE [elim]: "trace_of (tr, P) Q"
@@ -316,48 +316,210 @@ lemma failures_deadlock: "failures deadlock = {([], E) | E. True}"
 text \<open> A (minimal) divergence trace is recorded when there is a trace that leads to a divergent state. \<close>
 
 definition min_divergence_of :: "'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
-"min_divergence_of tr t = (\<exists> t'. trace_of (tr, t') t \<and> diverges t')"
+"min_divergence_of tr P = trace_of (tr, diverge) P"
 
-lemma "min_divergence_of [] diverge"
+lemma min_divergence_diverge: "min_divergence_of [] diverge"
   by (meson diverges_diverge min_divergence_of_def trace_of_Nil)
 
-inductive div_free' :: "(('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
-ret_dfree': "div_free' R (Ret x)" |
-tau_dfree': "div_free' R P \<Longrightarrow> div_free' R (Sil P)" |
-vis_dfree': "(\<And> t. t \<in> ran F \<Longrightarrow> R t) \<Longrightarrow> div_free' R (Vis F)"
+definition "no_divergence P = (\<forall> tr. \<not> min_divergence_of tr P)" 
 
-lemma monotonic_div_free': "div_free' x P \<Longrightarrow> x \<le> y \<Longrightarrow> div_free' y P"
-  apply (induct rule: div_free'.induct)
-  apply (simp_all add: ret_dfree' tau_dfree' vis_dfree')
-  apply (simp add: predicate1D vis_dfree')
+inductive stabilises_to :: "(('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
+ret_stbs [intro]: "stabilises_to R (Ret x)" |
+sil_stbs [intro]: "stabilises_to R P \<Longrightarrow> stabilises_to R (Sil P)" |
+vis_stbs [intro]: "(\<And> t. t \<in> ran F \<Longrightarrow> R t) \<Longrightarrow> stabilises_to R (Vis F)"
+
+lemma monotonic_stabilises_to: "stabilises_to R P \<Longrightarrow> R \<le> S \<Longrightarrow> stabilises_to S P"
+  apply (induct rule: stabilises_to.induct)
+  apply (simp_all add: ret_stbs sil_stbs vis_stbs)
+  apply (simp add: predicate1D vis_stbs)
   done
 
-lemma mono_div_free' [mono add]: "x \<le> y \<Longrightarrow> div_free' x \<le> div_free' y"
-  using monotonic_div_free' by auto
-  
-coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
-scons: "div_free' div_free P \<Longrightarrow> div_free P"
+lemma mono_stabilises_to [mono add]: "R \<le> S \<Longrightarrow> stabilises_to R \<le> stabilises_to S"
+  using monotonic_stabilises_to by auto
 
+lemma Sils_0 [intro]: "Sils 0 P = P"
+  by (simp)
 
-thm "div_free.cases"
+lemma stable_Ret [intro]: "stable (Ret x)"
+  by simp
 
-thm div_free.cases
+lemma stable_Vis [intro]: "stable (Vis F)"
+  by simp
 
-thm div_free'.induct
+lemma stabilises_Ret [simp]: "stabilises (Ret x)"
+  by (force simp add: stabilises_def)
 
+lemma stabilises_Sil [intro, simp]: 
+  "stabilises P \<Longrightarrow> stabilises (Sil P)"
+  by (metis diverge.sel diverges_then_diverge itree.sel(2))
 
-lemma "(\<lambda> P. \<forall> t. \<not> min_divergence_of t P) \<le> div_free' (\<lambda> P. \<forall> t. \<not> min_divergence_of t P)"
+lemma stabilises_Vis [intro, simp]:
+  "stabilises (Vis F)"
+  by (meson diverges_implies_unstable stable_Vis)
+
+lemma stabilises_to_stabilises [intro]: "stabilises_to R P \<Longrightarrow> stabilises P"
+  by (induct rule: stabilises_to.induct, auto)
+
+lemma stabilises_to_Sils_VisI [intro]: "ran F \<subseteq> Collect R \<Longrightarrow> stabilises_to R (Sils n (Vis F))"
+  by (induct n, auto)
+
+lemma stabilises_to_Sils_RetI [intro]: "stabilises_to R (Sils n (Ret x))"
+  by (induct n, auto)
+
+lemma stabilises_alt_def: 
+  "stabilises_to R P = (\<exists> n P'. Sils n P' = P \<and> ((P' \<in> range Vis \<and> ran (un_Vis P') \<subseteq> Collect R) \<or> P' \<in> range Ret))"
   apply (auto)
+   apply (induct rule: stabilises_to.induct)
+  apply (auto)
+  apply (meson Sils.simps(1) range_eqI)
+  apply (metis Sils.simps(2) itree.sel(3) rangeI)
+  apply (meson Sils.simps(2) rangeI)
+  apply (smt (z3) Collect_mono_iff Sils.simps(1) itree.sel(3) mem_Collect_eq ran_def rangeI)
+  done
+
+lemma stabilises_alt_def': 
+  "stabilises_to R P = 
+    ((\<exists> n F. Sils n (Vis F) = P \<and> ran F \<subseteq> Collect R) \<or> (\<exists> n x. Sils n (Ret x) = P))"
+  by (auto simp add: stabilises_alt_def, metis itree.sel(3) rangeI, blast)
+  
+lemma Vis_Sils: "Vis F = Sils n (Vis G) \<longleftrightarrow> (n = 0 \<and> F = G)"
+  by (metis Sils.elims is_Vis_Sils itree.disc(8) itree.disc(9) itree.inject(3))
+
+lemma Sils_Vis_inj: "Sils m (Vis F) = Sils n (Vis G) \<Longrightarrow> (m = n \<and> F = G)"
+  apply (induct m, auto simp add: Vis_Sils)
+  apply (induct n, auto)
+   apply (metis Sils.elims is_Vis_Sils itree.disc(9))
+  apply (induct n, auto)
+  apply (metis Sils.elims Vis_Sils)
+  done 
+
+lemma Vis_not_Sils_Ret: "Vis F = Sils n (Ret x) \<Longrightarrow> False"
+  by (metis is_Vis_Sils itree.disc(7) itree.disc(9))
+
+lemma Sils_Vis_not_Ret: "Sils m (Vis F) = Sils n (Ret x) \<Longrightarrow> False"
+  apply (induct m, auto dest: Vis_not_Sils_Ret)
+  apply (induct n, auto)
+  apply (metis Sils.elims Vis_not_Sils_Ret)
+  done
+
+lemma Sils_Vis_iff: "Sils m (Vis F) = Sils n (Vis G) \<longleftrightarrow> (m = n \<and> F = G)"
+  by (auto simp add: Sils_Vis_inj)
+
+lemma stabilises_to_Sils_Vis [simp]: "stabilises_to R (Sils n (Vis F)) = (ran F \<subseteq> Collect R)"
+  by (auto, auto simp add: Sils_Vis_iff stabilises_alt_def, metis Sils_Vis_not_Ret)
+
+lemma no_divergence: "no_divergence P = (\<forall>tr P'. trace_of (tr, P') P \<longrightarrow> stabilises P')"
+  apply (auto simp add: no_divergence_def min_divergence_of_def)
+  using diverges_diverge diverges_implies_equal apply blast
+  apply (meson diverges_diverge)
+  done
+
+lemma stabilises_to_no_divergence: 
+  assumes "stabilises_to no_divergence P"
+  shows "no_divergence P"
+proof (clarsimp simp add: no_divergence)
+  fix tr P'
+  assume "trace_of (tr, P') P"
+  hence "(\<lambda> (tr, P') P. stabilises P') (tr, P') P"
+    using assms
+    apply (induct rule: trace_of.induct)
+      apply (auto)
+    using stabilises_to.cases apply fastforce
+    apply (metis itree.disc(1) itree.disc(3) itree.disc(8) itree.discI(3) itree.sel(3) no_divergence ranI stabilises_to.cases)
+    done
+  thus "stabilises P'"
+    by auto
+qed
+
+lemma no_divergence_prefp_div_free:
+  "stabilises_to no_divergence \<le> no_divergence"
+  by (simp add: predicate1I stabilises_to_no_divergence)
+
+lemma itree_disj_cases:
+  "(\<exists> n F. P = Sils n (Vis F)) \<or> (\<exists> n x. P = Sils n (Ret x)) \<or> P = diverge"
+  by (metis diverges_then_diverge is_Ret_def itree.collapse(3) itree.exhaust_disc stabilises_def)
+
+lemma itree_cases:
+  assumes 
+    "\<And> n F. P = (Sils n (Vis F)) \<Longrightarrow> Q"
+    "\<And> n x. P = (Sils n (Ret x)) \<Longrightarrow> Q"
+    "P = diverge \<Longrightarrow> Q"
+  shows "Q"
+  by (metis assms(1) assms(2) assms(3) itree_disj_cases)
+
+lemma trace_of_Sils [intro]: "trace_of ([], P) (Sils n P)"
+  by (induct n, auto)
+
+lemma "no_divergence P \<Longrightarrow> stabilises_to no_divergence P"
+  apply (cases P rule: itree_cases)
+  apply (simp add: stabilises_alt_def' fun_eq_iff no_divergence)
+  apply (auto)
+
+    apply (simp add: )
+  
+  apply 
+
+lemma "stabilises_to no_divergence = no_divergence"
+  apply (auto simp add: fun_eq_iff)
+  apply (simp add: stabilises_alt_def' fun_eq_iff)
+  apply (auto)
+  apply (simp add: stabilises_to_no_divergence)
+   apply (simp add: stabilises_to_Sils_RetI stabilises_to_no_divergence)
+  apply (simp add: no_divergence)
   oops
+
+lemma Collect_no_div_lemma: "(\<not> A \<subseteq> Collect no_divergence) = (\<exists> Q \<in> A. \<not> no_divergence Q)"
+  by (auto)
+
+lemma "\<not> stabilises_to no_divergence P \<Longrightarrow> \<exists> tr. trace_of (tr, diverge) P"
+  apply (cases P rule: itree_cases)
+  apply (simp add: Collect_no_div_lemma)
+  apply (auto simp add: stabilises_alt_def Collect_no_div_lemma no_divergence)
+  oops
+
+lemma "no_divergence P \<Longrightarrow> stabilises_to no_divergence P"
+  apply (rule ccontr)
+  apply (auto simp add: stabilises_alt_def fun_eq_iff)
+
+  apply (auto simp add: stabilises_)
+  apply (simp add: 
+  apply (coinduction)
+
+lemma "no_divergence \<le> stabilises_to no_divergence"
+  apply (auto)
+
+coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
+scons: "stabilises_to div_free P \<Longrightarrow> div_free P"
+
+lemma div_free_is_upto: "div_free \<le> stabilises_to div_free"
+  by (meson div_free.cases predicate1I)
+
+lemma div_free_coind:
+  assumes "\<phi> P"
+  and "\<phi> \<le> stabilises_to \<phi>"
+  shows "div_free P"
+  using assms
+  apply (coinduction arbitrary: P rule: div_free.coinduct)
+  apply (auto)
+  apply (metis (mono_tags, lifting) mono_stabilises_to predicate1I rev_predicate1D)
+  done
+
+thm stabilises_to.induct
+
+lemma "no_divergence \<le> div_free"
+  apply (auto)
+  apply (rule div_free_coind[of "no_divergence"])
+
 
 lemma "div_free P \<Longrightarrow> \<not> min_divergence_of t P"
   oops
 
-lemma "div_free' R P \<Longrightarrow> min_divergence_of t P \<Longrightarrow> False"
-  apply (induct arbitrary: t rule: div_free'.induct)
+lemma "stabilises_to R P \<Longrightarrow> R = div_free \<Longrightarrow> \<not> min_divergence_of t P"
+  apply (induct arbitrary: t rule: stabilises_to.induct)
   apply (simp add: min_divergence_of_def)
   apply (metis diverge.code diverges_then_diverge itree.distinct(1) snd_conv trace_of_Ret)
    apply (metis diverge.sel diverges_diverge diverges_implies_equal itree.distinct(5) itree.sel(2) min_divergence_of_def trace_ofE)
+  apply (auto)
   oops
 
 lemma "div_free P \<Longrightarrow> min_divergence_of t P \<Longrightarrow> False"
@@ -376,15 +538,7 @@ theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred:
   using assms
 *)
 
-lemma div_free_coind:
-  assumes "\<phi> P"
-  and "\<phi> \<le> div_free' \<phi>"
-  shows "div_free P"
-  using assms
-  apply (coinduction arbitrary: P rule: div_free.coinduct)
-  apply (auto)
-  apply (metis (mono_tags, lifting) mono_div_free' predicate1I rev_predicate1D)
-  done
+
 
 lemma is_Sil_choice: "is_Sil (choice P Q) = (is_Sil P \<or> is_Sil Q)"
   using itree.exhaust_disc by (auto)
@@ -536,11 +690,11 @@ lemma "div_free speak"
   apply (induct_tac n)
   apply (simp)
   apply (subst speak.code) back
-   apply (rule vis_dfree')
+   apply (rule vis_stbs)
    apply (simp add: ran_def)
   apply (rule_tac x="1" in exI, simp)
   apply (simp)
-  apply (rule tau_dfree')
+  apply (rule sil_stbs)
   apply (simp)
   done
 
