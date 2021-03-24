@@ -348,7 +348,8 @@ lemma trace_to_bind_Nil_cases:
   apply (erule bind_SilE)
   apply (simp)
   apply (auto)
-
+  apply (metis bind_Sils_dest trace_of_Sils trace_to_Nil_Sils trace_to_Sil)
+  done
 
 lemma trace_to_bind_cases:
   assumes 
