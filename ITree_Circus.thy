@@ -250,6 +250,9 @@ inductive_cases
 
 abbreviation (input) "trace_of \<equiv> (\<lambda> (tr, P') P. P \<midarrow>tr\<leadsto> P')"
 
+lemma trace_to_Sils [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sils n P \<midarrow>tr\<leadsto> P'"
+  by (induct n, auto)
+
 lemma trace_to_Ret: "Ret x \<midarrow>tr\<leadsto> P \<Longrightarrow> (tr, P) = ([], Ret x)"
   by (erule trace_toE, simp_all)
 
@@ -520,6 +523,7 @@ proof -
     using assms by fastforce
 qed
 
+
 lemma trace_to_ConsE:
   assumes "P \<midarrow>x # xs\<leadsto> Q" 
   obtains P' where "P \<midarrow>[x]\<leadsto> P'" "P' \<midarrow>xs\<leadsto> Q"
@@ -535,44 +539,53 @@ proof -
     by (metis assms list.distinct(1) list.sel(1) list.sel(3) that)
 qed
 
+lemma trace_to_singleE [elim!]:
+  assumes "P \<midarrow>[a]\<leadsto> P'"
+  obtains m n F  where "P = Sils m (Vis F)" "a \<in> dom F" "F a = Some (Sils n P')"
+proof -
+  have "\<And> tr. P \<midarrow>tr\<leadsto> P' \<Longrightarrow> (length tr = 1 \<longrightarrow> (\<exists> m n F. P = Sils m (Vis F) \<and> hd tr \<in> dom F \<and> F (hd tr) = Some (Sils n P')))"
+    apply (induct_tac rule: trace_to.induct)
+       apply (auto)
+      apply (metis Sils.simps(2) domI)
+     apply (metis Sils.simps(1) domI trace_to_Nil_Sils)
+    apply (metis Vis_Sils domI trace_to_Nil_Sils)
+    done
+  thus ?thesis
+    by (metis One_nat_def assms length_Cons list.sel(1) list.size(3) that)
+qed
 
-lemma "\<lbrakk> P \<midarrow>[a]\<leadsto> P'; div_free P \<rbrakk> \<Longrightarrow> div_free P'"
-  oops
+lemma trace_to_single_iff: "P \<midarrow>[a]\<leadsto> P' \<longleftrightarrow> (\<exists> m n F. P = Sils m (Vis F) \<and> a \<in> dom F \<and> F a = Some (Sils n P'))"
+  by (metis case_prodD' option.sel trace_of_Sils trace_to_Sils trace_to_Vis trace_to_singleE)
+
+lemma div_free_Vis: "div_free (Vis F) \<longleftrightarrow> (\<forall> P \<in> ran F. div_free P)"
+  by (metis (mono_tags, lifting) Ball_Collect Vis_Sils Vis_not_Sils_Ret div_free.simps stabilises_alt_def')
+
+lemma div_free_Sils: "div_free (Sils n P) \<longleftrightarrow> div_free P"
+  by (induct n, auto)
+
+lemma div_free_step: "\<lbrakk> P \<midarrow>[a]\<leadsto> P'; div_free P \<rbrakk> \<Longrightarrow> div_free P'"
+  by (auto simp add: div_free_Vis div_free_Sils, meson div_free_Sils ranI)
 
 lemma trace_to_Nil_diverges: "\<lbrakk> trace_of ([], diverge) P \<rbrakk> \<Longrightarrow> diverges P"
   using Sils_diverge diverges_then_diverge trace_to_Nil_Sils by force
 
-lemma "P \<midarrow>tr\<leadsto> diverge \<Longrightarrow> div_free P \<Longrightarrow> False"
+lemma trace_to_div_free: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> div_free P \<Longrightarrow> div_free P'"
   apply (induct tr arbitrary: P)
-   apply (metis Sils_diverge div_free_diverge trace_to_Nil_Sils)
+  apply (metis div_free_Sils trace_to_Nil_Sils)
   apply (erule trace_to_ConsE)
-  apply (simp)
   apply (auto)
+  apply (meson div_free_Sils div_free_Vis ranI)
+  done
 
-thm div_free.simps
-
-lemma "div_free \<le> no_divergence"
-  apply (auto)
-  apply (rule ccontr)
-  apply (auto simp add: no_divergence_def min_divergence_of_def)
+lemma div_free_in_no_divergence: "div_free \<le> no_divergence"
+  by (auto, metis div_free_diverge diverges_diverge diverges_implies_equal no_divergence split_conv trace_to_div_free)
   
+lemma div_free_is_no_divergence: "div_free = no_divergence"
+  by (simp add: antisym div_free_coind div_free_in_no_divergence predicate1I stabilises_to_is_no_diverge)
 
 
-lemma "div_free P \<Longrightarrow> \<not> min_divergence_of t P"
-  oops
-
-lemma "stabilises_to R P \<Longrightarrow> R = div_free \<Longrightarrow> \<not> min_divergence_of t P"
-  apply (induct arbitrary: t rule: stabilises_to.induct)
-  apply (simp add: min_divergence_of_def)
-  apply (metis diverge.code itree.distinct(1) snd_conv trace_of_Ret)
-   apply (metis diverge.sel itree.distinct(5) itree.sel(2) min_divergence_of_def trace_ofE)
-  apply (auto)
-  oops
-
-lemma "div_free P \<Longrightarrow> min_divergence_of t P \<Longrightarrow> False"
-  apply (erule div_free.cases)
-  apply (simp)
-  oops
+lemma div_free_no_min_divergence: "div_free P \<Longrightarrow> \<not> min_divergence_of t P"
+  by (simp add: div_free_is_no_divergence no_divergence_def)
 
 (*
 theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
@@ -584,8 +597,6 @@ theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred:
   shows "P = Q"
   using assms
 *)
-
-
 
 lemma is_Sil_choice: "is_Sil (choice P Q) = (is_Sil P \<or> is_Sil Q)"
   using itree.exhaust_disc by (auto)
@@ -747,11 +758,11 @@ lemma "div_free speak"
 
 definition "echo = loop (\<lambda>_. do { i \<leftarrow> inp Input; outp Output i })"
 
-lemma "trace_of ([build\<^bsub>Input\<^esub> 1, build\<^bsub>Output\<^esub> 1], echo ()) (echo ())"
-  apply (subst echo_def) back
+lemma "echo () \<midarrow>[build\<^bsub>Input\<^esub> 1, build\<^bsub>Output\<^esub> 1]\<leadsto> echo ()"
+  apply (subst echo_def)
   apply (subst loop.code)
   apply (subst echo_def[THEN sym])
-  apply (rule trace_of_Sil)
+  apply (rule trace_to_Sil)
   apply (simp add: inp_def)
   apply (subst bind_itree.code)
   oops
