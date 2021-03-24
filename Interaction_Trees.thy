@@ -1,7 +1,7 @@
 section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
-  imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec"
+  imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
 begin
 
 subsection \<open> Interaction Tree Type \<close>
@@ -77,6 +77,8 @@ primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightar
         None \<Rightarrow> None |
         Some x \<Rightarrow> Some (bind_itree x k)))"
 
+print_theorems
+
 friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "bind_itree u k = 
   (case u of 
@@ -98,6 +100,17 @@ lemma bind_Sil [simp]: "Sil t \<bind> k = Sil (t \<bind> k)"
 
 lemma bind_Vis [simp]: "Vis t \<bind> k = Vis (\<lambda> e. t e \<bind> (\<lambda> x. Some (x \<bind> k)))"
   by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
+
+lemma bind_Sil_dest:
+  "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> R = Q x))"
+  by (metis bind_itree.disc_iff(1) bind_itree.simps(3) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.disc(5) itree.sel(2))
+
+lemma bind_SilE:
+  assumes "(P \<bind> Q) = Sil X"
+    "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; X = Q x \<rbrakk> \<Longrightarrow> R"
+  shows R
+  using assms bind_Sil_dest by blast
 
 subsection \<open> Transitive Silent Steps \<close>
 
@@ -152,6 +165,30 @@ lemma Sils_Vis_iff: "Sils m (Vis F) = Sils n (Vis G) \<longleftrightarrow> (m = 
 lemma bind_Sils [simp]: "Sils n P \<bind> Q = Sils n (P \<bind> Q)"
   by (induct n; simp)
 
+
+lemma Sils_Sil_shift [simp]: "Sils n (Sil P) = Sil (Sils n P)"
+  by (metis Sils.simps(1) Sils.simps(2) Sils_Sils add_Suc_right)
+
+
+lemma bind_Sils_dest:
+  "P \<bind> Q = Sils n R \<Longrightarrow> 
+  ((\<exists> P'. P = Sils n P' \<and> R = P' \<bind> Q) 
+    \<or> (\<exists> x m. m < n \<and> P = Sils m (Ret x) \<and> Q x = Sils (n - (m + 1)) R))"
+  apply (induct n arbitrary: P Q R)
+   apply (auto)[1]
+  apply (simp)
+  apply (erule bind_SilE)
+   apply (metis Sils.simps(2) Suc_less_eq)
+  apply (metis Sils.simps(1) diff_zero zero_less_Suc)
+  done
+
+lemma bind_SilsE:
+  assumes "(P \<bind> Q) = Sils n X"
+    "\<And> P'. \<lbrakk> P = Sils n P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
+    "\<And> x m. \<lbrakk> m < n; P = Sils m (Ret x); Q x = Sils (n - (m + 1)) X \<rbrakk> \<Longrightarrow> R"
+  shows R
+  using assms(1) assms(2) assms(3) bind_Sils_dest by blast
+  
 subsection \<open> Operational Semantics and Traces \<close>
 
 inductive trace_to :: "('e, 's) itree \<Rightarrow> 'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" ("_ \<midarrow>_\<leadsto> _" [55, 0, 55] 55) where
@@ -170,6 +207,32 @@ lemma trace_to_Ret: "Ret x \<midarrow>tr\<leadsto> P \<Longrightarrow> (tr, P) =
 
 lemma trace_of_Sils [intro]: "Sils n P \<midarrow>[]\<leadsto> P"
   by (induct n, auto)
+
+lemma trace_to_prefix_closed:
+  assumes "P \<midarrow>tr'\<leadsto> Q" "tr \<le> tr'"
+  shows "\<exists> P'. P \<midarrow>tr\<leadsto> P'"
+  using assms proof (induct arbitrary: tr rule: trace_to.induct)
+  case (trace_to_Nil P)
+  then show ?case by (auto)
+next
+  case (trace_to_Sil P tr' P' tr)
+  then show ?case by (auto)
+next
+  case (trace_to_Vis e F tr' P' tr)
+  then show ?case
+  proof (cases "tr = []")
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    then obtain tr'' where tr: "tr = e # tr''" "tr'' \<le> tr'"
+      by (meson Prefix_Order.prefix_Cons trace_to_Vis.prems)
+    moreover then obtain P'' where "the (F e) \<midarrow>tr''\<leadsto> P''"
+      using trace_to_Vis.hyps(3) by presburger
+    with trace_to_Vis tr show ?thesis
+      by auto      
+  qed
+qed
 
 lemma trace_to_Nil_Sils:
   assumes "P \<midarrow>[]\<leadsto> P'" 
@@ -262,6 +325,90 @@ proof -
   ultimately show ?thesis
     by (simp add: trace_to_trans)
 qed
+
+inductive_cases
+  ttb: "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
+
+thm ttb
+thm trace_to.induct
+
+lemma Sil_to_Ret [simp]: "Sil P \<midarrow>xs\<leadsto> Ret x \<longleftrightarrow> P \<midarrow>xs\<leadsto> Ret x"
+  by (auto)
+
+
+
+lemma trace_to_bind_Nil_cases:
+  assumes 
+    "(P \<bind> Q) \<midarrow>[]\<leadsto> Q'"
+  shows "(\<exists> P'. P \<midarrow>[]\<leadsto> P' \<and> Q' = (P' \<bind> Q)) 
+          \<or> (\<exists> x. P \<midarrow>[]\<leadsto> Ret x \<and> Q x \<midarrow>[]\<leadsto> Q')"
+  using assms
+  apply (erule_tac ttb)
+    apply (auto)[1]
+  apply (erule bind_SilE)
+  apply (simp)
+  apply (auto)
+
+
+lemma trace_to_bind_cases:
+  assumes 
+    "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
+  shows "(\<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> Q' = (P' \<bind> Q)) 
+          \<or> (\<exists> x tr\<^sub>1 tr\<^sub>2. P \<midarrow>tr\<^sub>1\<leadsto> Ret x \<and> Q x \<midarrow>tr\<^sub>2\<leadsto> Q' \<and> tr = tr\<^sub>1 @ tr\<^sub>2)"
+
+
+lemma "\<lbrakk> P \<midarrow>tr\<leadsto> P'; (P \<bind> Q) \<midarrow>tr'\<leadsto> Q' \<rbrakk> \<Longrightarrow> tr \<le> tr'"
+  apply (erule_tac ttb)
+    apply (auto)
+  apply (simp)
+
+lemma trace_to_bind_cases:
+  assumes 
+    "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
+  shows "(\<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> Q' = (P' \<bind> Q)) 
+          \<or> (\<exists> x tr\<^sub>1 tr\<^sub>2. P \<midarrow>tr\<^sub>1\<leadsto> Ret x \<and> Q x \<midarrow>tr\<^sub>2\<leadsto> Q' \<and> tr = tr\<^sub>1 @ tr\<^sub>2)"
+  using assms
+  apply (induct tr)
+  apply (simp)
+  apply (erule_tac ttb)
+  apply (simp)
+     apply blast
+   apply (erule bind_SilE)
+    apply (simp)
+    apply (rule disjI1)
+    apply (rule)
+  apply (rule)
+  apply (auto)
+proof (induct rule: trace_to.induct )
+  case (trace_to_Nil P')
+  then show ?case apply (simp)
+next
+  case (trace_to_Sil P tr P')
+  then show ?case sorry
+next
+  case (trace_to_Vis e F tr P')
+  then show ?case sorry
+qed
+case (trace_to_Nil P)
+  then show ?case 
+    apply (auto)
+next
+  case (trace_to_Sil P tr P')
+  then show ?case sorry
+next
+  case (trace_to_Vis e F tr P')
+  then show ?case sorry
+qed
+
+lemma trace_to_bindE:
+  assumes 
+    "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
+    "\<And> P'. \<lbrakk> P \<midarrow>tr\<leadsto> P'; Q' = (P' \<bind> Q) \<rbrakk> \<Longrightarrow> R"
+    "\<And> x tr\<^sub>1 tr\<^sub>2. \<lbrakk> P \<midarrow>tr\<^sub>1\<leadsto> Ret x; Q x \<midarrow>tr\<^sub>2\<leadsto> Q'; tr = tr\<^sub>1 @ tr\<^sub>2 \<rbrakk> \<Longrightarrow> R"
+  shows "R"
+  using assms
+  apply (induct arbitrary: P Q rule: trace_to.induct)
+  apply (auto)
 
 subsection \<open> Weak Bisimulation \<close>
 
