@@ -6,13 +6,82 @@ begin
 
 subsection \<open> Failures and Divergences \<close>
 
-definition "traces P = {tr. \<exists> P'. P \<midarrow>tr\<leadsto> P'}"
+datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's ("\<cmark>")
 
+type_synonym ('e, 's) trace = "('e, 's) event list"
+
+lemma map_Ev_eq_iff [simp]: "map Ev xs = map Ev ys \<longleftrightarrow> xs = ys"
+  by (metis event.inject(1) list.inj_map_strong)
+
+definition traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" where
+"traces P = {map Ev tr | tr. \<exists> P'. P \<midarrow>tr\<leadsto> P'} \<union> {map Ev tr @ [\<cmark>(v)] | tr v. P \<midarrow>tr\<leadsto> Ret v}"
+
+lemma Nil_in_traces [simp]: "[] \<in> traces P"
+  by (auto simp add: traces_def)
+
+lemma traces_prefix_in_Ev: "tr @ [\<cmark>(v)] \<in> traces(P) \<Longrightarrow> set tr \<subseteq> range Ev"
+  by (auto simp add: traces_def)
+     (metis Nil_is_map_conv event.distinct(1) last_map snoc_eq_iff_butlast)
+
+lemma of_Ev_Ev [simp]: "(of_Ev \<circ> Ev) = id"
+  by (auto)
+
+lemma map_Ev_of_Ev [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map (Ev \<circ> of_Ev) tr = tr"
+  by (metis (mono_tags, lifting) comp_def event.collapse(1) event.disc(1) map_idI rangeE subset_code(1))
+
+lemma term_trace_iff [simp]: "tr @ [\<cmark>(v)] \<in> traces(P) \<longleftrightarrow> (set tr \<subseteq> range Ev \<and> P \<midarrow>map of_Ev tr\<leadsto> Ret v)"
+  apply (auto simp add: traces_def map_idI)
+  apply (metis append_eq_map_conv event.disc(2) is_Ev_def map_eq_Cons_D)
+   apply (metis Nil_is_map_conv event.distinct(1) last_map snoc_eq_iff_butlast)
+  done
+
+lemma in_tracesE [elim]: 
+  assumes
+  "tr \<in> traces P"
+  "\<And> P' tr'. \<lbrakk> tr = map Ev tr'; P \<midarrow>tr'\<leadsto> P' \<rbrakk> \<Longrightarrow> R"
+  "\<And> P' tr' v. \<lbrakk> tr = map Ev tr' @ [\<cmark>(v)]; P \<midarrow>tr'\<leadsto> Ret v \<rbrakk> \<Longrightarrow> R"
+  shows R
+  using assms by (auto simp add: traces_def)
+
+lemma not_in_traces [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> tr \<notin> traces(P) \<longleftrightarrow> \<not> (\<exists> P'. P \<midarrow>map of_Ev tr\<leadsto> P')"
+  by (simp add: traces_def, auto)
+
+lemma traces_Ret: "traces (Ret x) = {[], [\<cmark>(x)]}"
+  by (auto simp add: traces_def)
+
+lemma traces_Tau: "traces (Sil P) = traces P"
+  by (force simp add: traces_def)
+
+lemma diverge_not_Ret [dest]: "diverge = Ret v \<Longrightarrow> False"
+  by (metis div_free_Ret div_free_diverge)
+
+lemma diverge_not_Vis [dest]: "diverge = Vis F \<Longrightarrow> False"
+  by (metis diverges_diverge stabilises_Vis)
+
+lemma diverge_no_Ret_trans [dest]: "diverge \<midarrow>tr\<leadsto> Ret v \<Longrightarrow> False"
+  by (metis diverge_not_Ret diverges_diverge snd_conv trace_of_divergent)
+  
 lemma traces_diverge: "traces diverge = {[]}"
   by (auto simp add: traces_def dest: trace_of_divergent)
 
-lemma traces_bind: "traces (P \<bind> Q) = undefined"
+lemma map_of_Ev_append [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map of_Ev tr = tr\<^sub>1 @ tr\<^sub>2 \<longleftrightarrow> tr = (map Ev tr\<^sub>1 @ map Ev tr\<^sub>2)"
+  by (auto, metis map_Ev_of_Ev map_append map_map)
+
+lemma traces_bind: 
+  "traces (P \<bind> Q) = 
+  (traces(P) \<inter> lists (range Ev)) 
+  \<union> {tr\<^sub>1 @ tr\<^sub>2 | tr\<^sub>1 tr\<^sub>2. \<exists> v. tr\<^sub>1 @ [\<cmark>(v)] \<in> traces(P) \<and> tr\<^sub>2 \<in> traces(Q v)}"
+  apply (auto elim!: in_tracesE trace_to_bindE)
   apply (auto simp add: traces_def)
+  apply (metis (no_types, lifting) Nil_is_map_conv append_Nil2 image_subset_iff list.set_map map_of_Ev_append range_eqI)
+  apply (metis bind_RetE)
+  apply (metis bind_RetE)
+  apply (metis (no_types, lifting) append.right_neutral list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest)
+  apply (metis append_Nil2 image_subset_iff list.set_map map_append map_of_Ev_append range_eqI)
+  apply (meson trace_to_bind_left)
+  apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)
+  apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)
+  done
 
 text \<open> A failure is recorded when there is a trace leading to a stable interaction tree. At this
   point, the refusal is calculated. \<close>
@@ -45,6 +114,9 @@ text \<open> Deadlock is an interaction with no visible event \<close>
 definition deadlock :: "('e, 'r) itree" where
 "deadlock = Vis [\<mapsto>]"
 
+lemma traces_deadlock: "traces(deadlock) = {[]}"
+  by (auto simp add: deadlock_def)
+
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
@@ -71,6 +143,10 @@ corec loop :: "('e, 'r) ktree \<Rightarrow> ('e, 'r) ktree" where
 
 definition inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree" where
 "inp c = Vis (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret)"
+
+lemma "traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
+  apply (auto simp add: inp_def elim!: in_tracesE)
+  oops
 
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
