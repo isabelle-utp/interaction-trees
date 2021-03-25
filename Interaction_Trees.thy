@@ -231,15 +231,15 @@ trace_to_Sil [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sil P \<mi
 trace_to_Vis [intro]: "\<lbrakk> e \<in> dom F; the (F e) \<midarrow>tr\<leadsto> P' \<rbrakk> \<Longrightarrow> Vis F \<midarrow>e # tr\<leadsto> P'"
 
 inductive_cases
-  trace_toE [elim]: "P \<midarrow>tr\<leadsto> P'" and
-  Vis_trace_toE [elim]: "Vis F \<midarrow>tr\<leadsto> P"
-
+  trace_to_VisE [elim]: "Vis F \<midarrow>tr\<leadsto> P" and
+  trace_to_RetE [elim]: "Ret x \<midarrow>tr\<leadsto> P" and
+  trace_to_SilE [elim]: "Sil P \<midarrow>tr\<leadsto> P'"
 
 lemma trace_to_Sils [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sils n P \<midarrow>tr\<leadsto> P'"
   by (induct n, auto)
 
 lemma trace_to_Ret: "Ret x \<midarrow>tr\<leadsto> P \<Longrightarrow> (tr, P) = ([], Ret x)"
-  by (erule trace_toE, simp_all)
+  by auto
 
 lemma trace_of_Sils [intro]: "Sils n P \<midarrow>[]\<leadsto> P"
   by (induct n, auto)
