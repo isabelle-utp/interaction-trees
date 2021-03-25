@@ -101,6 +101,40 @@ lemma bind_Sil [simp]: "Sil t \<bind> k = Sil (t \<bind> k)"
 lemma bind_Vis [simp]: "Vis t \<bind> k = Vis (\<lambda> e. t e \<bind> (\<lambda> x. Some (x \<bind> k)))"
   by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
 
+term "(\<circ>\<^sub>m) F' (Some \<circ> Q)"
+
+definition [simp]: "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
+
+syntax
+  "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixl "\<Zcomp>" 54)
+
+translations
+  "P \<Zcomp> Q" == "CONST kleisli_comp (CONST bind) P Q"
+
+term "P \<bind> Q = Vis F \<Longrightarrow> (\<exists> F'. P = Vis F' \<and> F = F' \<Zcomp> (\<lambda> t. Some (t \<bind> Q)))"
+
+thm bind_itree.simps
+
+text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
+  minimally terminate. \<close>
+
+lemma bind_RetE [elim!]:
+  assumes "P \<bind> Q = Ret x"
+  shows False
+  by (metis assms bind_itree.disc(1) bind_itree.disc(2) itree.disc(7) itree.exhaust_disc stable_Ret)
+
+lemma bind_VisE:
+  assumes "P \<bind> Q = Vis F"
+  obtains F' where "Vis F' = P" "F = (F' \<Zcomp> (\<lambda> t. Some (t \<bind> Q)))"
+proof -
+  obtain F' where "Vis F' = P"
+    by (metis assms bind_itree.disc_iff(2) is_Vis_def)
+  moreover with assms have "F = (F' \<Zcomp> (\<lambda> t. Some (t \<bind> Q)))"
+    by (auto simp add: fun_eq_iff)
+  ultimately show ?thesis
+    using that by force
+qed
+
 lemma bind_Sil_dest:
   "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> R = Q x))"
   by (metis bind_itree.disc_iff(1) bind_itree.simps(3) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.disc(5) itree.sel(2))
@@ -184,7 +218,7 @@ lemma bind_Sils_dest:
 
 lemma bind_SilsE:
   assumes "(P \<bind> Q) = Sils n X"
-    "\<And> P'. \<lbrakk> P = Sils n P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
+    "\<And> P'. \<lbrakk> P = Sils n P'; P' \<bind> Q = X \<rbrakk> \<Longrightarrow> R"
     "\<And> x m. \<lbrakk> m < n; P = Sils m (Ret x); Q x = Sils (n - (m + 1)) X \<rbrakk> \<Longrightarrow> R"
   shows R
   using assms(1) assms(2) assms(3) bind_Sils_dest by blast
@@ -335,7 +369,8 @@ thm trace_to.induct
 lemma Sil_to_Ret [simp]: "Sil P \<midarrow>xs\<leadsto> Ret x \<longleftrightarrow> P \<midarrow>xs\<leadsto> Ret x"
   by (auto)
 
-
+lemma Sils_to_Ret [simp]: "Sils n P \<midarrow>tr\<leadsto> Ret x \<longleftrightarrow> P \<midarrow>tr\<leadsto> Ret x"
+  by (induct n, auto)
 
 lemma trace_to_bind_Nil_cases:
   assumes 
@@ -351,12 +386,42 @@ lemma trace_to_bind_Nil_cases:
   apply (metis bind_Sils_dest trace_of_Sils trace_to_Nil_Sils trace_to_Sil)
   done
 
+lemma trace_to_bind_single_cases:
+  assumes 
+    "(P \<bind> Q) \<midarrow>[a]\<leadsto> Q'"
+  shows "(\<exists> P'. P \<midarrow>[a]\<leadsto> P' \<and> (P' \<bind> Q) = Q') 
+          \<or> (\<exists> x. P \<midarrow>[a]\<leadsto> Ret x \<and> Q x \<midarrow>[]\<leadsto> Q')
+          \<or> (\<exists> x. P \<midarrow>[]\<leadsto> Ret x \<and> Q x \<midarrow>[a]\<leadsto> Q')"
+  using assms
+  apply (erule_tac trace_to_singleE)
+    apply (auto)[1]
+  apply (erule bind_SilsE)
+   apply (simp)
+   apply (erule bind_VisE)
+  apply (auto simp add: bind_eq_Some_conv)
+  apply (metis domI option.sel trace_of_Sils trace_to_Sils trace_to_Vis trace_to_bind_Nil_cases)
+  apply (metis domI option.sel trace_to_Nil trace_to_Sils trace_to_Vis)
+  done
+
+lemma [simp]: "Sils n (Vis F) \<midarrow>x # xs\<leadsto> P' \<longleftrightarrow> (Vis F \<midarrow>x # xs\<leadsto> P')"
+  by (smt (verit, ccfv_threshold) Sils_Vis_inj option.sel trace_to_ConsE trace_to_Sils trace_to_Vis trace_to_singleE)
+  
 lemma trace_to_bind_cases:
   assumes 
     "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
   shows "(\<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> Q' = (P' \<bind> Q)) 
           \<or> (\<exists> x tr\<^sub>1 tr\<^sub>2. P \<midarrow>tr\<^sub>1\<leadsto> Ret x \<and> Q x \<midarrow>tr\<^sub>2\<leadsto> Q' \<and> tr = tr\<^sub>1 @ tr\<^sub>2)"
-
+  using assms
+  apply (induct tr arbitrary: P Q Q')
+   apply (simp add: trace_to_bind_Nil_cases)
+  apply (erule trace_to_ConsE)
+  apply (auto)
+  apply (erule bind_SilsE)
+  apply (erule bind_VisE)
+  apply (auto)
+  apply (rule)
+  apply (rule)
+  apply (rule trace_to_Cons)
 
 lemma "\<lbrakk> P \<midarrow>tr\<leadsto> P'; (P \<bind> Q) \<midarrow>tr'\<leadsto> Q' \<rbrakk> \<Longrightarrow> tr \<le> tr'"
   apply (erule_tac ttb)
