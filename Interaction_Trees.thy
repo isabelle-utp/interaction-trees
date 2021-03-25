@@ -403,9 +403,18 @@ lemma trace_to_bind_single_cases:
   apply (metis domI option.sel trace_to_Nil trace_to_Sils trace_to_Vis)
   done
 
-lemma [simp]: "Sils n (Vis F) \<midarrow>x # xs\<leadsto> P' \<longleftrightarrow> (Vis F \<midarrow>x # xs\<leadsto> P')"
+lemma Vis_Cons_trns [simp]: "Vis F' \<midarrow>a # tr\<leadsto> P' \<longleftrightarrow> (a \<in> dom(F') \<and> the(F' a) \<midarrow>tr\<leadsto> P')"
+  by (auto)
+
+lemma Ret_trns [simp]: "Ret x \<midarrow>tr\<leadsto> P \<longleftrightarrow> (tr = [] \<and> P = Ret x)"
+  by auto
+
+lemma Sils_Vis_trns [simp]: "Sils n (Vis F) \<midarrow>x # xs\<leadsto> P' \<longleftrightarrow> (Vis F \<midarrow>x # xs\<leadsto> P')"
   by (smt (verit, ccfv_threshold) Sils_Vis_inj option.sel trace_to_ConsE trace_to_Sils trace_to_Vis trace_to_singleE)
-  
+
+lemma Sils_Ret_trns [simp]: "Sils n (Ret x) \<midarrow>t # ts\<leadsto> P' \<longleftrightarrow> False"
+  by (auto, metis Sils_Vis_not_Ret trace_to_ConsE trace_to_singleE)
+
 lemma trace_to_bind_cases:
   assumes 
     "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
@@ -418,63 +427,18 @@ lemma trace_to_bind_cases:
   apply (auto)
   apply (erule bind_SilsE)
   apply (erule bind_VisE)
-  apply (auto)
-  apply (rule)
-  apply (rule)
-  apply (rule trace_to_Cons)
-
-lemma "\<lbrakk> P \<midarrow>tr\<leadsto> P'; (P \<bind> Q) \<midarrow>tr'\<leadsto> Q' \<rbrakk> \<Longrightarrow> tr \<le> tr'"
-  apply (erule_tac ttb)
-    apply (auto)
-  apply (simp)
-
-lemma trace_to_bind_cases:
-  assumes 
-    "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
-  shows "(\<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> Q' = (P' \<bind> Q)) 
-          \<or> (\<exists> x tr\<^sub>1 tr\<^sub>2. P \<midarrow>tr\<^sub>1\<leadsto> Ret x \<and> Q x \<midarrow>tr\<^sub>2\<leadsto> Q' \<and> tr = tr\<^sub>1 @ tr\<^sub>2)"
-  using assms
-  apply (induct tr)
-  apply (simp)
-  apply (erule_tac ttb)
-  apply (simp)
-     apply blast
-   apply (erule bind_SilE)
-    apply (simp)
-    apply (rule disjI1)
-    apply (rule)
-  apply (rule)
-  apply (auto)
-proof (induct rule: trace_to.induct )
-  case (trace_to_Nil P')
-  then show ?case apply (simp)
-next
-  case (trace_to_Sil P tr P')
-  then show ?case sorry
-next
-  case (trace_to_Vis e F tr P')
-  then show ?case sorry
-qed
-case (trace_to_Nil P)
-  then show ?case 
-    apply (auto)
-next
-  case (trace_to_Sil P tr P')
-  then show ?case sorry
-next
-  case (trace_to_Vis e F tr P')
-  then show ?case sorry
-qed
+  apply (auto simp add: bind_eq_Some_conv)
+  apply (smt (verit) append_Cons append_Nil domI option.sel trace_of_Sils trace_to_Vis trace_to_trans)
+  apply (metis domI option.sel trace_to_Sils trace_to_Vis)
+  done
 
 lemma trace_to_bindE:
   assumes 
     "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
     "\<And> P'. \<lbrakk> P \<midarrow>tr\<leadsto> P'; Q' = (P' \<bind> Q) \<rbrakk> \<Longrightarrow> R"
     "\<And> x tr\<^sub>1 tr\<^sub>2. \<lbrakk> P \<midarrow>tr\<^sub>1\<leadsto> Ret x; Q x \<midarrow>tr\<^sub>2\<leadsto> Q'; tr = tr\<^sub>1 @ tr\<^sub>2 \<rbrakk> \<Longrightarrow> R"
-  shows "R"
-  using assms
-  apply (induct arbitrary: P Q rule: trace_to.induct)
-  apply (auto)
+  shows R
+  using assms(1) assms(2) assms(3) trace_to_bind_cases by blast
 
 subsection \<open> Weak Bisimulation \<close>
 
