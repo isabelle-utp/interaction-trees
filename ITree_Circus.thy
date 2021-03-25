@@ -16,6 +16,9 @@ lemma map_Ev_eq_iff [simp]: "map Ev xs = map Ev ys \<longleftrightarrow> xs = ys
 definition traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" where
 "traces P = {map Ev tr | tr. \<exists> P'. P \<midarrow>tr\<leadsto> P'} \<union> {map Ev tr @ [\<cmark>(v)] | tr v. P \<midarrow>tr\<leadsto> Ret v}"
 
+definition straces :: "('e, 's) ktree \<Rightarrow> ('s \<Rightarrow> ('e, 's) trace set)" ("traces\<^sub>s") where
+"straces K = (\<lambda> s. traces (K s))"
+
 lemma Nil_in_traces [simp]: "[] \<in> traces P"
   by (auto simp add: traces_def)
 
@@ -51,6 +54,13 @@ lemma traces_Ret: "traces (Ret x) = {[], [\<cmark>(x)]}"
 
 lemma traces_Tau: "traces (Sil P) = traces P"
   by (force simp add: traces_def)
+
+lemma traces_Vis: "traces (Vis F) = {[]} \<union> {Ev a # tr | a tr. a \<in> dom(F) \<and> tr \<in> traces(the(F a))}"
+  apply (auto elim!: in_tracesE trace_to_VisE)
+  apply (auto simp add: traces_def)
+  apply (metis domI list.map(2) option.sel trace_to_Vis)
+  apply (metis domI list.simps(9) option.sel trace_to_Vis)
+  done
 
 lemma diverge_not_Ret [dest]: "diverge = Ret v \<Longrightarrow> False"
   by (metis div_free_Ret div_free_diverge)
@@ -101,10 +111,21 @@ lemma diverge_no_failures [dest]: "failure_of t diverge \<Longrightarrow> False"
 lemma failures_diverge: "failures diverge = {}"
   by (auto simp add: failures_def)
 
+lemma failures_Vis: 
+  "failures (Vis F) = {([], E) | E. E \<subseteq> - dom F} \<union> {(a # tr, E) | a tr E. a \<in> dom F \<and> (tr, E) \<in> failures (the (F a))}"
+  apply (auto  simp add: failures_def failure_of_def)
+    apply blast
+  oops
+
 subsection \<open> Main Operators \<close>
 
 definition Skip :: "('e, 'r) ktree" where
 "Skip = (\<lambda> s. Ret s)"
+
+expr_ctr subst_id
+
+lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<cmark> [\<leadsto>]]})\<^sub>e"
+  by (simp add: Skip_def straces_def traces_Ret, expr_simp)
 
 abbreviation Div :: "('e, 'r) ktree" where
 "Div \<equiv> (\<lambda> s. diverge)"
@@ -144,9 +165,14 @@ corec loop :: "('e, 'r) ktree \<Rightarrow> ('e, 'r) ktree" where
 definition inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree" where
 "inp c = Vis (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret)"
 
-lemma "traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
-  apply (auto simp add: inp_def elim!: in_tracesE)
-  oops
+find_theorems "Option.bind"
+
+lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
+  apply (simp add: inp_def traces_Vis traces_Ret)
+  apply (auto simp add: inp_def bind_eq_Some_conv elim!: in_tracesE trace_to_VisE)
+   apply (meson wb_prism.build_match)
+  apply (simp add: traces_Ret)
+  done 
 
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"

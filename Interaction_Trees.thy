@@ -231,7 +231,9 @@ trace_to_Sil [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sil P \<mi
 trace_to_Vis [intro]: "\<lbrakk> e \<in> dom F; the (F e) \<midarrow>tr\<leadsto> P' \<rbrakk> \<Longrightarrow> Vis F \<midarrow>e # tr\<leadsto> P'"
 
 inductive_cases
-  trace_toE [elim]: "P \<midarrow>tr\<leadsto> P'"
+  trace_toE [elim]: "P \<midarrow>tr\<leadsto> P'" and
+  Vis_trace_toE [elim]: "Vis F \<midarrow>tr\<leadsto> P"
+
 
 lemma trace_to_Sils [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sils n P \<midarrow>tr\<leadsto> P'"
   by (induct n, auto)
