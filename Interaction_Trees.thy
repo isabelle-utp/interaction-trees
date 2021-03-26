@@ -281,7 +281,7 @@ proof -
     using assms by fastforce
 qed
 
-lemma trace_to_NilE:
+lemma trace_to_NilE [elim]:
   assumes "P \<midarrow>[]\<leadsto> P'" 
   obtains n where "P = Sils n P'"
   using assms trace_to_Nil_Sils by auto
@@ -365,9 +365,6 @@ qed
 inductive_cases
   ttb: "(P \<bind> Q) \<midarrow>tr\<leadsto> Q'"
 
-thm ttb
-thm trace_to.induct
-
 lemma Sil_to_Ret [simp]: "Sil P \<midarrow>xs\<leadsto> Ret x \<longleftrightarrow> P \<midarrow>xs\<leadsto> Ret x"
   by (auto)
 
@@ -441,24 +438,5 @@ lemma trace_to_bindE:
     "\<And> x tr\<^sub>1 tr\<^sub>2. \<lbrakk> P \<midarrow>tr\<^sub>1\<leadsto> Ret x; Q x \<midarrow>tr\<^sub>2\<leadsto> Q'; tr = tr\<^sub>1 @ tr\<^sub>2 \<rbrakk> \<Longrightarrow> R"
   shows R
   using assms(1) assms(2) assms(3) trace_to_bind_cases by blast
-
-subsection \<open> Weak Bisimulation \<close>
-
-coinductive wbisim :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>" 50) where
-wbisim_sym: "P \<approx> Q \<Longrightarrow> Q \<approx> P" |
-wbisim_Ret [intro]: "Ret x \<approx> Ret x" |
-wbisim_Sil [intro]: "P \<approx> Q \<Longrightarrow> Sil P \<approx> Q" |
-wbisim_Vis [intro]: "\<lbrakk> dom(F) = dom(G); \<And> e. e \<in> dom(F) \<Longrightarrow> the (F e) \<approx> the (G e) \<rbrakk> \<Longrightarrow> Vis F \<approx> Vis G"
-
-lemma wbisim_refl: "P \<approx> P"
-  by (coinduction arbitrary: P, auto)
-
-lemma wbisim_trans: "\<lbrakk> P \<approx> Q; Q \<approx> R \<rbrakk> \<Longrightarrow> P \<approx> R"
-  by (coinduction arbitrary: P Q R, auto intro: wbisim_sym)
-
-text \<open> For CCS, weak bisimulation is not a congruence with respect to choice. Hence, Milner creates
-  a derived relation, observation congruence, which adds the requirement that an initial silent
-  action must be matched by a silent action in the other process. This is an issue because $\tau$
-  can resolve a choice in CCS. \<close>
 
 end

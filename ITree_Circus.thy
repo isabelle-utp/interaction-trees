@@ -165,8 +165,6 @@ corec loop :: "('e, 'r) ktree \<Rightarrow> ('e, 'r) ktree" where
 definition inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree" where
 "inp c = Vis (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret)"
 
-find_theorems "Option.bind"
-
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
   apply (simp add: inp_def traces_Vis traces_Ret)
   apply (auto simp add: inp_def bind_eq_Some_conv elim!: in_tracesE trace_to_VisE)
@@ -274,23 +272,6 @@ qed
 
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
-
-lemma traces_deadlock: "traces deadlock = {[]}"
-  by (auto simp add: traces_def deadlock_def)
-
-lemma traces_inp: "wb_prism e \<Longrightarrow> traces (inp e) = {[]} \<union> {[build\<^bsub>e\<^esub> x] | x. True}"
-  apply (simp add: traces_def inp_def)
-  apply (auto)
-   apply (erule trace_toE)
-     apply (simp)
-    apply (erule trace_toE)
-      apply (simp)
-     apply (simp)
-    apply (simp)
-   apply (simp_all add: fun_eq_iff comp_def)
-   apply (smt (verit, best) bind_eq_Some_conv comp_apply domIff itree.distinct(1) itree.distinct(3) option.collapse option.sel prod.inject trace_to.cases wb_prism.build_match)
-  apply (metis (mono_tags, lifting) bind.bind_lunit domIff option.simps(3) trace_to.intros(3) trace_to_Nil wb_prism.match_build)
-  done
 
 lemma deadlock_failure: "failure_of f deadlock \<Longrightarrow> \<exists> E. f = ([], E)"
   by (auto simp add: failure_of_def prod.case_eq_if, metis eq_fst_iff trace_of_deadlock)

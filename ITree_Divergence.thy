@@ -123,6 +123,12 @@ lemma Sil_cycle_diverge: "\<lbrakk> is_Sil P; un_Sil P = P \<rbrakk> \<Longright
 lemma diverges_then_diverge: "divergent P \<longleftrightarrow> P = diverge"
   using diverges_diverge diverges_implies_equal by blast
 
+lemma Sil_fp_divergent [simp]: "Sil P = P \<longleftrightarrow> P = diverge"
+  by (metis Sil_cycle_diverge diverge.code diverges_diverge diverges_implies_equal itree.disc(5) itree.sel(2))
+
+lemma Sil_nfp_stabilises [simp]: "Sil P \<noteq> P \<longleftrightarrow> stabilises P"
+  by (metis Sil_fp_divergent diverges_diverge diverges_implies_equal)
+
 lemma trace_of_divergent:
   assumes "P \<midarrow>t\<leadsto> P'" "divergent P"
   shows "(t, P') = ([], diverge)"
@@ -246,7 +252,6 @@ lemma no_divergence_in_div_free: "no_divergence \<le> div_free"
    apply (auto simp add: stabilises_to_is_no_diverge)
   done
 
-
 lemma trace_to_Nil_diverges: "P \<midarrow>[]\<leadsto> diverge \<Longrightarrow> divergent P"
   using Sils_diverge diverges_then_diverge trace_to_Nil_Sils by force
 
@@ -266,5 +271,8 @@ lemma div_free_is_no_divergence: "div_free = no_divergence"
 
 lemma div_free_no_min_divergence: "div_free P \<Longrightarrow> \<not> P \<midarrow>t\<leadsto> diverge"
   by (simp add: div_free_is_no_divergence no_divergence_def)
+
+lemma divergent_trace_toI: "\<lbrakk> \<And> P'. P \<midarrow>[]\<leadsto> P' \<Longrightarrow> unstable P' \<rbrakk> \<Longrightarrow> divergent P"
+  by (metis stabilises_def trace_of_Sils)
 
 end
