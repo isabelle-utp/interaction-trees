@@ -4,46 +4,58 @@ begin
 
 subsection \<open> Weak Bisimulation \<close>
 
-inductive wbisim_upto :: "('e, 's) itree \<Rightarrow> (('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>\<^bsub>_\<^esub>" 50) where
-wbupto_Ret [intro]: "Ret x \<approx>\<^bsub>R\<^esub> Ret x" |
-wbupto_Sil1 [intro]: "P \<approx>\<^bsub>R\<^esub> Q \<Longrightarrow> Sil P \<approx>\<^bsub>R\<^esub> Q" |
-wbupto_Sil2 [intro]: "P \<approx>\<^bsub>R\<^esub> Q \<Longrightarrow> P \<approx>\<^bsub>R\<^esub> Sil Q" |
-wbisim_Vis [intro]: "\<lbrakk> dom(F) = dom(G); \<And> e. e \<in> dom(F) \<Longrightarrow> R (the (F e)) (the (G e)) \<rbrakk> \<Longrightarrow> Vis F \<approx>\<^bsub>R\<^esub> Vis G"
-
-abbreviation (input) "wbupto R \<equiv> (\<lambda> P Q. P \<approx>\<^bsub>R\<^esub> Q)"
-
-lemma monotonic_wbisim_upto: "P \<approx>\<^bsub>R\<^esub> Q \<Longrightarrow> R \<le> S \<Longrightarrow> P \<approx>\<^bsub>S\<^esub> Q"
-  by (induct rule: wbisim_upto.induct ,auto)
-
-lemma mono_stabilises_to [mono add]: "R \<le> S \<Longrightarrow> wbupto R \<le> wbupto S"
-  by (auto intro: monotonic_wbisim_upto)
-
 coinductive wbisim :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>" 50) where
-wbisim: "P \<approx>\<^bsub>wbisim\<^esub> Q \<Longrightarrow> P \<approx> Q"
+wbisim_Ret [intro]: "Ret x \<approx> Ret x" |
+wbisim_Sil1 [intro]: "P \<approx> Q \<Longrightarrow> Sil P \<approx> Q" |
+wbisim_Sil2 [intro]: "P \<approx> Q \<Longrightarrow> P \<approx> Sil Q" |
+wbisim_Vis [intro]: "\<lbrakk> dom(F) = dom(G); \<And> e. e \<in> dom(F) \<Longrightarrow> the (F e) \<approx> the (G e) \<rbrakk> \<Longrightarrow> Vis F \<approx> Vis G"
+
+lemma [simp]: "Sils n P = Vis F \<longleftrightarrow> (n = 0 \<and> P = Vis F)"
+  by (metis Sils.simps(1) is_Vis_Sils itree.disc(9))
+
+lemma "Sils n P = Sil Q \<longleftrightarrow> ((n > 0 \<and> Q = Sils (n - 1) P) \<or> (n = 0 \<and> P = Sil Q))"
+  by (induct n, auto)
+
+lemma [simp]: "Sils n P \<noteq> diverge \<longleftrightarrow> P \<noteq> diverge"
+  by (metis Sils_diverge Sils_injective)
 
 inductive_cases
-  wbisim_RetE: "P \<approx> Ret x"
+  wbisim_RetE: "P \<approx> Ret x" and
+  wbisim_SilE: "Sil Q \<approx> P"
 
 lemma wbisim_sym [intro]: "P \<approx> Q \<Longrightarrow> Q \<approx> P"
-  apply (coinduction arbitrary: P Q, auto) oops
+  by (coinduction arbitrary: P Q, auto elim: wbisim.cases)
 
-lemma "Sils n P \<approx> Sils n P"
-  apply (coinduction arbitrary: n P, auto)
-  oops
+lemma wbisim_Sils [intro]: "Sils n P \<approx> P" 
+  by (coinduction arbitrary: n P, auto, metis Sils.elims, metis Sils.elims Sils.simps(2) itree.exhaust)
 
-lemma wbisim_refl [intro]: "P = Q \<Longrightarrow> P \<approx> Q" 
+thm wbisim_SilE
+
+lemma wbisim_SilD: "Sil P \<approx> Q \<Longrightarrow> P \<approx> Q"
   apply (coinduction arbitrary: P Q, auto)
-  oops  
+  apply (erule wbisim_SilE, auto)
+  apply (smt (verit, ccfv_SIG) wbisim.cases)
+  done
+
+lemma wbisim_SilsD: "Sils n P \<approx> Q \<Longrightarrow> P \<approx> Q"
+  by (induct n, auto dest: wbisim_SilD)
+
+lemma wbisim_refl [intro]: "P \<approx> P"
+  by (metis Sils.simps(1) wbisim_Sils)
 
 lemma wbisim_trans: "\<lbrakk> P \<approx> Q; Q \<approx> R \<rbrakk> \<Longrightarrow> P \<approx> R"
   apply (coinduction arbitrary: P Q R, auto)
   oops
 
-lemma wbisim_Sils [intro]: "Sils n P \<approx> P"
-  apply (induct n, auto) oops
+  thm itree_cases
+
+lemma wbisim_diverge: "P \<approx> diverge \<Longrightarrow> unstable P"
+  apply (cases P rule: itree_cases, auto dest!: wbisim_SilsD)
+  oops
 
 lemma wbisim_trace_to_Nil: "P \<midarrow>[]\<leadsto> P' \<Longrightarrow> P \<approx> P'"
-  oops
+  by auto
+  
 
 text \<open> For CCS, weak bisimulation is not a congruence with respect to choice. Hence, Milner creates
   a derived relation, observation congruence, which adds the requirement that an initial silent
