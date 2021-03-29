@@ -101,8 +101,6 @@ lemma bind_Sil [simp]: "Sil t \<bind> k = Sil (t \<bind> k)"
 lemma bind_Vis [simp]: "Vis t \<bind> k = Vis (\<lambda> e. t e \<bind> (\<lambda> x. Some (x \<bind> k)))"
   by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
 
-term "(\<circ>\<^sub>m) F' (Some \<circ> Q)"
-
 definition [simp]: "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 
 syntax

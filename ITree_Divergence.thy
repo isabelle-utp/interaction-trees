@@ -79,6 +79,12 @@ lemma bind_diverge: "diverge \<bind> F = diverge"
 lemma unstable_diverge: "unstable diverge"
   by simp
 
+lemma diverge_not_Ret [dest]: "diverge = Ret v \<Longrightarrow> False"
+  by (metis diverge.code itree.simps(5))
+
+lemma diverge_not_Vis [dest]: "diverge = Vis F \<Longrightarrow> False"
+  by (metis diverge.code itree.distinct(5))
+
 text \<open> An interaction tree is divergent if it never stabilises. \<close>
 
 abbreviation "divergent P \<equiv> (\<not> (stabilises P))"
@@ -138,6 +144,12 @@ lemma trace_of_divergent:
   apply (metis diverge.code itree.inject(2))
   apply (metis diverge.code itree.inject(2))
   done
+
+lemma diverge_no_Ret_trans [dest]: "diverge \<midarrow>tr\<leadsto> Ret v \<Longrightarrow> False"
+  by (metis diverge_not_Ret diverges_diverge snd_conv trace_of_divergent)
+
+lemma diverge_no_Vis_trans [dest]: "diverge \<midarrow>tr\<leadsto> Vis F \<Longrightarrow> False"
+  by (metis diverge_not_Vis diverges_diverge snd_conv trace_of_divergent)
 
 text \<open> Any interaction either stabilises to a visible event, stabilises to termination, or diverges. \<close>
 

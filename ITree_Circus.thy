@@ -4,7 +4,7 @@ theory ITree_Circus
   imports "ITree_Divergence" "Optics.Optics" "Shallow-Expressions.Shallow_Expressions"
 begin
 
-subsection \<open> Failures and Divergences \<close>
+subsection \<open> Preliminaries \<close>
 
 datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's ("\<cmark>")
 
@@ -12,6 +12,17 @@ type_synonym ('e, 's) trace = "('e, 's) event list"
 
 lemma map_Ev_eq_iff [simp]: "map Ev xs = map Ev ys \<longleftrightarrow> xs = ys"
   by (metis event.inject(1) list.inj_map_strong)
+
+lemma of_Ev_Ev [simp]: "(of_Ev \<circ> Ev) = id"
+  by (auto)
+
+lemma map_Ev_of_Ev [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map (Ev \<circ> of_Ev) tr = tr"
+  by (metis (mono_tags, lifting) comp_def event.collapse(1) event.disc(1) map_idI rangeE subset_code(1))
+
+lemma map_of_Ev_append [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map of_Ev tr = tr\<^sub>1 @ tr\<^sub>2 \<longleftrightarrow> tr = (map Ev tr\<^sub>1 @ map Ev tr\<^sub>2)"
+  by (auto, metis map_Ev_of_Ev map_append map_map)
+
+subsection \<open> Traces \<close>
 
 definition traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" where
 "traces P = {map Ev tr | tr. \<exists> P'. P \<midarrow>tr\<leadsto> P'} \<union> {map Ev tr @ [\<cmark>(v)] | tr v. P \<midarrow>tr\<leadsto> Ret v}"
@@ -25,12 +36,6 @@ lemma Nil_in_traces [simp]: "[] \<in> traces P"
 lemma traces_prefix_in_Ev: "tr @ [\<cmark>(v)] \<in> traces(P) \<Longrightarrow> set tr \<subseteq> range Ev"
   by (auto simp add: traces_def)
      (metis Nil_is_map_conv event.distinct(1) last_map snoc_eq_iff_butlast)
-
-lemma of_Ev_Ev [simp]: "(of_Ev \<circ> Ev) = id"
-  by (auto)
-
-lemma map_Ev_of_Ev [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map (Ev \<circ> of_Ev) tr = tr"
-  by (metis (mono_tags, lifting) comp_def event.collapse(1) event.disc(1) map_idI rangeE subset_code(1))
 
 lemma term_trace_iff [simp]: "tr @ [\<cmark>(v)] \<in> traces(P) \<longleftrightarrow> (set tr \<subseteq> range Ev \<and> P \<midarrow>map of_Ev tr\<leadsto> Ret v)"
   apply (auto simp add: traces_def map_idI)
@@ -61,21 +66,9 @@ lemma traces_Vis: "traces (Vis F) = {[]} \<union> {Ev a # tr | a tr. a \<in> dom
   apply (metis domI list.map(2) option.sel trace_to_Vis)
   apply (metis domI list.simps(9) option.sel trace_to_Vis)
   done
-
-lemma diverge_not_Ret [dest]: "diverge = Ret v \<Longrightarrow> False"
-  by (metis div_free_Ret div_free_diverge)
-
-lemma diverge_not_Vis [dest]: "diverge = Vis F \<Longrightarrow> False"
-  by (metis diverges_diverge stabilises_Vis)
-
-lemma diverge_no_Ret_trans [dest]: "diverge \<midarrow>tr\<leadsto> Ret v \<Longrightarrow> False"
-  by (metis diverge_not_Ret diverges_diverge snd_conv trace_of_divergent)
   
 lemma traces_diverge: "traces diverge = {[]}"
   by (auto simp add: traces_def dest: trace_of_divergent)
-
-lemma map_of_Ev_append [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map of_Ev tr = tr\<^sub>1 @ tr\<^sub>2 \<longleftrightarrow> tr = (map Ev tr\<^sub>1 @ map Ev tr\<^sub>2)"
-  by (auto, metis map_Ev_of_Ev map_append map_map)
 
 lemma traces_bind: 
   "traces (P \<bind> Q) = 
@@ -93,11 +86,13 @@ lemma traces_bind:
   apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)
   done
 
+subsection \<open> Failures and Divergences \<close>
+
 text \<open> A failure is recorded when there is a trace leading to a stable interaction tree. At this
   point, the refusal is calculated. \<close>
 
 definition failure_of :: "('e list \<times> 'e set) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
-"failure_of = (\<lambda> (tr, E) t. \<exists> t'. t \<midarrow>tr\<leadsto> t' \<and> is_Vis t' \<and> E \<subseteq> (- dom (un_Vis t')))"
+"failure_of = (\<lambda> (tr, E) P. \<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> is_Vis P' \<and> E \<subseteq> (- dom (un_Vis P')))"
 
 definition failures :: "('e, 's) itree \<Rightarrow> ('e list \<times> 'e set) set" where
 "failures P = {f. failure_of f P}"

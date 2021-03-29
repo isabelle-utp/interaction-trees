@@ -10,10 +10,10 @@ wbisim_Sil1 [intro]: "P \<approx> Q \<Longrightarrow> Sil P \<approx> Q" |
 wbisim_Sil2 [intro]: "P \<approx> Q \<Longrightarrow> P \<approx> Sil Q" |
 wbisim_Vis [intro]: "\<lbrakk> dom(F) = dom(G); \<And> e. e \<in> dom(F) \<Longrightarrow> the (F e) \<approx> the (G e) \<rbrakk> \<Longrightarrow> Vis F \<approx> Vis G"
 
-lemma [simp]: "Sils n P = Vis F \<longleftrightarrow> (n = 0 \<and> P = Vis F)"
+lemma Sils_eq_Vis_iff [simp]: "Sils n P = Vis F \<longleftrightarrow> (n = 0 \<and> P = Vis F)"
   by (metis Sils.simps(1) is_Vis_Sils itree.disc(9))
 
-lemma "Sils n P = Sil Q \<longleftrightarrow> ((n > 0 \<and> Q = Sils (n - 1) P) \<or> (n = 0 \<and> P = Sil Q))"
+lemma Sils_eq_Sils_iff: "Sils n P = Sil Q \<longleftrightarrow> ((n > 0 \<and> Q = Sils (n - 1) P) \<or> (n = 0 \<and> P = Sil Q))"
   by (induct n, auto)
 
 lemma [simp]: "Sils n P \<noteq> diverge \<longleftrightarrow> P \<noteq> diverge"
@@ -47,7 +47,14 @@ lemma wbisim_trans: "\<lbrakk> P \<approx> Q; Q \<approx> R \<rbrakk> \<Longrigh
   apply (coinduction arbitrary: P Q R, auto)
   oops
 
-  thm itree_cases
+lemma stableE: "\<lbrakk> stable P; \<And> F. \<lbrakk> P = Vis F \<rbrakk> \<Longrightarrow> Q; \<And> x. \<lbrakk> P = Ret x \<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
+  by (meson is_Ret_def is_Vis_def itree.exhaust_disc)
+
+lemma stabilises_trace_toE: "\<lbrakk> stabilises P; \<And> F. \<lbrakk> P \<midarrow>[]\<leadsto> Vis F \<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
+  oops
+
+lemma "\<lbrakk> P \<approx> Q; stabilises P \<rbrakk> \<Longrightarrow> stabilises Q"
+  
 
 lemma wbisim_diverge: "P \<approx> diverge \<Longrightarrow> unstable P"
   apply (cases P rule: itree_cases, auto dest!: wbisim_SilsD)
