@@ -9,6 +9,7 @@ subsection \<open> Preliminaries \<close>
 datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's ("\<cmark>")
 
 type_synonym ('e, 's) trace = "('e, 's) event list"
+type_synonym ('e, 's) refusal = "('e, 's) event set"
 
 lemma map_Ev_eq_iff [simp]: "map Ev xs = map Ev ys \<longleftrightarrow> xs = ys"
   by (metis event.inject(1) list.inj_map_strong)
@@ -19,13 +20,38 @@ lemma of_Ev_Ev [simp]: "(of_Ev \<circ> Ev) = id"
 lemma map_Ev_of_Ev [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map (Ev \<circ> of_Ev) tr = tr"
   by (metis (mono_tags, lifting) comp_def event.collapse(1) event.disc(1) map_idI rangeE subset_code(1))
 
+lemma trace_EvE [elim]: "\<lbrakk> set tr \<subseteq> range Ev; \<And> tr'. tr = map Ev tr' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (metis map_Ev_of_Ev map_map)
+
 lemma map_of_Ev_append [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> map of_Ev tr = tr\<^sub>1 @ tr\<^sub>2 \<longleftrightarrow> tr = (map Ev tr\<^sub>1 @ map Ev tr\<^sub>2)"
-  by (auto, metis map_Ev_of_Ev map_append map_map)
+  by (auto)
+
+lemma trace_last_Ev [simp]: "s @ [a] = map Ev tr \<longleftrightarrow> (tr \<noteq> [] \<and> s = map Ev (butlast tr) \<and> a = Ev (last tr))"
+  by (auto simp add: snoc_eq_iff_butlast map_butlast last_map)
+
+lemma Ev_subset_image [simp]: "(Ev ` A) \<subseteq> (Ev ` B) \<longleftrightarrow> A \<subseteq> B"
+  by auto
+
+lemma Ev_in_Ev_image [simp]: "Ev x \<in> Ev ` A \<longleftrightarrow> x \<in> A"
+  by auto
+
+text \<open> Roscoe's multi-step transition relation including termination events. \<close>
+
+definition mstep_to :: "('e, 's) itree \<Rightarrow> ('e, 's) trace \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" ("_ \<Midarrow>_\<Rightarrow> _" [55, 0, 55] 55)
+  where "P \<Midarrow>tr\<Rightarrow> P' \<equiv> ((set tr \<subseteq> range Ev \<and> P \<midarrow>map of_Ev tr\<leadsto> P') \<or> 
+                        (\<exists> tr' x. tr = (map Ev tr') @ [\<cmark>(x)] \<and> P \<midarrow>tr'\<leadsto> Ret x \<and> P' = deadlock))"
+
+lemma mstep_termE [elim]: 
+  "\<lbrakk> P \<Midarrow>tr @ [\<cmark>(v)]\<Rightarrow> P'; \<And> tr'. \<lbrakk> tr = map Ev tr'; P \<midarrow>tr'\<leadsto> Ret v \<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
+  by (auto simp add: mstep_to_def)
 
 subsection \<open> Traces \<close>
 
 definition traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" where
 "traces P = {map Ev tr | tr. \<exists> P'. P \<midarrow>tr\<leadsto> P'} \<union> {map Ev tr @ [\<cmark>(v)] | tr v. P \<midarrow>tr\<leadsto> Ret v}"
+
+lemma trace_alt_def: "traces P = {s. \<exists> Q. P \<Midarrow>s\<Rightarrow> Q}"
+  by (auto simp add: traces_def mstep_to_def)
 
 definition straces :: "('e, 's) ktree \<Rightarrow> ('s \<Rightarrow> ('e, 's) trace set)" ("traces\<^sub>s") where
 "straces K = (\<lambda> s. traces (K s))"
@@ -35,13 +61,9 @@ lemma Nil_in_traces [simp]: "[] \<in> traces P"
 
 lemma traces_prefix_in_Ev: "tr @ [\<cmark>(v)] \<in> traces(P) \<Longrightarrow> set tr \<subseteq> range Ev"
   by (auto simp add: traces_def)
-     (metis Nil_is_map_conv event.distinct(1) last_map snoc_eq_iff_butlast)
 
 lemma term_trace_iff [simp]: "tr @ [\<cmark>(v)] \<in> traces(P) \<longleftrightarrow> (set tr \<subseteq> range Ev \<and> P \<midarrow>map of_Ev tr\<leadsto> Ret v)"
-  apply (auto simp add: traces_def map_idI)
-  apply (metis append_eq_map_conv event.disc(2) is_Ev_def map_eq_Cons_D)
-   apply (metis Nil_is_map_conv event.distinct(1) last_map snoc_eq_iff_butlast)
-  done
+  by (auto simp add: traces_def map_idI)
 
 lemma in_tracesE [elim]: 
   assumes
@@ -86,16 +108,47 @@ lemma traces_bind:
   apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)
   done
 
-subsection \<open> Failures and Divergences \<close>
+subsection \<open> Divergences \<close>
+
+definition "divergences P = {s @ t | s t. set s \<subseteq> range Ev \<and> set t \<subseteq> range Ev \<and> (\<exists> Q. P \<Midarrow>s\<Rightarrow> Q \<and> Q\<Up>)}"
+
+lemma divergences_alt_def: 
+  "divergences P = {map Ev (s @ t) | s t. (\<exists> Q. P \<midarrow>s\<leadsto> Q \<and> Q\<Up>)}"
+  apply (auto elim!: trace_EvE simp add: divergences_def mstep_to_def)
+  apply blast
+   apply (metis Nil_is_map_conv event.distinct(1) last_map snoc_eq_iff_butlast)
+  apply (force)
+  done
+
+lemma divergences_diverge: "divergences diverge = lists (range Ev)"
+  by (auto simp add: divergences_alt_def)
+     (metis diverges_diverge map_append self_append_conv2 subsetI trace_EvE trace_to_Nil)
+
+lemma divergences_Ret: "divergences (Ret x) = {}"
+  by (simp add: divergences_alt_def)
+
+subsection \<open> Failures \<close>
 
 text \<open> A failure is recorded when there is a trace leading to a stable interaction tree. At this
   point, the refusal is calculated. \<close>
 
+definition refuses :: "('e, 's) itree \<Rightarrow> ('e, 's) refusal \<Rightarrow> bool" (infix "ref" 65) where
+"refuses P B = ((\<exists> F. P = Vis F \<and> B \<inter> Ev ` dom F = {}) \<or> (is_Ret P \<and> B \<subseteq> range Ev))"
+
+lemma Ret_refuses [simp]: "Ret x ref B \<longleftrightarrow> B \<subseteq> range Ev"
+  by (simp add: refuses_def)
+
+lemma Vis_refuses [simp]: "Vis F ref B \<longleftrightarrow> B \<inter> Ev ` dom F = {}"
+  by (simp add: refuses_def)
+
+lemma Sil_refuses [simp]: "Sil P ref B = False"
+  by (simp add: refuses_def)
+
 definition failure_of :: "('e list \<times> 'e set) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 "failure_of = (\<lambda> (tr, E) P. \<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> is_Vis P' \<and> E \<subseteq> (- dom (un_Vis P')))"
 
-definition failures :: "('e, 's) itree \<Rightarrow> ('e list \<times> 'e set) set" where
-"failures P = {f. failure_of f P}"
+definition failures :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" where
+"failures P = {(s, X). \<exists> Q. P \<Midarrow>s\<Rightarrow> Q \<and> Q ref X} \<union> {(s @ [\<cmark>(v)], X) | s v X. \<exists> Q. P \<Midarrow>s @ [\<cmark>(v)]\<Rightarrow> Q}"
 
 lemma diverge_no_failures [dest]: "failure_of t diverge \<Longrightarrow> False"
   apply (simp add: failure_of_def prod.case_eq_if)
@@ -104,15 +157,53 @@ lemma diverge_no_failures [dest]: "failure_of t diverge \<Longrightarrow> False"
   done
 
 lemma failures_diverge: "failures diverge = {}"
-  by (auto simp add: failures_def)
+  by (auto simp add: failures_def refuses_def mstep_to_def)
+     (metis diverge_no_Ret_trans itree.collapse(1))
 
-lemma failures_Vis: 
-  "failures (Vis F) = {([], E) | E. E \<subseteq> - dom F} \<union> {(a # tr, E) | a tr E. a \<in> dom F \<and> (tr, E) \<in> failures (the (F a))}"
-  apply (auto  simp add: failures_def failure_of_def)
-    apply blast
-  oops
+lemma failures_Ret: 
+  "failures (Ret v) = {([], X) | X. X \<subseteq> range Ev} \<union> {([\<cmark>(v)], X) | X. True}"
+  by (simp add: failures_def mstep_to_def, safe, simp_all)
+
+lemma "{(s, X). \<exists> Q. Vis F \<Midarrow>s\<Rightarrow> Q \<and> Q ref X} = 
+  {([], X) | X. X \<inter> Ev ` dom F = {}} 
+  \<union>"
+  
+  apply (simp add: mstep_to_def)
+
+lemma failures_Vis:
+  "failures (Vis F) = {([], X) | X. X \<inter> Ev ` dom F = {}} 
+                      \<union> {(Ev a # tr, X) | tr a X. a \<in> dom(F) \<and> (tr, X) \<in> failures(the(F a))}"
+  apply (simp add: failures_def)
+
+  
+
+lemma "failures(Ret x) = failures(Vis F) \<Longrightarrow> False"
+  apply (simp add: failures_Ret failures_Vis)
+  apply (simp add: failures_def mstep_to_def refuses_def)
+  apply (auto)
+
+subsection \<open> Determinism \<close>
+
+definition "deterministic P = (divergences P = {} \<and> (\<forall> s a. s @ [a] \<in> traces(P) \<longrightarrow> (s, {a}) \<notin> failures(P)))"
+
+text \<open> Interaction trees satisfy the CSP definition of determinism. \<close>
+
+lemma div_free_is_determinsitic:
+  "div_free P \<Longrightarrow> deterministic P"
+  apply (auto simp add: deterministic_def divergences_def traces_def failures_def mstep_to_def refuses_def)
+  apply (metis div_free_diverge diverges_diverge diverges_implies_equal trace_to_div_free)
+  apply (simp add: domD trace_to_determinstic_choice)
+  apply (metis event.simps(4) last_map list.simps(8) snoc_eq_iff_butlast)
+  apply (metis append_butlast_last_id is_Ret_def trace_to_Ret_end)
+  apply (metis Cons_eq_map_D append_eq_map_conv event.simps(4))
+  apply (metis Nil_is_append_conv Nil_is_map_conv event.simps(4) last_map last_snoc not_Cons_self2)
+  apply (meson trace_to_Ret_excl_Vis)
+  apply (metis event.simps(4) trace_last_Ev)
+  apply (metis event.simps(4) trace_last_Ev)
+  done
 
 subsection \<open> Main Operators \<close>
+
 
 definition Skip :: "('e, 'r) ktree" where
 "Skip = (\<lambda> s. Ret s)"
@@ -124,11 +215,6 @@ lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<cmark> [\<leadsto>]]})\<^s
 
 abbreviation Div :: "('e, 'r) ktree" where
 "Div \<equiv> (\<lambda> s. diverge)"
-
-text \<open> Deadlock is an interaction with no visible event \<close>
-
-definition deadlock :: "('e, 'r) itree" where
-"deadlock = Vis [\<mapsto>]"
 
 lemma traces_deadlock: "traces(deadlock) = {[]}"
   by (auto simp add: deadlock_def)

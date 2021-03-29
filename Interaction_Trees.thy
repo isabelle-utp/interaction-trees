@@ -437,4 +437,29 @@ lemma trace_to_bindE:
   shows R
   using assms(1) assms(2) assms(3) trace_to_bind_cases by blast
 
+text \<open> If an interaction tree has terminated, no further interactions are possible. \<close>
+
+lemma trace_to_Ret_end:
+  "\<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P \<midarrow>tr @ [e]\<leadsto> P' \<rbrakk> \<Longrightarrow> False"
+  by (induct tr arbitrary: P P', auto)
+     (metis Sils_Vis_trns Vis_Cons_trns trace_to_ConsE trace_to_singleE)
+
+text \<open> If an event happened beyond a visible choice, then this must have resolved the choice. \<close>
+
+lemma trace_to_determinstic_choice:
+  "\<lbrakk> P \<midarrow>tr\<leadsto> Vis F; P \<midarrow>tr @ [e]\<leadsto> P' \<rbrakk> \<Longrightarrow> e \<in> dom(F)"
+  apply (induct tr arbitrary: P P', auto)
+  using Sils_Vis_inj apply blast
+  apply (metis Sils_Vis_trns Vis_Cons_trns domIff not_None_eq trace_to_ConsE trace_to_singleE)
+  done
+
+text \<open> An interaction tree cannot lead to both termination and a visible event. \<close>
+
+lemma trace_to_Ret_excl_Vis:
+  "\<lbrakk> P \<midarrow>tr\<leadsto> Ret v; P \<midarrow>tr\<leadsto> Vis F \<rbrakk> \<Longrightarrow> False"
+  apply (induct tr arbitrary: P)
+  apply (metis Sils_Vis_not_Ret trace_to_NilE)
+  apply (metis Sils_Vis_trns Vis_Cons_trns trace_to_ConsE trace_to_singleE)
+  done
+
 end

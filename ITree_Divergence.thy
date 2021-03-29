@@ -87,7 +87,8 @@ lemma diverge_not_Vis [dest]: "diverge = Vis F \<Longrightarrow> False"
 
 text \<open> An interaction tree is divergent if it never stabilises. \<close>
 
-abbreviation "divergent P \<equiv> (\<not> (stabilises P))"
+abbreviation divergent :: "('e, 's) itree \<Rightarrow> bool" ("_\<Up>" [999] 1000) where
+"divergent P \<equiv> (\<not> (stabilises P))"
 
 translations "CONST divergent P" <= "\<not> (CONST stabilises P)"
 
@@ -103,7 +104,7 @@ lemma diverges_diverge [simp]: "divergent diverge"
 text \<open> There is a unique divergent @{type itree}. \<close>
 
 lemma diverges_implies_equal: 
-  assumes "divergent P" "divergent Q"
+  assumes "P \<Up>" "Q \<Up>"
   shows "P = Q"
 using assms proof (coinduction arbitrary: P Q rule: itree_coind)
   case (wform P Q)
@@ -126,7 +127,7 @@ qed
 lemma Sil_cycle_diverge: "\<lbrakk> is_Sil P; un_Sil P = P \<rbrakk> \<Longrightarrow> P = diverge"
   by (coinduction arbitrary: P, auto)
 
-lemma diverges_then_diverge: "divergent P \<longleftrightarrow> P = diverge"
+lemma diverges_then_diverge: "P\<Up> \<longleftrightarrow> P = diverge"
   using diverges_diverge diverges_implies_equal by blast
 
 lemma Sil_fp_divergent [simp]: "Sil P = P \<longleftrightarrow> P = diverge"
