@@ -46,6 +46,14 @@ lemma mstep_termE [elim]:
   "\<lbrakk> P \<Midarrow>tr @ [\<cmark>(v)]\<Rightarrow> P'; \<And> tr'. \<lbrakk> tr = map Ev tr'; P \<midarrow>tr'\<leadsto> Ret v; P' = deadlock \<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (auto simp add: mstep_to_def)
 
+fun initial_events :: "('e, 's) itree \<Rightarrow> ('e, 's) event set" ("\<I>") where
+"initial_events (Vis F) = Ev ` dom F" |
+"initial_events (Ret x) = {\<cmark> x}" |
+"initial_events (Sil P) = {}"
+
+lemma "e \<in> \<I>(P) \<Longrightarrow> (\<exists> P'. P \<Midarrow>[e]\<Rightarrow> P')"
+  by (cases P, auto simp add: mstep_to_def)
+
 subsection \<open> Traces \<close>
 
 definition traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" where
@@ -65,6 +73,11 @@ lemma traces_prefix_in_Ev: "tr @ [\<cmark>(v)] \<in> traces(P) \<Longrightarrow>
 
 lemma term_trace_iff [simp]: "tr @ [\<cmark>(v)] \<in> traces(P) \<longleftrightarrow> (set tr \<subseteq> range Ev \<and> P \<midarrow>map of_Ev tr\<leadsto> Ret v)"
   by (auto simp add: traces_def map_idI)
+
+lemma in_tracesI1:
+  assumes "P \<midarrow>tr\<leadsto> P'" "t = map Ev tr"
+  shows "t \<in> traces(P)"
+  using assms traces_def by fastforce
 
 lemma in_tracesE [elim]:
   assumes
@@ -101,13 +114,60 @@ lemma traces_bind:
   apply (auto simp add: traces_def)
   apply (metis (no_types, lifting) Nil_is_map_conv append_Nil2 image_subset_iff list.set_map map_of_Ev_append range_eqI)
   apply (metis bind_RetE)
-  apply (metis bind_RetE)
   apply (metis (no_types, lifting) append.right_neutral list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest)
   apply (metis append_Nil2 image_subset_iff list.set_map map_append map_of_Ev_append range_eqI)
   apply (meson trace_to_bind_left)
   apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)
   apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)
   done
+
+lemma T1a [simp]: "traces(P) \<noteq> {}"
+  by (auto simp add: traces_def)
+
+lemma trace_to_appendE:
+  assumes "P \<midarrow>t\<^sub>1 @ t\<^sub>2\<leadsto> Q"
+  obtains P' where "P \<midarrow>t\<^sub>1\<leadsto> P'" "P' \<midarrow>t\<^sub>2\<leadsto> Q"
+  using assms by (induct t\<^sub>1 arbitrary: P, auto, meson trace_to_Cons trace_to_ConsE)
+
+lemma T1b: 
+  assumes "t\<^sub>1 @ t\<^sub>2 \<in> traces(P)"
+  shows "t\<^sub>1 \<in> traces(P)"
+proof (cases "t\<^sub>2 = []")
+  case True
+  then show ?thesis using assms by simp
+next
+  case False
+  note t\<^sub>2 = this
+  then show ?thesis
+  using assms proof (erule_tac in_tracesE)
+    fix P' tr 
+    assume a: "t\<^sub>1 @ t\<^sub>2 = map Ev tr" "P \<midarrow>tr\<leadsto> P'"
+    then obtain P'' where "P \<midarrow>map of_Ev t\<^sub>1\<leadsto> P''"
+      by (metis UNIV_I append_Nil2 list.set_map map_append map_of_Ev_append subsetI subset_image_iff trace_to_appendE)
+    with a show ?thesis
+      by (metis append_eq_map_conv in_tracesI1 trace_to_appendE)
+  next
+    fix P' tr v
+    assume a: "t\<^sub>1 @ t\<^sub>2 = map Ev tr @ [\<cmark> v]" "P \<midarrow>tr\<leadsto> Ret v"
+    hence "(tr = map of_Ev (butlast (t\<^sub>1 @ t\<^sub>2)))"
+      by (metis append_Nil2 assms butlast_snoc list.simps(8) map_of_Ev_append traces_prefix_in_Ev)
+    hence P: "P \<midarrow>map of_Ev (butlast (t\<^sub>1 @ t\<^sub>2)) \<leadsto> Ret v"
+      using a(2) by force
+    then have "\<exists> P''. P \<midarrow>map of_Ev t\<^sub>1\<leadsto> P''"
+    proof (cases "t\<^sub>1 = []")
+      case True
+      thus ?thesis by auto
+    next
+      case False
+      with P t\<^sub>2 show ?thesis
+        by (force elim:trace_to_appendE simp add: butlast_append)
+    qed
+    thus ?thesis
+      by (metis (no_types, hide_lams) UNIV_I a(1) butlast_append butlast_snoc in_tracesI1 le_sup_iff list.set_map map_Ev_of_Ev map_map set_append subsetI subset_image_iff t\<^sub>2)
+  qed
+qed
+
+lemmas T1 = T1a T1b
 
 subsection \<open> Divergences \<close>
 
@@ -128,8 +188,53 @@ lemma in_divergenceE [elim]:
   shows R
   using assms by (auto simp add: divergences_alt_def diverges_then_diverge)
 
+lemma in_divergence_tranI: "P \<midarrow>tr\<leadsto> diverge \<Longrightarrow> map Ev tr \<in> divergences(P)"
+  by (force simp add: divergences_alt_def)
+
+lemma D1: 
+  assumes "s \<in> divergences P" "t \<in> lists (range Ev)"
+  shows "s @ t \<in> divergences P"
+proof -
+  obtain tr s' where "s = map Ev (tr @ s')" "P \<midarrow>tr\<leadsto> diverge"
+    using assms(1) by blast
+  with assms(2) show ?thesis
+    apply (auto simp add: divergences_def mstep_to_def)
+    apply (rule_tac x="map Ev tr" in exI)
+    apply (force)
+    done
+qed
+
+lemma D1_prefix: "\<lbrakk> s \<in> divergences P; set t \<subseteq> range Ev; s \<le> t \<rbrakk> \<Longrightarrow> t \<in> divergences P"
+  by (metis (no_types, lifting) D1 Prefix_Order.prefixE in_listsI le_sup_iff set_append subset_code(1))
+
+lemma no_divergences_then_div_free: "divergences P = {} \<Longrightarrow> div_free P"
+  by (auto simp add: divergences_alt_def)
+     (metis div_free_is_no_divergence no_divergence)
+
 definition divergence_strict_traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" ("traces\<^sub>\<bottom>") where
 "divergence_strict_traces P = traces P \<union> divergences P"
+
+lemma F1a: "traces\<^sub>\<bottom>(P) \<noteq> {}"
+  by (simp add: divergence_strict_traces_def)
+
+lemma non_divergent_prefix:
+  assumes "t\<^sub>1 @ t\<^sub>2 \<in> divergences P" "t\<^sub>1 \<notin> divergences P" 
+  shows "t\<^sub>1 \<in> traces P"
+proof -
+  obtain tr s where tr: "t\<^sub>1 @ t\<^sub>2 = map Ev (tr @ s)" "P \<midarrow>tr\<leadsto> diverge"
+    using assms(1) by blast
+  hence t1: "set t\<^sub>1 \<subseteq> range Ev"
+    by (metis Ev_subset_image le_sup_iff list.set_map set_append subset_UNIV)
+  hence "\<not> (t\<^sub>1 \<ge> map Ev tr)"
+    by (meson D1_prefix assms(2) in_divergence_tranI tr(2))
+  hence "t\<^sub>1 < map Ev tr"
+    by (smt (z3) Prefix_Order.prefix_prefix append_eq_append_conv2 less_list_def map_append order_refl tr(1))
+  thus ?thesis
+    by (metis Prefix_Order.strict_prefixE' T1b in_tracesI1 tr(2))
+qed
+
+lemma F1b: "t\<^sub>1 @ t\<^sub>2 \<in> traces\<^sub>\<bottom>(P) \<Longrightarrow> t\<^sub>1 \<in> traces\<^sub>\<bottom>(P)"
+  by (auto simp add: divergence_strict_traces_def non_divergent_prefix, meson T1b)
 
 lemma divergences_diverge: "divergences diverge = lists (range Ev)"
   by (auto simp add: divergences_alt_def)
@@ -144,9 +249,9 @@ text \<open> A failure is recorded when there is a trace leading to a stable int
   point, the refusal is calculated. \<close>
 
 definition refuses :: "('e, 's) itree \<Rightarrow> ('e, 's) refusal \<Rightarrow> bool" (infix "ref" 65) where
-"refuses P B = ((\<exists> F. P = Vis F \<and> B \<inter> Ev ` dom F = {}) \<or> (is_Ret P \<and> B \<subseteq> range Ev))"
+"refuses P B = ((\<exists> F. P = Vis F \<and> B \<inter> Ev ` dom F = {}) \<or> (\<exists> x. P = Ret x \<and> \<cmark>(x) \<notin> B))"
 
-lemma Ret_refuses [simp]: "Ret x ref B \<longleftrightarrow> B \<subseteq> range Ev"
+lemma Ret_refuses [simp]: "Ret x ref B \<longleftrightarrow> \<cmark>(x) \<notin> B"
   by (simp add: refuses_def)
 
 lemma Vis_refuses [simp]: "Vis F ref B \<longleftrightarrow> B \<inter> Ev ` dom F = {}"
@@ -154,6 +259,9 @@ lemma Vis_refuses [simp]: "Vis F ref B \<longleftrightarrow> B \<inter> Ev ` dom
 
 lemma Sil_refuses [simp]: "Sil P ref B = False"
   by (simp add: refuses_def)
+
+lemma refuses_down_closed: "\<lbrakk> P ref X; Y \<subseteq> X \<rbrakk> \<Longrightarrow> P ref Y"
+  by (force simp add: refuses_def)
 
 definition failure_of :: "('e list \<times> 'e set) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 "failure_of = (\<lambda> (tr, E) P. \<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> is_Vis P' \<and> E \<subseteq> (- dom (un_Vis P')))"
@@ -170,14 +278,54 @@ lemma in_failuresE [elim]:
   \<comment> \<open> The process reaches a visible choice, and is refusing all subsets of possible events \<close>
   "\<And> F B T tr. \<lbrakk> f = (map Ev tr, B); P \<midarrow>tr\<leadsto> Vis F; B \<inter> Ev ` dom F = {} \<rbrakk> \<Longrightarrow> R"
   \<comment> \<open> The process reaches a termination event, and is refusing all non-termination events \<close>
-  "\<And> x B T tr. \<lbrakk> f = (map Ev tr, Ev ` B); P \<midarrow>tr\<leadsto> Ret x \<rbrakk> \<Longrightarrow> R"
+  "\<And> x B T tr. \<lbrakk> f = (map Ev tr, B - {\<cmark>(x)}); P \<midarrow>tr\<leadsto> Ret x \<rbrakk> \<Longrightarrow> R"
   \<comment> \<open> The process terminates; technically similar to the previous one. \<close>
-  "\<And> x B T tr v. \<lbrakk> f = (map Ev tr @ [\<cmark> v], B); P \<midarrow>tr\<leadsto> Ret x \<rbrakk> \<Longrightarrow> R"
+  "\<And> x B T tr. \<lbrakk> f = (map Ev tr @ [\<cmark> x], B); P \<midarrow>tr\<leadsto> Ret x \<rbrakk> \<Longrightarrow> R"
   shows R
   using assms 
   by (auto simp add: failures_def refuses_def mstep_to_def deadlock_def)
-     (metis itree.collapse(1) map_Ev_of_Ev map_map subset_image_iff)
-  
+     (metis Diff_insert_absorb map_Ev_of_Ev map_map)
+
+lemma in_failuresI1: "\<lbrakk> P \<midarrow>tr\<leadsto> Vis F; B \<inter> Ev ` dom(F) = {} \<rbrakk> \<Longrightarrow> (map Ev tr, B) \<in> failures P"
+  by (auto simp add: failures_def mstep_to_def)
+
+lemma in_failuresI2: "P \<midarrow>tr\<leadsto> Ret x \<Longrightarrow> (map Ev tr, B - {\<cmark> x}) \<in> failures P"
+  by (auto simp add: failures_def mstep_to_def)
+
+lemma in_failures_iff:
+  "(tr, B) \<in> failures P \<longleftrightarrow> 
+        (\<exists> F tr'. tr = map Ev tr' \<and> P \<midarrow>tr'\<leadsto> Vis F \<and> B \<inter> Ev ` dom(F) = {})
+        \<or> (\<exists> x tr'. tr = map Ev tr' \<and> \<cmark> x \<notin> B \<and> P \<midarrow>tr'\<leadsto> Ret x)
+        \<or> (\<exists> x tr'. tr = map Ev tr' @ [\<cmark> x] \<and> P \<midarrow>tr'\<leadsto> Ret x)"
+  by (auto simp add: failures_def mstep_to_def refuses_def)
+     (metis map_Ev_of_Ev map_map, blast+)
+
+lemma failures_term_iff: 
+  "(tr @ [\<cmark>(v)], E) \<in> failures(P) \<longleftrightarrow> (\<exists> Q. P \<Midarrow>tr @ [\<cmark>(v)]\<Rightarrow> Q)"
+  by (auto simp add: failures_def)
+
+lemma failures_term_Ev_iff: 
+  "(map Ev tr @ [\<cmark>(v)], E) \<in> failures(P) \<longleftrightarrow> P \<midarrow>tr\<leadsto> Ret v"
+  by (auto simp add: failures_def mstep_to_def)
+
+lemma T2: "(s, X) \<in> failures(P) \<Longrightarrow> s \<in> traces(P)"
+  by force
+
+lemma F2: "\<lbrakk> (s, X) \<in> failures(P); Y \<subseteq> X \<rbrakk> \<Longrightarrow> (s, Y) \<in> failures(P)"
+  by (auto simp add: failures_def mstep_to_def, meson refuses_down_closed)
+
+lemma F3: "\<lbrakk> (s, X) \<in> failures(P); Y \<inter> {x. s @ [x] \<in> traces(P)} = {} \<rbrakk> \<Longrightarrow> (s, X \<union> Y) \<in> failures(P)"
+  apply (auto simp add: in_failures_iff traces_def set_eq_iff)
+  apply (rename_tac F tr')
+   apply (drule_tac x="F" in spec)
+  apply (auto)
+   apply (meson domI rev_image_eqI)
+  apply (rename_tac F tr' a y)
+  apply (drule_tac x="Ev a" in spec)
+  apply (auto)
+  apply (metis Vis_Cons_trns butlast_snoc domI snoc_eq_iff_butlast trace_to_ConsE trace_to_Nil trace_to_trans)
+  done
+
 definition stable_failures :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" ("failures\<^sub>\<bottom>") where
 "stable_failures P = failures(P) \<union> {(s, X). s \<in> divergences(P) \<and> X \<subseteq> range Ev}"
 
@@ -189,14 +337,13 @@ lemma diverge_no_failures [dest]: "failure_of t diverge \<Longrightarrow> False"
 
 lemma failures_diverge: "failures diverge = {}"
   by (auto simp add: failures_def refuses_def mstep_to_def)
-     (metis diverge_no_Ret_trans itree.collapse(1))
 
 lemma failures_Sil:
   "failures (Sil P) = failures P"
   by (simp add: failures_def mstep_to_def, auto)
 
 lemma failures_Ret: 
-  "failures (Ret v) = {([], X) | X. X \<subseteq> range Ev} \<union> {([\<cmark>(v)], X) | X. True}"
+  "failures (Ret v) = {([], X) | X. \<cmark>(v) \<notin> X} \<union> {([\<cmark>(v)], X) | X. True}"
   by (simp add: failures_def mstep_to_def, safe, simp_all)
 
 lemma failures_Vis:
@@ -212,16 +359,48 @@ lemma failures_Vis:
   apply (metis domI list.simps(9) option.sel)
   done
 
+lemma dom_bind [simp]: "dom (\<lambda> x. P x \<bind> Q) = {x \<in> dom P. the(P x) \<in> dom Q}"
+  by (auto, meson bind_eq_Some_conv, metis bind_eq_Some_conv option.sel)
+
+lemma refuses_Term_iff: "Q ref (B \<union> range \<cmark>) \<longleftrightarrow> (\<exists>F. Q = Vis F \<and> B \<inter> Ev ` dom F = {})"
+  by (auto simp add: refuses_def)
+
+lemma failures_Term_iff:
+  "(map Ev tr, B \<union> range \<cmark>) \<in> failures P \<longleftrightarrow> (\<exists> F. P \<midarrow>tr\<leadsto> Vis F \<and> B \<inter> Ev ` dom F = {})"
+  by (auto simp add: failures_def mstep_to_def refuses_Term_iff)
+     (metis event.simps(4) trace_last_Ev)+
+  
+text \<open> Refusing all termination events \<close>
+
+lemma "(tr, B \<union> range \<cmark>) \<in> failures P \<longleftrightarrow> 
+        (\<exists> F tr'. tr = map Ev tr' \<and> P \<midarrow>tr'\<leadsto> Vis F \<and> B \<inter> Ev ` dom(F) = {})
+        \<or> (\<exists> x tr'. tr = map Ev tr' @ [\<cmark> x] \<and> P \<midarrow>tr'\<leadsto> Ret x)"
+  apply (auto simp add: failures_def mstep_to_def refuses_def)
+  apply (metis inf_sup_distrib2 map_Ev_of_Ev map_map sup_eq_bot_iff)
+  apply (metis Vis_refuses refuses_Term_iff)
+  done
+
 lemma failures_bind: 
   "failures (P \<bind> Q) = 
-    {(s, X). set s \<subseteq> range Ev \<and> (\<exists> v. (s, X \<union> {\<cmark>(v)}) \<in> failures(P))}
-    \<union> {(s @ t, X) | s t X v. s @ [\<cmark>(v)] \<in> traces(P) \<and> (t, X) \<in> failures(Q v)}"
-  apply (auto)
-     apply (erule in_failuresE)
-  apply (auto elim!: trace_to_bindE)
-      apply (metis bind_RetE)
-     apply (simp add: failures_def mstep_to_def)
-  oops
+    {(s, X). set s \<subseteq> range Ev \<and> (s, X \<union> (range Term)) \<in> failures(P)}
+    \<union> {(s @ t, X) | s t X. \<exists> v. s @ [\<cmark>(v)] \<in> traces(P) \<and> (t, X) \<in> failures(Q v)}"
+  apply (rule set_eqI)
+  apply (clarify)
+  apply (simp add: in_failures_iff)
+  apply (auto elim!: trace_to_bindE bind_VisE')
+            apply (meson Vis_refuses refuses_Term_iff)
+           apply (metis (no_types, lifting) image_subset_iff list.set_map map_Ev_eq_iff map_Ev_of_Ev map_map rangeI)
+          apply (meson bind_RetE')
+         apply (metis (no_types, hide_lams) append_Nil2 image_subset_iff list.set_map list.simps(8) map_of_Ev_append rangeI)
+        apply (metis bind_RetE)
+       apply (metis Ev_subset_image UNIV_I append.right_neutral list.set_map map_append map_of_Ev_append subsetI)
+      apply (metis Ev_subset_image UNIV_I append_Nil2 list.set_map map_append map_of_Ev_append subsetI)
+     apply (rename_tac b F tr')
+     apply (drule_tac x="(\<lambda> e. F e \<bind> (\<lambda> x. Some (x \<bind> Q)))" in spec)
+     apply (simp)
+     apply (metis Int_Un_distrib2 Un_Int_eq(1) bind_Vis disjoint_iff trace_to_bind_left)
+    apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)+
+  done
 
 lemma "failures(Ret x) = failures(Vis F) \<Longrightarrow> False"
   by (simp add: failures_Ret failures_Vis, auto)

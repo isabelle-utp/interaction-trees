@@ -121,6 +121,11 @@ lemma bind_RetE [elim!]:
   shows False
   by (metis assms bind_itree.disc(1) bind_itree.disc(2) itree.disc(7) itree.exhaust_disc stable_Ret)
 
+lemma bind_RetE' [elim!]:
+  assumes "Ret x = P \<bind> Q"
+  shows False
+  by (metis assms bind_RetE)
+
 lemma bind_VisE:
   assumes "P \<bind> Q = Vis F"
   obtains F' where "Vis F' = P" "F = (F' \<Zcomp> (\<lambda> t. Some (t \<bind> Q)))"
@@ -132,6 +137,11 @@ proof -
   ultimately show ?thesis
     using that by force
 qed
+
+lemma bind_VisE':
+  assumes "Vis F = P \<bind> Q"
+  obtains F' where "Vis F' = P" "F = (F' \<Zcomp> (\<lambda> t. Some (t \<bind> Q)))"
+  by (metis assms bind_VisE)
 
 lemma bind_Sil_dest:
   "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> R = Q x))"
