@@ -46,13 +46,26 @@ lemma mstep_termE [elim]:
   "\<lbrakk> P \<Midarrow>tr @ [\<cmark>(v)]\<Rightarrow> P'; \<And> tr'. \<lbrakk> tr = map Ev tr'; P \<midarrow>tr'\<leadsto> Ret v; P' = deadlock \<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (auto simp add: mstep_to_def)
 
-fun initial_events :: "('e, 's) itree \<Rightarrow> ('e, 's) event set" ("\<I>") where
-"initial_events (Vis F) = Ev ` dom F" |
-"initial_events (Ret x) = {\<cmark> x}" |
-"initial_events (Sil P) = {}"
+lemma mstep_stabilises: "\<lbrakk> P \<Midarrow>tr\<Rightarrow> P'; tr \<noteq> [] \<rbrakk> \<Longrightarrow> stabilises P"
+  apply (auto simp add: mstep_to_def stabilises_traceI)
+  apply (meson stabilises_traceI)
+  apply (metis diverge_no_Ret_trans diverges_then_diverge)
+  done
 
-lemma "e \<in> \<I>(P) \<Longrightarrow> (\<exists> P'. P \<Midarrow>[e]\<Rightarrow> P')"
-  by (cases P, auto simp add: mstep_to_def)
+definition initials :: "('e, 's) itree \<Rightarrow> ('e, 's) event set" ("\<I>") where
+"\<I>(P) = {e. \<exists> P'. P \<Midarrow>[e]\<Rightarrow> P'}"
+
+lemma initials_Vis: "\<I>(Vis F) = Ev ` dom F"
+  by (auto simp add: initials_def mstep_to_def)
+
+lemma initials_Ret: "\<I>(Ret x) = {\<cmark> x}"
+  by (auto simp add: initials_def mstep_to_def)
+
+lemma initials_Sil: "\<I>(Sil P) = \<I>(P)"
+  apply (auto simp add: initials_def mstep_to_def)
+  apply (metis domI itree.distinct(5) trace_of_Sils trace_to_SilE trace_to_single_iff)
+  apply blast
+  done
 
 subsection \<open> Traces \<close>
 
@@ -123,11 +136,6 @@ lemma traces_bind:
 
 lemma T1a [simp]: "traces(P) \<noteq> {}"
   by (auto simp add: traces_def)
-
-lemma trace_to_appendE:
-  assumes "P \<midarrow>t\<^sub>1 @ t\<^sub>2\<leadsto> Q"
-  obtains P' where "P \<midarrow>t\<^sub>1\<leadsto> P'" "P' \<midarrow>t\<^sub>2\<leadsto> Q"
-  using assms by (induct t\<^sub>1 arbitrary: P, auto, meson trace_to_Cons trace_to_ConsE)
 
 lemma T1b: 
   assumes "t\<^sub>1 @ t\<^sub>2 \<in> traces(P)"
@@ -359,6 +367,9 @@ lemma failures_Vis:
   apply (metis domI list.simps(9) option.sel)
   done
 
+lemma failures_deadlock: "failures deadlock = {([], X) | X. True}"
+  by (auto simp add: deadlock_def failures_Vis)
+
 lemma dom_bind [simp]: "dom (\<lambda> x. P x \<bind> Q) = {x \<in> dom P. the(P x) \<in> dom Q}"
   by (auto, meson bind_eq_Some_conv, metis bind_eq_Some_conv option.sel)
 
@@ -413,7 +424,7 @@ text \<open> Interaction trees satisfy the CSP definition of determinism. \<clos
 
 lemma div_free_is_determinsitic:
   "div_free P \<Longrightarrow> deterministic P"
-  apply (auto simp add: deterministic_def divergences_def traces_def failures_def mstep_to_def refuses_def)
+  apply (auto simp add: deterministic_def divergences_def traces_def failures_def mstep_to_def refuses_def termination_determinsitic)
   apply (metis div_free_diverge diverges_diverge diverges_implies_equal trace_to_div_free)
   apply (simp add: domD trace_to_determinstic_choice)
   apply (metis event.simps(4) last_map list.simps(8) snoc_eq_iff_butlast)
@@ -421,12 +432,10 @@ lemma div_free_is_determinsitic:
   apply (metis Cons_eq_map_D append_eq_map_conv event.simps(4))
   apply (metis Nil_is_append_conv Nil_is_map_conv event.simps(4) last_map last_snoc not_Cons_self2)
   apply (meson trace_to_Ret_excl_Vis)
-  apply (metis event.simps(4) trace_last_Ev)
-  apply (metis event.simps(4) trace_last_Ev)
+  apply (metis event.simps(4) trace_last_Ev)+  
   done
 
 subsection \<open> Main Operators \<close>
-
 
 definition Skip :: "('e, 'r) ktree" where
 "Skip = (\<lambda> s. Ret s)"
@@ -445,11 +454,11 @@ lemma traces_deadlock: "traces(deadlock) = {[]}"
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
-corec test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree" where
+definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree" where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
 lemma "test (\<lambda> s. False) = Stop"
-  by (simp add: test.code)
+  by (simp add: test_def)
 
 definition assigns :: "'s subst \<Rightarrow> ('e, 's) ktree" where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
@@ -517,7 +526,7 @@ definition seq :: "('e, 's) ktree \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e
 
 text \<open> This is like race-free behaviour \<close>
 
-primcorec choice :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" where
+primcorec choice :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<diamond>" 59) where
 "choice P Q =
    (case (P, Q) of 
       (Vis F, Vis G) \<Rightarrow> Vis (F \<odot> G) |
@@ -528,29 +537,10 @@ primcorec choice :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> (
       (Vis _, Ret v)   \<Rightarrow> Ret v
    )"
 
-text \<open> External Choice test cases \<close>
-
-lemma "X \<noteq> Y \<Longrightarrow> choice (Vis [X \<mapsto> Ret a]) (Vis [Y \<mapsto> Ret b]) = 
-       Vis [X \<mapsto> Ret a, Y \<mapsto> Ret b]"
-  by (auto simp add: choice.code map_prod_merge)
-
-lemma "choice (Vis [X \<mapsto> Ret a]) (Vis [X \<mapsto> Ret b]) = 
-       deadlock"
-  by (simp add: choice.code deadlock_def map_prod_merge)
-
-lemma "X \<noteq> Y \<Longrightarrow> choice (Sil (Vis [X \<mapsto> Ret a])) (Sil (Vis [Y \<mapsto> Ret b])) = 
-       Sil (Sil (Vis [X \<mapsto> Ret a, Y \<mapsto> Ret b]))"
-  by (simp add: choice.code map_prod_merge fun_upd_twist)
-
-text \<open> This requires weak bisimulation \<close>
-
-lemma "\<And> P. (X = choice P P \<and> Y = P) \<or> (X = Y) \<Longrightarrow> X = Y"
-  apply (coinduction arbitrary: X Y)
-  apply (auto simp add: itree.case_eq_if itree.distinct_disc(1))
-  oops
-
 lemma choice_diverge: "choice diverge P = diverge"
   by (coinduction arbitrary: P, auto, metis diverge.code itree.simps(11))
+
+text \<open> External Choice test cases \<close>
 
 lemma choice_Sils: "choice (Sils m P) Q = Sils m (choice P Q)"
   by (induct m, simp_all add: choice.code)
@@ -574,50 +564,61 @@ next
     by (metis Sils_Sils add.commute choice_Sils choice_Sils_stable)
 qed
 
+lemma 
+  assumes "P \<Midarrow>[a]\<Rightarrow> P'" "\<I>(P) \<inter> \<I>(Q) = {}" 
+  shows "P \<diamond> Q \<Midarrow>[a]\<Rightarrow> P'"
+proof -
+  have "stabilises P"
+    by (meson assms(1) mstep_stabilises not_Cons_self2)
+  then obtain n P'' where P'': "P = Sils n P''" "stable P''"
+    by (metis stabilises_def)
+  have "P'' \<diamond> Q \<Midarrow>[a]\<Rightarrow> P'"
+  proof (cases P'')
+    case (Ret x1)
+    then show ?thesis sorry
+  next
+    case (Sil x2)
+    then show ?thesis
+      using P'' by force
+  next
+    case (Vis x3)
+    then show ?thesis sorry
+  qed
+  oops
+
+lemma 
+  assumes "\<I>(P) \<inter> \<I>(Q) = {}"
+  shows "failures(P \<diamond> Q) = {([], X) | X. ([], X) \<in> failures(P) \<inter> failures(Q)}
+                         \<union> {(s, X). (s, X) \<in> failures P \<union> failures Q \<and> s \<noteq> []}
+                         \<union> {([], X) | X. X \<subseteq> range Ev \<and> (\<exists> v. [\<cmark> v] \<in> traces(P) \<union> traces(Q))}"
+  oops
+
+lemma "X \<noteq> Y \<Longrightarrow> choice (Vis [X \<mapsto> Ret a]) (Vis [Y \<mapsto> Ret b]) = 
+       Vis [X \<mapsto> Ret a, Y \<mapsto> Ret b]"
+  by (auto simp add: choice.code map_prod_merge)
+
+lemma "choice (Vis [X \<mapsto> Ret a]) (Vis [X \<mapsto> Ret b]) = 
+       deadlock"
+  by (simp add: choice.code deadlock_def map_prod_merge)
+
+lemma "X \<noteq> Y \<Longrightarrow> choice (Sil (Vis [X \<mapsto> Ret a])) (Sil (Vis [Y \<mapsto> Ret b])) = 
+       Sil (Sil (Vis [X \<mapsto> Ret a, Y \<mapsto> Ret b]))"
+  by (simp add: choice.code map_prod_merge fun_upd_twist)
+
+text \<open> This requires weak bisimulation \<close>
+
+lemma "\<And> P. (X = choice P P \<and> Y = P) \<or> (X = Y) \<Longrightarrow> X = Y"
+  apply (coinduction arbitrary: X Y)
+  apply (auto simp add: itree.case_eq_if itree.distinct_disc(1))
+  oops
+
+
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
 
-lemma deadlock_failure: "failure_of f deadlock \<Longrightarrow> \<exists> E. f = ([], E)"
-  by (auto simp add: failure_of_def prod.case_eq_if, metis eq_fst_iff trace_of_deadlock)
-
-lemma failures_deadlock: "failures deadlock = {([], E) | E. True}"
-  apply (auto simp add: failures_def )
-  apply (meson deadlock_failure prod.inject)
-  apply (metis (mono_tags, lifting) compl_le_swap1 deadlock_def dom_empty empty_subsetI failure_of_def itree.disc(9) itree.sel(3) old.prod.case trace_to_Nil)
-  done
-
-text \<open> A (minimal) divergence trace is recorded when there is a trace that leads to a divergent state. \<close>
-
-definition min_divergence_of :: "'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
-"min_divergence_of tr P = P \<midarrow>tr\<leadsto> diverge"
-
-lemma min_divergence_diverge [intro]: "min_divergence_of [] diverge"
-  by (simp add: min_divergence_of_def trace_to_Nil)
-
-
-(*
-theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
-  assumes "\<phi> P Q" and
-  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
-  "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
-  "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q" and
-  "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (dom(F) = dom(G) \<and> (\<forall> x\<in>dom(F). \<phi> (the (F x)) (the (G x))))"
-  shows "P = Q"
-  using assms
-*)
 
 lemma is_Sil_choice: "is_Sil (choice P Q) = (is_Sil P \<or> is_Sil Q)"
   using itree.exhaust_disc by (auto)
-
-(*
-lemma deadlock_l1: "\<And> P. (T\<^sub>1 = choice deadlock P \<and> T\<^sub>2 = P) \<or> (T\<^sub>1 = T\<^sub>2) \<Longrightarrow> T\<^sub>1 = T\<^sub>2"
-  apply (simp only: deadlock_def)
-  apply (coinduction arbitrary: T\<^sub>1 T\<^sub>2)
-  apply (auto simp add: itree.case_eq_if itree.distinct_disc(3))
-  using itree.distinct_disc(5) apply force
-  using rel_map_iff apply blast+
-  done
-*)
 
 lemma stable_deadlock [simp]: "stable deadlock"
   by (simp add: deadlock_def)

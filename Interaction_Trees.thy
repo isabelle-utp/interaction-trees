@@ -331,6 +331,11 @@ lemma trace_to_Cons [intro]:
   "\<lbrakk> P \<midarrow>[x]\<leadsto> P'; P' \<midarrow>xs\<leadsto> P'' \<rbrakk> \<Longrightarrow> P \<midarrow>x # xs\<leadsto> P''"
   by force
 
+lemma trace_to_appendE:
+  assumes "P \<midarrow>t\<^sub>1 @ t\<^sub>2\<leadsto> Q"
+  obtains P' where "P \<midarrow>t\<^sub>1\<leadsto> P'" "P' \<midarrow>t\<^sub>2\<leadsto> Q"
+  using assms by (induct t\<^sub>1 arbitrary: P, auto, meson trace_to_Cons trace_to_ConsE)
+
 lemma trace_to_trans:
   "\<lbrakk> P \<midarrow>tr\<leadsto> P'; P' \<midarrow>tr'\<leadsto> P'' \<rbrakk> \<Longrightarrow> P \<midarrow>tr @ tr'\<leadsto> P''"
   apply (induct tr arbitrary: P P' P'' tr')
@@ -472,4 +477,10 @@ lemma trace_to_Ret_excl_Vis:
   apply (metis Sils_Vis_trns Vis_Cons_trns trace_to_ConsE trace_to_singleE)
   done
 
+text \<open> Termination is deterministic. \<close>
+
+lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P \<midarrow>tr\<leadsto> Ret y \<rbrakk> \<Longrightarrow> x = y"
+  by (induct tr arbitrary: P, auto)
+     (metis Sils_to_Ret Vis_Cons_trns trace_to_ConsE trace_to_singleE)
+     
 end

@@ -21,6 +21,9 @@ lemma stabilises_Vis [intro, simp]:
   "stabilises (Vis F)"
   by (metis Sils.simps(1) itree.disc(9) itree.distinct_disc(6) stabilises_def)
 
+lemma stabilises_traceI: "\<lbrakk> P \<midarrow>tr\<leadsto> P'; tr \<noteq> [] \<rbrakk> \<Longrightarrow> stabilises P"
+  by (metis append_Cons append_Nil list.distinct(1) list.exhaust stabilises_Vis stabilises_def trace_of_Sils trace_to_VisE trace_to_appendE trace_to_singleE)
+
 text \<open> An @{type itree} stabilises to a relation @{term R} if after stabilising and choosing a 
   new event, the continuation is in @{term R}. \<close>
 
