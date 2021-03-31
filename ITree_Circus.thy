@@ -55,7 +55,7 @@ lemma mstep_stabilises: "\<lbrakk> P \<Midarrow>tr\<Rightarrow> P'; tr \<noteq> 
 definition initials :: "('e, 's) itree \<Rightarrow> ('e, 's) event set" ("\<I>") where
 "\<I>(P) = {e. \<exists> P'. P \<Midarrow>[e]\<Rightarrow> P'}"
 
-lemma initials_Vis: "\<I>(Vis F) = Ev ` dom F"
+lemma initials_Vis: "\<I>(Vis F) = Ev ` keys F"
   by (auto simp add: initials_def mstep_to_def)
 
 lemma initials_Ret: "\<I>(Ret x) = {\<cmark> x}"
@@ -63,7 +63,7 @@ lemma initials_Ret: "\<I>(Ret x) = {\<cmark> x}"
 
 lemma initials_Sil: "\<I>(Sil P) = \<I>(P)"
   apply (auto simp add: initials_def mstep_to_def)
-  apply (metis domI itree.distinct(5) trace_of_Sils trace_to_SilE trace_to_single_iff)
+  apply (metis itree.distinct(5) trace_of_Sils trace_to_SilE trace_to_single_iff)
   apply blast
   done
 
@@ -103,17 +103,20 @@ lemma in_tracesE [elim]:
 lemma not_in_traces [simp]: "set tr \<subseteq> range Ev \<Longrightarrow> tr \<notin> traces(P) \<longleftrightarrow> \<not> (\<exists> P'. P \<midarrow>map of_Ev tr\<leadsto> P')"
   by (simp add: traces_def, auto)
 
+lemma traces_single_Term: "[\<cmark> s] \<in> traces(P) \<Longrightarrow> \<exists> n. P = Sils n (Ret s)"
+  by (auto simp add: traces_def)
+
 lemma traces_Ret: "traces (Ret x) = {[], [\<cmark>(x)]}"
   by (auto simp add: traces_def)
 
 lemma traces_Tau: "traces (Sil P) = traces P"
   by (force simp add: traces_def)
 
-lemma traces_Vis: "traces (Vis F) = {[]} \<union> {Ev a # tr | a tr. a \<in> dom(F) \<and> tr \<in> traces(the(F a))}"
+lemma traces_Vis: "traces (Vis F) = {[]} \<union> {Ev a # tr | a tr. a \<in> keys(F) \<and> tr \<in> traces(F a)}"
   apply (auto elim!: in_tracesE trace_to_VisE)
   apply (auto simp add: traces_def)
-  apply (metis domI list.map(2) option.sel trace_to_Vis)
-  apply (metis domI list.simps(9) option.sel trace_to_Vis)
+  apply (metis list.map(2) trace_to_Vis)
+  apply (metis list.simps(9) trace_to_Vis)
   done
   
 lemma traces_diverge: "traces diverge = {[]}"
@@ -257,12 +260,12 @@ text \<open> A failure is recorded when there is a trace leading to a stable int
   point, the refusal is calculated. \<close>
 
 definition refuses :: "('e, 's) itree \<Rightarrow> ('e, 's) refusal \<Rightarrow> bool" (infix "ref" 65) where
-"refuses P B = ((\<exists> F. P = Vis F \<and> B \<inter> Ev ` dom F = {}) \<or> (\<exists> x. P = Ret x \<and> \<cmark>(x) \<notin> B))"
+"refuses P B = ((\<exists> F. P = Vis F \<and> B \<inter> Ev ` keys F = {}) \<or> (\<exists> x. P = Ret x \<and> \<cmark>(x) \<notin> B))"
 
 lemma Ret_refuses [simp]: "Ret x ref B \<longleftrightarrow> \<cmark>(x) \<notin> B"
   by (simp add: refuses_def)
 
-lemma Vis_refuses [simp]: "Vis F ref B \<longleftrightarrow> B \<inter> Ev ` dom F = {}"
+lemma Vis_refuses [simp]: "Vis F ref B \<longleftrightarrow> B \<inter> Ev ` keys F = {}"
   by (simp add: refuses_def)
 
 lemma Sil_refuses [simp]: "Sil P ref B = False"
@@ -272,9 +275,9 @@ lemma refuses_down_closed: "\<lbrakk> P ref X; Y \<subseteq> X \<rbrakk> \<Longr
   by (force simp add: refuses_def)
 
 definition failure_of :: "('e list \<times> 'e set) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
-"failure_of = (\<lambda> (tr, E) P. \<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> is_Vis P' \<and> E \<subseteq> (- dom (un_Vis P')))"
+"failure_of = (\<lambda> (tr, E) P. \<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> is_Vis P' \<and> E \<subseteq> (- keys (un_Vis P')))"
 
-lemma Vis_trace_to: "Vis F \<midarrow>tr\<leadsto> P \<longleftrightarrow> ((tr = [] \<and> P = Vis F) \<or> (\<exists> a tr'. a \<in> dom(F) \<and> tr = a # tr' \<and> the(F a) \<midarrow>tr'\<leadsto> P))"
+lemma Vis_trace_to: "Vis F \<midarrow>tr\<leadsto> P \<longleftrightarrow> ((tr = [] \<and> P = Vis F) \<or> (\<exists> a tr'. a \<in> keys(F) \<and> tr = a # tr' \<and> (F a) \<midarrow>tr'\<leadsto> P))"
   by (auto)
 
 definition failures :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" where
@@ -284,7 +287,7 @@ lemma in_failuresE [elim]:
   assumes
   "f \<in> failures P"
   \<comment> \<open> The process reaches a visible choice, and is refusing all subsets of possible events \<close>
-  "\<And> F B T tr. \<lbrakk> f = (map Ev tr, B); P \<midarrow>tr\<leadsto> Vis F; B \<inter> Ev ` dom F = {} \<rbrakk> \<Longrightarrow> R"
+  "\<And> F B T tr. \<lbrakk> f = (map Ev tr, B); P \<midarrow>tr\<leadsto> Vis F; B \<inter> Ev ` keys F = {} \<rbrakk> \<Longrightarrow> R"
   \<comment> \<open> The process reaches a termination event, and is refusing all non-termination events \<close>
   "\<And> x B T tr. \<lbrakk> f = (map Ev tr, B - {\<cmark>(x)}); P \<midarrow>tr\<leadsto> Ret x \<rbrakk> \<Longrightarrow> R"
   \<comment> \<open> The process terminates; technically similar to the previous one. \<close>
@@ -294,7 +297,7 @@ lemma in_failuresE [elim]:
   by (auto simp add: failures_def refuses_def mstep_to_def deadlock_def)
      (metis Diff_insert_absorb map_Ev_of_Ev map_map)
 
-lemma in_failuresI1: "\<lbrakk> P \<midarrow>tr\<leadsto> Vis F; B \<inter> Ev ` dom(F) = {} \<rbrakk> \<Longrightarrow> (map Ev tr, B) \<in> failures P"
+lemma in_failuresI1: "\<lbrakk> P \<midarrow>tr\<leadsto> Vis F; B \<inter> Ev ` keys(F) = {} \<rbrakk> \<Longrightarrow> (map Ev tr, B) \<in> failures P"
   by (auto simp add: failures_def mstep_to_def)
 
 lemma in_failuresI2: "P \<midarrow>tr\<leadsto> Ret x \<Longrightarrow> (map Ev tr, B - {\<cmark> x}) \<in> failures P"
@@ -302,7 +305,7 @@ lemma in_failuresI2: "P \<midarrow>tr\<leadsto> Ret x \<Longrightarrow> (map Ev 
 
 lemma in_failures_iff:
   "(tr, B) \<in> failures P \<longleftrightarrow> 
-        (\<exists> F tr'. tr = map Ev tr' \<and> P \<midarrow>tr'\<leadsto> Vis F \<and> B \<inter> Ev ` dom(F) = {})
+        (\<exists> F tr'. tr = map Ev tr' \<and> P \<midarrow>tr'\<leadsto> Vis F \<and> B \<inter> Ev ` keys(F) = {})
         \<or> (\<exists> x tr'. tr = map Ev tr' \<and> \<cmark> x \<notin> B \<and> P \<midarrow>tr'\<leadsto> Ret x)
         \<or> (\<exists> x tr'. tr = map Ev tr' @ [\<cmark> x] \<and> P \<midarrow>tr'\<leadsto> Ret x)"
   by (auto simp add: failures_def mstep_to_def refuses_def)
@@ -327,11 +330,10 @@ lemma F3: "\<lbrakk> (s, X) \<in> failures(P); Y \<inter> {x. s @ [x] \<in> trac
   apply (rename_tac F tr')
    apply (drule_tac x="F" in spec)
   apply (auto)
-   apply (meson domI rev_image_eqI)
-  apply (rename_tac F tr' a y)
+  apply (rename_tac F tr' a)
   apply (drule_tac x="Ev a" in spec)
   apply (auto)
-  apply (metis Vis_Cons_trns butlast_snoc domI snoc_eq_iff_butlast trace_to_ConsE trace_to_Nil trace_to_trans)
+  apply (metis Vis_Cons_trns butlast_snoc snoc_eq_iff_butlast trace_to_ConsE trace_to_Nil trace_to_trans)
   done
 
 definition stable_failures :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" ("failures\<^sub>\<bottom>") where
@@ -355,16 +357,16 @@ lemma failures_Ret:
   by (simp add: failures_def mstep_to_def, safe, simp_all)
 
 lemma failures_Vis:
-  "failures (Vis F) = {([], X) | X. X \<inter> Ev ` dom F = {}} 
-                      \<union> {(Ev a # tr, X) | tr a X. a \<in> dom(F) \<and> (tr, X) \<in> failures(the(F a))}"
+  "failures (Vis F) = {([], X) | X. X \<inter> Ev ` keys F = {}} 
+                      \<union> {(Ev a # tr, X) | tr a X. a \<in> keys(F) \<and> (tr, X) \<in> failures(F a)}"
   apply (simp add: failures_def mstep_to_def Vis_trace_to)
   apply (safe, simp_all)
   apply force
   apply blast
   apply blast
   apply blast
-  apply (metis domI list.simps(9) option.sel)
-  apply (metis domI list.simps(9) option.sel)
+  apply (metis list.simps(9) option.sel)
+  apply (metis list.simps(9) option.sel)
   done
 
 lemma failures_deadlock: "failures deadlock = {([], X) | X. True}"
@@ -373,18 +375,18 @@ lemma failures_deadlock: "failures deadlock = {([], X) | X. True}"
 lemma dom_bind [simp]: "dom (\<lambda> x. P x \<bind> Q) = {x \<in> dom P. the(P x) \<in> dom Q}"
   by (auto, meson bind_eq_Some_conv, metis bind_eq_Some_conv option.sel)
 
-lemma refuses_Term_iff: "Q ref (B \<union> range \<cmark>) \<longleftrightarrow> (\<exists>F. Q = Vis F \<and> B \<inter> Ev ` dom F = {})"
+lemma refuses_Term_iff: "Q ref (B \<union> range \<cmark>) \<longleftrightarrow> (\<exists>F. Q = Vis F \<and> B \<inter> Ev ` keys F = {})"
   by (auto simp add: refuses_def)
 
 lemma failures_Term_iff:
-  "(map Ev tr, B \<union> range \<cmark>) \<in> failures P \<longleftrightarrow> (\<exists> F. P \<midarrow>tr\<leadsto> Vis F \<and> B \<inter> Ev ` dom F = {})"
+  "(map Ev tr, B \<union> range \<cmark>) \<in> failures P \<longleftrightarrow> (\<exists> F. P \<midarrow>tr\<leadsto> Vis F \<and> B \<inter> Ev ` keys F = {})"
   by (auto simp add: failures_def mstep_to_def refuses_Term_iff)
      (metis event.simps(4) trace_last_Ev)+
   
 text \<open> Refusing all termination events \<close>
 
 lemma "(tr, B \<union> range \<cmark>) \<in> failures P \<longleftrightarrow> 
-        (\<exists> F tr'. tr = map Ev tr' \<and> P \<midarrow>tr'\<leadsto> Vis F \<and> B \<inter> Ev ` dom(F) = {})
+        (\<exists> F tr'. tr = map Ev tr' \<and> P \<midarrow>tr'\<leadsto> Vis F \<and> B \<inter> Ev ` keys(F) = {})
         \<or> (\<exists> x tr'. tr = map Ev tr' @ [\<cmark> x] \<and> P \<midarrow>tr'\<leadsto> Ret x)"
   apply (auto simp add: failures_def mstep_to_def refuses_def)
   apply (metis inf_sup_distrib2 map_Ev_of_Ev map_map sup_eq_bot_iff)
@@ -407,7 +409,7 @@ lemma failures_bind:
        apply (metis Ev_subset_image UNIV_I append.right_neutral list.set_map map_append map_of_Ev_append subsetI)
       apply (metis Ev_subset_image UNIV_I append_Nil2 list.set_map map_append map_of_Ev_append subsetI)
      apply (rename_tac b F tr')
-     apply (drule_tac x="(\<lambda> e. F e \<bind> (\<lambda> x. Some (x \<bind> Q)))" in spec)
+     apply (drule_tac x="map_mapping (\<lambda> x. bind_itree x Q) F" in spec)
      apply (simp)
      apply (metis Int_Un_distrib2 Un_Int_eq(1) bind_Vis disjoint_iff trace_to_bind_left)
     apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)+
@@ -449,7 +451,7 @@ abbreviation Div :: "('e, 'r) ktree" where
 "Div \<equiv> (\<lambda> s. diverge)"
 
 lemma traces_deadlock: "traces(deadlock) = {[]}"
-  by (auto simp add: deadlock_def)
+  by (auto simp add: deadlock_def traces_Vis)
 
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
@@ -476,13 +478,12 @@ corec loop :: "('e, 'r) ktree \<Rightarrow> ('e, 'r) ktree" where
 "loop P e = Sil (P e \<bind> loop P)"
 
 definition inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree" where
-"inp c = Vis (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret)"
+"inp c = Vis (Mapping.Mapping (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret))"
 
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
   apply (simp add: inp_def traces_Vis traces_Ret)
-  apply (auto simp add: inp_def bind_eq_Some_conv elim!: in_tracesE trace_to_VisE)
-   apply (meson wb_prism.build_match)
-  apply (simp add: traces_Ret)
+  apply (auto simp add: inp_def bind_eq_Some_conv traces_Ret domIff keys.abs_eq  elim!: in_tracesE trace_to_VisE)
+  apply (metis (no_types, lifting) wb_prism_def)
   done 
 
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
@@ -492,9 +493,9 @@ syntax "_input" :: "id \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic"
 translations "c?(x) \<rightarrow> P" == "CONST input c (\<lambda> x. P)"
 
 primcorec outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
-"outp c v = Vis (\<lambda> e. case match\<^bsub>c\<^esub> e of 
+"outp c v = Vis (Mapping.Mapping (\<lambda> e. case match\<^bsub>c\<^esub> e of 
                       Some x \<Rightarrow> if (v = x) then Some (Ret ()) else None | 
-                      _ \<Rightarrow> None)"
+                      _ \<Rightarrow> None))"
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
 "output c e P = (\<lambda> s. outp c e \<then> Ret s)"
@@ -502,18 +503,20 @@ definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow
 syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_!'(_') \<rightarrow> _" [90, 0, 91] 91)
 translations "c!(e) \<rightarrow> P" == "CONST output c e P"
 
-definition map_prod :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('a \<rightharpoonup> 'b) \<Rightarrow> ('a \<rightharpoonup> 'b)" (infixl "\<odot>" 100) where
-"map_prod f g = (\<lambda>x. case g x of 
-                      None \<Rightarrow> f x | 
+definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
+"map_prod f g = Mapping.Mapping (\<lambda>x. case Mapping.lookup g x of 
+                      None \<Rightarrow> Mapping.lookup f x | 
                       Some y \<Rightarrow> 
-                        (case f x of 
-                          None \<Rightarrow> g x |
+                        (case Mapping.lookup f x of 
+                          None \<Rightarrow> Mapping.lookup g x |
                           Some z \<Rightarrow> None))"
 
 lemma map_prod_commute: "x \<odot> y = y \<odot> x"
-  by (auto simp add: fun_eq_iff map_prod_def option.case_eq_if)
+  apply (auto simp add: fun_eq_iff map_prod_def option.case_eq_if)
+  apply (metis (no_types, lifting) lookup.abs_eq mapping_eqI option.case(1) option.case(2) option.collapse)
+  done
 
-lemma map_prod_empty [simp]: "x \<odot> [\<mapsto>] = x" "[\<mapsto>] \<odot> x = x"
+lemma map_prod_empty [simp]: "x \<odot> {\<mapsto>} = x" "{\<mapsto>} \<odot> x = x"
    by (force simp add: fun_eq_iff map_prod_def option.case_eq_if)+
 
 lemma map_prod_merge: 
@@ -532,7 +535,7 @@ primcorec choice :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> (
       (Vis F, Vis G) \<Rightarrow> Vis (F \<odot> G) |
       (Sil P', _) \<Rightarrow> Sil (choice P' Q) |
       (_, Sil Q') \<Rightarrow> Sil (choice P Q') |
-      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis [\<mapsto>] | 
+      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {\<mapsto>} | 
       (Ret v, Vis _)   \<Rightarrow> Ret v | \<comment> \<open> Needs more thought \<close>
       (Vis _, Ret v)   \<Rightarrow> Ret v
    )"
@@ -565,7 +568,7 @@ next
 qed
 
 lemma 
-  assumes "P \<Midarrow>[a]\<Rightarrow> P'" "\<I>(P) \<inter> \<I>(Q) = {}" 
+  assumes "P \<Midarrow>[a]\<Rightarrow> P'" "\<I>(P) \<inter> \<I>(Q) = {}" "is_Vis Q"
   shows "P \<diamond> Q \<Midarrow>[a]\<Rightarrow> P'"
 proof -
   have "stabilises P"
@@ -581,8 +584,11 @@ proof -
     then show ?thesis
       using P'' by force
   next
-    case (Vis x3)
-    then show ?thesis sorry
+    case (Vis F)
+    with assms(1) P'' obtain e where "a = Ev e" "e \<in> dom F"
+      by (auto simp add: mstep_to_def domIff)
+    with assms P'' show ?thesis
+      apply (simp)
   qed
   oops
 
@@ -717,10 +723,14 @@ next
     apply (auto)
     apply (smt choice.simps(3) choice.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
      apply (smt choice.simps(3) choice.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
+(*
     apply (subgoal_tac "G x = Some y")
     apply (metis choice_deadlock choice_deadlock' option.sel)
     apply (smt choice.simps(3) choice.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
     done
+*)
+    oops
+
 qed
 
 definition extchoice :: "('e, 's) ktree \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" (infixl "\<box>" 59) where
