@@ -480,11 +480,17 @@ corec loop :: "('e, 'r) ktree \<Rightarrow> ('e, 'r) ktree" where
 definition inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree" where
 "inp c = Vis (Mapping.Mapping (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret))"
 
+term "Vis (Mapping [(build\<^bsub>c\<^esub> v, Ret v). v \<leftarrow> B])"
+
+definition inp_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('e, 'a) itree" where
+"inp_in c B = Vis (Mapping [(build\<^bsub>c\<^esub> v, Ret v). v \<leftarrow> B])"
+
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
   apply (simp add: inp_def traces_Vis traces_Ret)
   apply (auto simp add: inp_def bind_eq_Some_conv traces_Ret domIff keys.abs_eq  elim!: in_tracesE trace_to_VisE)
   apply (metis (no_types, lifting) wb_prism_def)
   done 
+
 
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
@@ -492,10 +498,8 @@ definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> (
 syntax "_input" :: "id \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic" ("_?'(_') \<rightarrow> _" [90, 0, 91] 91)
 translations "c?(x) \<rightarrow> P" == "CONST input c (\<lambda> x. P)"
 
-primcorec outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
-"outp c v = Vis (Mapping.Mapping (\<lambda> e. case match\<^bsub>c\<^esub> e of 
-                      Some x \<Rightarrow> if (v = x) then Some (Ret ()) else None | 
-                      _ \<Rightarrow> None))"
+definition outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
+"outp c v = Vis (Mapping [(build\<^bsub>c\<^esub> v, Ret())])"
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
 "output c e P = (\<lambda> s. outp c e \<then> Ret s)"
@@ -504,20 +508,17 @@ syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> lo
 translations "c!(e) \<rightarrow> P" == "CONST output c e P"
 
 definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
-"map_prod f g = Mapping.Mapping (\<lambda>x. case Mapping.lookup g x of 
-                      None \<Rightarrow> Mapping.lookup f x | 
-                      Some y \<Rightarrow> 
-                        (case Mapping.lookup f x of 
-                          None \<Rightarrow> Mapping.lookup g x |
-                          Some z \<Rightarrow> None))"
+"map_prod f g = Mapping.combine (\<lambda> x y. x) (Mapping.filter (\<lambda> k v. k \<notin> keys(g)) f) (Mapping.filter (\<lambda> k v. k \<notin> keys(f)) g)"
 
 lemma map_prod_commute: "x \<odot> y = y \<odot> x"
   apply (auto simp add: fun_eq_iff map_prod_def option.case_eq_if)
-  apply (metis (no_types, lifting) lookup.abs_eq mapping_eqI option.case(1) option.case(2) option.collapse)
+  apply (transfer)
+  apply (simp add: combine_options_def)
+  apply (auto simp add: option.case_eq_if)
   done
 
 lemma map_prod_empty [simp]: "x \<odot> {\<mapsto>} = x" "{\<mapsto>} \<odot> x = x"
-   by (force simp add: fun_eq_iff map_prod_def option.case_eq_if)+
+  by (simp add: map_prod_def, transfer, auto simp add: combine_options_def option.case_eq_if)+
 
 lemma map_prod_merge: 
   "f(x \<mapsto> v) \<odot> g = 
@@ -783,7 +784,7 @@ lemma "echo () \<midarrow>[build\<^bsub>Input\<^esub> 1, build\<^bsub>Output\<^e
   oops
 
 definition "buffer = 
-  loop (\<lambda> s. choice (do { i \<leftarrow> inp Input; Ret (s @ [i]) }) 
+  loop (\<lambda> s. choice (do { i \<leftarrow> inp_in Input [0,1,2,3]; Ret (s @ [i]) }) 
                     (do { test (\<lambda> s. length s > 0) s;  
                           outp Output (hd s); 
                           Ret (tl s)
@@ -791,8 +792,31 @@ definition "buffer =
 
 term "Input?(i) \<rightarrow> (\<lambda> s. Ret (s @ [i])) \<box> Skip"
 
+definition "bitree = loop (\<lambda> s. inp_in Input [0,1,2,3] \<bind> outp Output)"
+
+term AList.restrict
+
+
+lemma Vis_Mapping_bind [code]: "Vis (Mapping xs) \<bind> Q = Vis (Mapping (map (\<lambda> (e, P). (e, P \<bind> Q)) xs))"
+  apply (induct xs, simp add: empty_Mapping[THEN sym])
+   apply (transfer, auto)
+  apply (transfer, auto)
+  done
+
+definition "list_prod xs ys = AList.merge (filter (\<lambda> (k, v). k \<notin> set (map fst ys)) xs) (filter (\<lambda> (k, v). k \<notin> set (map fst xs)) ys)"
+
+(*
+lemma [code]: "Mapping F \<odot> Mapping G = Mapping (list_prod F G)"
+  apply (simp add: map_prod_def)
+  apply (transfer)
+  apply (auto simp add: fun_eq_iff merge_empty option.case_eq_if)
+  apply (induct_tac F)
+  apply (auto simp add: list_prod_def merge_empty option.case_eq_if)
+  sorry
+*)
+
 subsection \<open> Code Generation \<close>
 
-export_code bind_itree diverge loop echo buffer in Haskell module_name ITree
+export_code list_prod bitree buffer in Haskell module_name ITree
 
 end
