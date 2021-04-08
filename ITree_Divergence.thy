@@ -27,24 +27,16 @@ lemma stabilises_traceI: "\<lbrakk> P \<midarrow>tr\<leadsto> P'; tr \<noteq> []
 text \<open> An @{type itree} stabilises to a relation @{term R} if after stabilising and choosing a 
   new event, the continuation is in @{term R}. \<close>
 
-find_theorems vals
-
-lemma vals_keys: "vals F = mapping_apply F ` keys F"
-  apply (auto simp add: keys.rep_eq mapping.vals_def)
-  apply (metis (no_types, lifting) domI image_iff lookup.abs_eq option.sel rep_inverse)
-  apply (metis lookup.rep_eq option.sel)
-  done
-
 
 inductive stabilises_to :: "(('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 ret_stbs [intro]: "stabilises_to R (Ret x)" |
 sil_stbs [intro]: "stabilises_to R P \<Longrightarrow> stabilises_to R (Sil P)" |
-vis_stbs [intro]: "(\<And> t. t \<in> vals F \<Longrightarrow> R t) \<Longrightarrow> stabilises_to R (Vis F)"
+vis_stbs [intro]: "(\<And> t. t \<in> pran F \<Longrightarrow> R t) \<Longrightarrow> stabilises_to R (Vis F)"
 
 lemma monotonic_stabilises_to: "stabilises_to R P \<Longrightarrow> R \<le> S \<Longrightarrow> stabilises_to S P"
   apply (induct rule: stabilises_to.induct)
   apply (simp_all add: ret_stbs sil_stbs vis_stbs)
-  apply (simp add: predicate1D vis_stbs)
+  apply fastforce
   done
 
 lemma mono_stabilises_to [mono add]: "R \<le> S \<Longrightarrow> stabilises_to R \<le> stabilises_to S"
@@ -54,29 +46,29 @@ lemma stabilises_to_stabilises [intro]: "stabilises_to R P \<Longrightarrow> sta
   by (induct rule: stabilises_to.induct, auto)
 
 lemma stabilises_to_Sils_VisI [intro]: 
-  "vals F \<subseteq> Collect R \<Longrightarrow> stabilises_to R (Sils n (Vis F))"
+  "pran F \<subseteq> Collect R \<Longrightarrow> stabilises_to R (Sils n (Vis F))"
   by (induct n, auto)
 
 lemma stabilises_to_Sils_RetI [intro]: "stabilises_to R (Sils n (Ret x))"
   by (induct n, auto)
 
 lemma stabilises_alt_def: 
-  "stabilises_to R P = (\<exists> n P'. Sils n P' = P \<and> ((P' \<in> range Vis \<and> vals (un_Vis P') \<subseteq> Collect R) \<or> P' \<in> range Ret))"
+  "stabilises_to R P = (\<exists> n P'. Sils n P' = P \<and> ((P' \<in> range Vis \<and> pran (un_Vis P') \<subseteq> Collect R) \<or> P' \<in> range Ret))"
   apply (auto)
    apply (induct rule: stabilises_to.induct)
   apply (auto)
   apply (meson Sils.simps(1) range_eqI)
   apply (metis Sils.simps(2) itree.sel(3) rangeI)
   apply (meson Sils.simps(2) rangeI)
-  apply (smt (verit, ccfv_threshold) Sils.simps(1) imageE itree.sel(3) mem_Collect_eq rangeI subsetI)
+  apply (metis Collect_mem_eq Collect_mono Sils.simps(1) itree.sel(3) rangeI)
   done
 
 lemma stabilises_alt_def': 
   "stabilises_to R P = 
-    ((\<exists> n F. Sils n (Vis F) = P \<and> vals F \<subseteq> Collect R) \<or> (\<exists> n x. Sils n (Ret x) = P))"
+    ((\<exists> n F. Sils n (Vis F) = P \<and> pran F \<subseteq> Collect R) \<or> (\<exists> n x. Sils n (Ret x) = P))"
   by (auto simp add: stabilises_alt_def, metis itree.sel(3) rangeI, blast)
   
-lemma stabilises_to_Sils_Vis [simp]: "stabilises_to R (Sils n (Vis F)) = (vals F \<subseteq> Collect R)"
+lemma stabilises_to_Sils_Vis [simp]: "stabilises_to R (Sils n (Vis F)) = (pran F \<subseteq> Collect R)"
   by (auto, auto simp add: Sils_Vis_iff stabilises_alt_def image_subset_iff, metis Sils_Vis_not_Ret)
 
 subsection \<open> Divergence \<close>
@@ -206,7 +198,7 @@ proof (clarsimp simp add: no_divergence)
     apply (induct rule: trace_to.induct)
       apply (auto)
     using stabilises_to.cases apply fastforce
-    apply (metis imageI itree.distinct(3) itree.simps(3) itree.simps(9) no_divergence stabilises_to.cases vals_keys)
+    apply (metis Vis_Sils imageI itree.distinct(3) itree.simps(9) no_divergence pran_pdom stabilises_to.cases)
     done
   thus "stabilises P'"
     by auto
@@ -222,9 +214,9 @@ lemma no_divergence_Sil: "no_divergence (Sil P) = no_divergence P"
 lemma no_divergence_Sils: "no_divergence (Sils n P) = no_divergence P"
   by (induct n, simp_all add: no_divergence_Sil)
 
-lemma no_divergence_Vis: "no_divergence (Vis F) = (vals F \<subseteq> Collect no_divergence)"
+lemma no_divergence_Vis: "no_divergence (Vis F) = (pran F \<subseteq> Collect no_divergence)"
   apply (auto simp add: no_divergence)
-  apply (metis (no_types, lifting) image_iff trace_to.intros(3) vals_keys)
+  apply (metis (no_types, lifting) image_iff pran_pdom trace_to_Vis)
   apply (metis Sils.simps(1) no_divergence stabilises_to_Sils_Vis stabilises_to_no_divergence)
   done
 
@@ -243,7 +235,7 @@ scons: "stabilises_to div_free P \<Longrightarrow> div_free P"
 lemma div_free_Ret [simp]: "div_free (Ret x)"
   by (simp add: div_free.intros ret_stbs)
 
-lemma div_free_Vis: "div_free (Vis F) \<longleftrightarrow> (\<forall> P \<in> vals F. div_free P)"
+lemma div_free_Vis: "div_free (Vis F) \<longleftrightarrow> (\<forall> P \<in> pran F. div_free P)"
   by (auto simp add: div_free.intros vis_stbs)
      (metis div_free.cases itree.distinct(3) itree.distinct(5) itree.sel(3) stabilises_to.cases)
 
@@ -255,7 +247,7 @@ lemma div_free_Sils: "div_free (Sils n P) \<longleftrightarrow> div_free P"
 
 lemma div_free_step: "\<lbrakk> P \<midarrow>[a]\<leadsto> P'; div_free P \<rbrakk> \<Longrightarrow> div_free P'"
   by (auto simp add: div_free_Vis div_free_Sils)
-     (metis div_free_Sils imageI vals_keys)
+     (metis div_free_Sils imageI pran_pdom)
 
 lemma div_free_diverge [simp]: "div_free diverge = False"
   by (meson div_free.simps diverges_diverge stabilises_to_stabilises)

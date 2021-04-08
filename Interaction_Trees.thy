@@ -1,45 +1,18 @@
 section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
-  imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order" "HOL-Library.AList_Mapping"
+  imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
+  "Z_Toolkit.Partial_Fun"
 begin
 
 subsection \<open> Preliminaries \<close>
 
-abbreviation "keys \<equiv> Mapping.keys"
+type_notation pfun (infixr "\<Zpfun>" 0)
+notation pdom_res (infixr "\<Zdres>" 66)
+abbreviation ndres (infixr "\<Zndres>" 66) where "ndres A P \<equiv> (- A) \<Zdres> P"
 
-notation Map.empty ("[\<mapsto>]")
-notation Mapping.empty ("{\<mapsto>}")
-
-abbreviation "rel_map R \<equiv> rel_fun (=) (rel_option R)"
-
-lemma rel_map_iff: 
-  "rel_map R f g \<longleftrightarrow> (dom(f) = dom(g) \<and> (\<forall> x\<in>dom(f). R (the (f x)) (the (g x))))"
-  apply (auto simp add: rel_fun_def)
-  apply (metis not_None_eq option.rel_distinct(2))
-  apply (metis not_None_eq option.rel_distinct(1))
-  apply (metis option.rel_sel option.sel option.simps(3))
-  apply (metis domIff option.rel_sel)
-  done
-
-lift_bnf (dead 'k, vals: 'v) mapping [wits: "Map.empty :: 'k \<Rightarrow> 'v option"] for map: map_mapping rel: rel_mapping
-  by auto
-
-abbreviation "mapping_apply f x \<equiv> the (Mapping.lookup f x)"
-
-find_theorems map_mapping
-
-declare [[coercion mapping_apply]]
+declare [[coercion pfun_app]]
 declare [[coercion_enabled]]
-
-lemma rel_mapping_iff: 
-  "rel_mapping R f g \<longleftrightarrow> (keys(f) = keys(g) \<and> (\<forall> x\<in>keys(f). R (f x) (g x)))"
-  apply (auto simp add: mapping.rel_mapping_def keys.rep_eq rel_map_iff vimage2p_def)
-  apply (metis domI lookup.rep_eq)
-  apply (metis domI lookup.abs_eq option.sel rep_inverse)
-  done
-
-type_notation mapping (infixr "\<Zpfun>" 0)
 
 subsection \<open> Interaction Tree Type \<close>
 
@@ -64,7 +37,7 @@ lemma stable_Vis [intro]: "stable (Vis F)"
 lemma unstableE: "\<lbrakk> unstable P; \<And> P'. P = Sil P' \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   using is_Sil_def by auto
 
-lemma is_VisE: "\<lbrakk> is_Vis P; \<And> x. P = Vis x \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
+lemma is_VisE [elim]: "\<lbrakk> is_Vis P; \<And> x. P = Vis x \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   using is_Vis_def by blast
 
 theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
@@ -72,20 +45,20 @@ theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred:
   "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
   "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
   "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q" and
-  "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (keys(F) = keys(G) \<and> (\<forall> x\<in>keys(F). \<phi> (F x) (G x)))"
+  "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (pdom(F) = pdom(G) \<and> (\<forall> x\<in>pdom(F). \<phi> (F x) (G x)))"
   shows "P = Q"
   using assms
-  by (coinduct rule: itree.coinduct, auto simp add: rel_mapping_iff)
+  by (coinduct rule: itree.coinduct, auto simp add: relt_pfun_iff)
 
 theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes phi: "\<phi> P Q" and
   "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
   "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
   "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q \<or> P = Q" and
-  "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (keys(F) = keys(G) \<and> (\<forall> x\<in>keys(F). \<phi> (F x) (G x) \<or> F x = G x))"
+  "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (pdom(F) = pdom(G) \<and> (\<forall> x\<in>pdom(F). \<phi> (F x) (G x) \<or> F x = G x))"
   shows "P = Q"
   using assms
-  by (coinduct rule: itree.coinduct_strong, auto simp add: rel_mapping_iff)
+  by (coinduct rule: itree.coinduct_strong, auto elim!: is_VisE simp add: relt_pfun_iff)
 
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
  cf. "Coinduction all the way up". Davide Sangiorgi. Replace R \<subseteq> F(R) prove R \<subseteq> C(F(R)). \<close>
@@ -96,37 +69,34 @@ type_synonym ('e, 'r) ktree = "'r \<Rightarrow> ('e, 'r) itree"
 
 primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, 's) itree" where
 "bind_itree u k = 
-  (case u of 
+  (case u of
+    \<comment> \<open> Pass the returned value to the continuation; the silent event is needed for friendliness. \<close>
     Ret r \<Rightarrow> Sil (k r) | 
+    \<comment> \<open> Execute the silent action and then the remainder of the binding. \<close>
     Sil t \<Rightarrow> Sil (bind_itree t k) | 
-    Vis t \<Rightarrow> Vis (map_mapping (\<lambda> x. bind_itree x k) t))"
+    \<comment> \<open> Apply the binding function to every possible continuation (non-trivial). \<close>
+    Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
 
-find_theorems map_mapping
-
-thm map_map
-
-term Mapping.lookup
-
-
+lemma map_pfun_alt_def: "map_pfun f g = pfun_of_map (map_option f \<circ> pfun_lookup g)"
+  by (simp add: map_pfun_def)
 
 friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "bind_itree u k = 
   (case u of 
     Ret r \<Rightarrow> Sil (k r) | 
     Sil t \<Rightarrow> Sil (bind_itree t k) | 
-    Vis t \<Rightarrow> Vis (map_mapping (\<lambda> x. bind_itree x k) t))"
-   apply (simp add: bind_itree.code)
-    sorry   
+    Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
+  by (simp add: bind_itree.code, transfer_prover)
 
 adhoc_overloading bind bind_itree
 
-lemma bind_Ret [simp]: "Ret v \<bind> k = Sil (k v)"
+lemma bind_Ret [simp, code]: "Ret v \<bind> k = Sil (k v)"
   by (simp add: bind_itree.ctr(1))
 
-lemma bind_Sil [simp]: "Sil t \<bind> k = Sil (t \<bind> k)"
+lemma bind_Sil [simp, code]: "Sil t \<bind> k = Sil (t \<bind> k)"
   by (simp add: bind_itree.ctr)
 
-lemma bind_Vis [simp]: "Vis t \<bind> k = Vis (map_mapping (\<lambda> x. bind_itree x k) t)"
+lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind_itree x k) t)"
   by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
 
 definition [simp]: "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
@@ -153,11 +123,11 @@ lemma bind_RetE' [elim!]:
 
 lemma bind_VisE:
   assumes "P \<bind> Q = Vis F"
-  obtains F' where "Vis F' = P" "F = map_mapping (\<lambda> x. x \<bind> Q) F'"
+  obtains F' where "Vis F' = P" "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
 proof -
   obtain F' where "Vis F' = P"
     by (metis assms bind_itree.disc_iff(2) is_Vis_def)
-  moreover with assms have "F = map_mapping (\<lambda> x. x \<bind> Q) F'"
+  moreover with assms have "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
     by (auto simp add: fun_eq_iff)
   ultimately show ?thesis
     using that by force
@@ -165,7 +135,7 @@ qed
 
 lemma bind_VisE':
   assumes "Vis F = P \<bind> Q"
-  obtains F' where "Vis F' = P" "F = map_mapping (\<lambda> x. x \<bind> Q) F'"
+  obtains F' where "Vis F' = P" "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
   by (metis assms bind_VisE)
 
 lemma bind_Sil_dest:
@@ -232,10 +202,8 @@ lemma Sils_Vis_iff: "Sils m (Vis F) = Sils n (Vis G) \<longleftrightarrow> (m = 
 lemma bind_Sils [simp]: "Sils n P \<bind> Q = Sils n (P \<bind> Q)"
   by (induct n; simp)
 
-
 lemma Sils_Sil_shift [simp]: "Sils n (Sil P) = Sil (Sils n P)"
   by (metis Sils.simps(1) Sils.simps(2) Sils_Sils add_Suc_right)
-
 
 lemma bind_Sils_dest:
   "P \<bind> Q = Sils n R \<Longrightarrow> 
@@ -261,7 +229,7 @@ subsection \<open> Operational Semantics and Traces \<close>
 inductive trace_to :: "('e, 's) itree \<Rightarrow> 'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" ("_ \<midarrow>_\<leadsto> _" [55, 0, 55] 55) where
 trace_to_Nil [intro]: "P \<midarrow>[]\<leadsto> P" | 
 trace_to_Sil [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sil P \<midarrow>tr\<leadsto> P'" |
-trace_to_Vis [intro]: "\<lbrakk> e \<in> keys F; F e \<midarrow>tr\<leadsto> P' \<rbrakk> \<Longrightarrow> Vis F \<midarrow>e # tr\<leadsto> P'"
+trace_to_Vis [intro]: "\<lbrakk> e \<in> pdom F; F e \<midarrow>tr\<leadsto> P' \<rbrakk> \<Longrightarrow> Vis F \<midarrow>e # tr\<leadsto> P'"
 
 inductive_cases
   trace_to_VisE [elim]: "Vis F \<midarrow>tr\<leadsto> P" and
@@ -336,9 +304,9 @@ qed
 
 lemma trace_to_singleE [elim!]:
   assumes "P \<midarrow>[a]\<leadsto> P'"
-  obtains m n F  where "P = Sils m (Vis F)" "a \<in> keys F" "F a = Sils n P'"
+  obtains m n F  where "P = Sils m (Vis F)" "a \<in> pdom F" "F a = Sils n P'"
 proof -
-  have "\<And> tr. P \<midarrow>tr\<leadsto> P' \<Longrightarrow> (length tr = 1 \<longrightarrow> (\<exists> m n F. P = Sils m (Vis F) \<and> hd tr \<in> keys F \<and> F (hd tr) = Sils n P'))"
+  have "\<And> tr. P \<midarrow>tr\<leadsto> P' \<Longrightarrow> (length tr = 1 \<longrightarrow> (\<exists> m n F. P = Sils m (Vis F) \<and> hd tr \<in> pdom F \<and> F (hd tr) = Sils n P'))"
     apply (induct_tac rule: trace_to.induct)
        apply (auto)
       apply (metis Sils.simps(2))
@@ -349,7 +317,7 @@ proof -
     by (metis One_nat_def assms length_Cons list.sel(1) list.size(3) that)
 qed
 
-lemma trace_to_single_iff: "P \<midarrow>[a]\<leadsto> P' \<longleftrightarrow> (\<exists> m n F. P = Sils m (Vis F) \<and> a \<in> keys F \<and> F a = Sils n P')"
+lemma trace_to_single_iff: "P \<midarrow>[a]\<leadsto> P' \<longleftrightarrow> (\<exists> m n F. P = Sils m (Vis F) \<and> a \<in> pdom F \<and> F a = Sils n P')"
   by (metis trace_of_Sils trace_to_Sils trace_to_Vis trace_to_singleE)
 
 lemma trace_to_Cons [intro]:
@@ -367,15 +335,6 @@ lemma trace_to_trans:
    apply (auto  elim: trace_to_NilE trace_to_ConsE)
   apply (meson trace_to_Cons trace_to_ConsE)
   done  
-
-lemma Mapping_apply [simp]: "mapping.Mapping F x = the (F x)"
-  by (simp add: lookup.abs_eq)
-
-lemma keys_map_mapping [simp]: "keys (map_mapping F G) = keys G"
-  unfolding map_mapping_def by (auto; metis dom_map_option_comp keys.abs_eq keys.rep_eq)
-
-lemma map_mapping_apply [simp]: "x \<in> keys G \<Longrightarrow> map_mapping F G x = F (G x)"
-  unfolding map_mapping_def by (auto, simp add: keys_is_none_rep lookup.rep_eq the_map_option)
 
 lemma trace_to_bind_left:
   assumes "P \<midarrow>tr\<leadsto> P'"
@@ -449,7 +408,7 @@ lemma trace_to_bind_single_cases:
   apply (metis trace_to_Nil trace_to_Sils trace_to_Vis)
   done
 
-lemma Vis_Cons_trns [simp]: "Vis F' \<midarrow>a # tr\<leadsto> P' \<longleftrightarrow> (a \<in> keys(F') \<and> F' a \<midarrow>tr\<leadsto> P')"
+lemma Vis_Cons_trns [simp]: "Vis F' \<midarrow>a # tr\<leadsto> P' \<longleftrightarrow> (a \<in> pdom(F') \<and> F' a \<midarrow>tr\<leadsto> P')"
   by (auto)
 
 lemma Ret_trns [simp]: "Ret x \<midarrow>tr\<leadsto> P \<longleftrightarrow> (tr = [] \<and> P = Ret x)"
@@ -496,7 +455,7 @@ lemma trace_to_Ret_end:
 text \<open> If an event happened beyond a visible choice, then this must have resolved the choice. \<close>
 
 lemma trace_to_determinstic_choice:
-  "\<lbrakk> P \<midarrow>tr\<leadsto> Vis F; P \<midarrow>tr @ [e]\<leadsto> P' \<rbrakk> \<Longrightarrow> e \<in> keys(F)"
+  "\<lbrakk> P \<midarrow>tr\<leadsto> Vis F; P \<midarrow>tr @ [e]\<leadsto> P' \<rbrakk> \<Longrightarrow> e \<in> pdom(F)"
   apply (induct tr arbitrary: P P', auto)
   using Sils_Vis_inj apply blast
   apply (metis Sils_Vis_trns Vis_Cons_trns trace_to_ConsE trace_to_singleE)

@@ -7,7 +7,7 @@ begin
 text \<open> Deadlock is an interaction with no visible event \<close>
 
 definition deadlock :: "('e, 'r) itree" where
-"deadlock = Vis {\<mapsto>}"
+"deadlock = Vis {}\<^sub>p"
 
 lemma deadlock_trace_to: "deadlock \<midarrow>tr\<leadsto> P \<longleftrightarrow> tr = [] \<and> P = deadlock"
   by (auto simp add: deadlock_def)
