@@ -728,6 +728,22 @@ next
 *)
     oops
 
+definition scomp :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> 'b \<times> 'c)" (infixl "\<otimes>" 100) where
+"scomp f g = pfun_of_map (\<lambda> x. do { u \<leftarrow> pfun_lookup f x; v \<leftarrow> pfun_lookup g x; Some (u, v) })"
+
+corec par :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<parallel>" 59) where
+"par P A Q =
+   (case (P, Q) of 
+      (Vis F, Vis G) \<Rightarrow> 
+        Vis (map_pfun (\<lambda> (P, Q). par P A Q) ((A \<Zdres> F) \<otimes> (A \<Zdres> G))) |
+      (Sil P', _) \<Rightarrow> Sil (par P' A Q) |
+      (_, Sil Q') \<Rightarrow> Sil (par P A Q') |
+      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {}\<^sub>p | 
+      (Ret v, Vis _)   \<Rightarrow> Ret v | \<comment> \<open> Needs more thought \<close>
+      (Vis _, Ret v)   \<Rightarrow> Ret v
+   )"
+
+
 
 definition extchoice :: "('e, 's) ktree \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" (infixl "\<box>" 59) where
 "extchoice P Q \<equiv> (\<lambda> s. choice (P s) (Q s))"
