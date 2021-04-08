@@ -618,10 +618,8 @@ lemma "\<And> P. (X = choice P P \<and> Y = P) \<or> (X = Y) \<Longrightarrow> X
   apply (auto simp add: itree.case_eq_if itree.distinct_disc(1))
   oops
 
-
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
-
 
 lemma is_Sil_choice: "is_Sil (choice P Q) = (is_Sil P \<or> is_Sil Q)"
   using itree.exhaust_disc by (auto)
@@ -686,7 +684,6 @@ next
     by (metis is_Sil_choice itree.disc(5) itree.disc(6)) 
 qed
 
-
 lemma choice_unstable: "unstable P \<Longrightarrow> choice P Q = Sil (choice (un_Sil P) Q)"
   by (metis (no_types, lifting) choice.ctr(2) itree.collapse(2) itree.simps(11) prod.sel(1))
 
@@ -747,6 +744,7 @@ subsection \<open> Examples \<close>
 chantype Chan =
   Input :: integer
   Output :: integer
+  State :: "integer list"
 
 corec speak :: "('e, 's) itree" where
 "speak = Vis (map_pfun (\<lambda> _. Sil speak) pId)"
@@ -783,17 +781,19 @@ lemma "echo () \<midarrow>[build\<^bsub>Input\<^esub> 1, build\<^bsub>Output\<^e
 
 definition "buffer = 
   loop (\<lambda> s. choice (do { i \<leftarrow> inp_in Input [0,1,2,3]; Ret (s @ [i]) }) 
-                    (do { test (\<lambda> s. length s > 0) s;  
-                          outp Output (hd s); 
-                          Ret (tl s)
-                        }))"
+                    (choice (do { test (\<lambda> s. length s > 0) s;  
+                                  outp Output (hd s); 
+                                  Ret (tl s)
+                                })
+                            (do { outp State s; Ret s })
+       ))"
 
-term "Input?(i) \<rightarrow> (\<lambda> s. Ret (s @ [i])) \<box> Skip"
+definition "mytest = loop (Input?(i) \<rightarrow> (\<lambda> s. Ret (s @ [i])) \<box> Stop)"
 
 definition "bitree = loop (\<lambda> s. inp_in Input [0,1,2,3] \<bind> outp Output)"
 
 subsection \<open> Code Generation \<close>
 
-export_code bitree buffer diverge deadlock in Haskell module_name ITree
+export_code mytest bitree buffer diverge deadlock in Haskell module_name ITree_Examples (string_classes)
 
 end
