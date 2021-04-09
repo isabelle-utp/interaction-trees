@@ -9,6 +9,9 @@ text \<open> Deadlock is an interaction with no visible event \<close>
 definition deadlock :: "('e, 'r) itree" where
 "deadlock = Vis {}\<^sub>p"
 
+lemma stable_deadlock [simp]: "stable deadlock"
+  by (simp add: deadlock_def)
+
 lemma deadlock_trace_to: "deadlock \<midarrow>tr\<leadsto> P \<longleftrightarrow> tr = [] \<and> P = deadlock"
   by (auto simp add: deadlock_def)
 

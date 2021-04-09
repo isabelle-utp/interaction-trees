@@ -63,6 +63,11 @@ theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induc
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
  cf. "Coinduction all the way up". Davide Sangiorgi. Replace R \<subseteq> F(R) prove R \<subseteq> C(F(R)). \<close>
 
+text \<open> Configuring the code generator; either partial functions or associative lists can be used
+  in specifying choice functions. \<close>
+
+code_datatype pfun_of_alist pfun_of_map
+
 subsection \<open> Kleisli Trees and Monad \<close>
 
 type_synonym ('e, 'r) ktree = "'r \<Rightarrow> ('e, 'r) itree"
