@@ -728,48 +728,47 @@ next
 *)
     oops
 
+text \<open> The following function combines two choice functions for parallel composition. \<close>
+
 datatype (discs_sels) ('a, 'b) andor = Left 'a | Right 'b | Both "'a \<times> 'b"
-
-term case_andor
-
-term map2
-
-term map_pfun
-
-(* Use combine to achieve *)
 
 definition scomp :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
 "scomp f A g = 
   map_pfun Both (A \<Zdres> pfuse f g) + map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) + map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
 
-(*
-pfun_of_map (\<lambda> x. case (pfun_lookup f x, pfun_lookup g x) of
-                                 (Some P, Some Q) \<Rightarrow> 
-                                    (if (x \<in> A) then Some (Both (P, Q)) else None) |
-                                 (Some P, None) \<Rightarrow> (if (x \<notin> A) then Some (Left P) else None) |
-                                 (None, Some Q) \<Rightarrow> (if (x \<notin> A) then Some (Right Q) else None) |
-                                 _ \<Rightarrow> None)"
-*)
-
 corec par :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" where
 "par P A Q =
    (case (P, Q) of 
-      (Vis F, Vis G) \<Rightarrow> 
-        Vis (map_pfun (case_andor (\<lambda> P'. par P' A (Vis G)) (\<lambda> Q'. par (Vis F) A Q') (\<lambda> (P', Q'). par P' A Q')) 
-                      (scomp F A G)) |
+      \<comment> \<open> Silent events happen independently and have priority \<close>
       (Sil P', _) \<Rightarrow> Sil (par P' A Q) |
       (_, Sil Q') \<Rightarrow> Sil (par P A Q') |
-      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {}\<^sub>p | 
-      (Ret v, Vis _)   \<Rightarrow> Ret v | \<comment> \<open> Needs more thought \<close>
-      (Vis _, Ret v)   \<Rightarrow> Ret v
+      \<comment> \<open> Visible events are subject to synchronisation constraints \<close>
+      (Vis F, Vis G) \<Rightarrow>
+        Vis (map_pfun 
+              (case_andor 
+                (\<lambda> P'. par P' A (Vis G)) \<comment> \<open> The left side advances independently \<close>
+                (\<lambda> Q'. par (Vis F) A Q') \<comment> \<open> The right side advances independently \<close>
+                (\<lambda> (P', Q'). par P' A Q')) \<comment> \<open> Both sides synchronise \<close>
+              (scomp F A G)) |
+      \<comment> \<open> If both sides terminate, then they must agree on the returned value. This could be
+           generalised using a merge function. \<close>
+      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {}\<^sub>p |
+      \<comment> \<open> A termination occurring on one side is pushed forward. Only events not requiring
+           synchronisation can occur on the other side. \<close>
+      (Ret v, Vis G)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (par (Ret v) A P)) (A \<Zndres> G)) | \<comment> \<open> Needs more thought \<close>
+      (Vis F, Ret v)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (par P A (Ret v))) (A \<Zndres> F))
    )"
 
 corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree" where
 "hide P A = 
   (case P of
-    Vis F \<Rightarrow> if (card (A \<inter> pdom(F)) = 1) then Sil (hide (F (the_elem (A \<inter> pdom(F)))) A) 
-             else if (A \<inter> pdom(F)) = {} then Vis (map_pfun (\<lambda> X. hide X A) F)
-             else deadlock |
+    Vis F \<Rightarrow> 
+      \<comment> \<open> If precisely one event in the hidden set is enabled, this becomes a silent event \<close>
+      if (card (A \<inter> pdom(F)) = 1) then Sil (hide (F (the_elem (A \<inter> pdom(F)))) A)
+      \<comment> \<open> If no event is in the hidden set, then the process continues as normal \<close>
+      else if (A \<inter> pdom(F)) = {} then Vis (map_pfun (\<lambda> X. hide X A) F)
+      \<comment> \<open> Otherwise, there are multiple hidden events present and we deadlock \<close>
+      else deadlock |
     Sil P \<Rightarrow> Sil (hide P A) |
     Ret x \<Rightarrow> Ret x)"
 
@@ -838,12 +837,6 @@ definition "bitree = loop (\<lambda> s. inp_in Input [0,1,2,3] \<bind> outp Outp
 
 chantype schan = 
   a :: unit b :: unit c :: unit
-
-(*
-definition "partest = 
-  (\<lambda> s. par (loop (\<lambda> s. (do { outp a (); outp b (); Ret () })) s) {build\<^bsub>b\<^esub> ()} 
-        (loop (\<lambda> s. (do { outp b (); outp c (); Ret () })) s)) "
-*)
 
 definition "partest = 
   (\<lambda> s. hide
