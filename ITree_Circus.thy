@@ -728,14 +728,35 @@ next
 *)
     oops
 
-definition scomp :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> 'b \<times> 'c)" (infixl "\<otimes>" 100) where
-"scomp f g = pfun_of_map (\<lambda> x. do { u \<leftarrow> pfun_lookup f x; v \<leftarrow> pfun_lookup g x; Some (u, v) })"
+datatype (discs_sels) ('a, 'b) andor = Left 'a | Right 'b | Both "'a \<times> 'b"
 
-corec par :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<parallel>" 59) where
+term case_andor
+
+term map2
+
+term map_pfun
+
+(* Use combine to achieve *)
+
+definition scomp :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
+"scomp f A g = 
+  map_pfun Both (A \<Zdres> pfuse f g) + map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) + map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
+
+(*
+pfun_of_map (\<lambda> x. case (pfun_lookup f x, pfun_lookup g x) of
+                                 (Some P, Some Q) \<Rightarrow> 
+                                    (if (x \<in> A) then Some (Both (P, Q)) else None) |
+                                 (Some P, None) \<Rightarrow> (if (x \<notin> A) then Some (Left P) else None) |
+                                 (None, Some Q) \<Rightarrow> (if (x \<notin> A) then Some (Right Q) else None) |
+                                 _ \<Rightarrow> None)"
+*)
+
+corec par :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" where
 "par P A Q =
    (case (P, Q) of 
       (Vis F, Vis G) \<Rightarrow> 
-        Vis (map_pfun (\<lambda> (P, Q). par P A Q) ((A \<Zdres> F) \<otimes> (A \<Zdres> G))) |
+        Vis (map_pfun (case_andor (\<lambda> P'. par P' A (Vis G)) (\<lambda> Q'. par (Vis F) A Q') (\<lambda> (P', Q'). par P' A Q')) 
+                      (scomp F A G)) |
       (Sil P', _) \<Rightarrow> Sil (par P' A Q) |
       (_, Sil Q') \<Rightarrow> Sil (par P A Q') |
       (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {}\<^sub>p | 
@@ -743,7 +764,14 @@ corec par :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree \
       (Vis _, Ret v)   \<Rightarrow> Ret v
    )"
 
-
+corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree" where
+"hide P A = 
+  (case P of
+    Vis F \<Rightarrow> if (card (A \<inter> pdom(F)) = 1) then Sil (hide (F (the_elem (A \<inter> pdom(F)))) A) 
+             else if (A \<inter> pdom(F)) = {} then Vis (map_pfun (\<lambda> X. hide X A) F)
+             else deadlock |
+    Sil P \<Rightarrow> Sil (hide P A) |
+    Ret x \<Rightarrow> Ret x)"
 
 definition extchoice :: "('e, 's) ktree \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" (infixl "\<box>" 59) where
 "extchoice P Q \<equiv> (\<lambda> s. choice (P s) (Q s))"
@@ -808,8 +836,23 @@ definition "mytest = loop (Input?(i) \<rightarrow> (\<lambda> s. Ret (s @ [i])) 
 
 definition "bitree = loop (\<lambda> s. inp_in Input [0,1,2,3] \<bind> outp Output)"
 
+chantype schan = 
+  a :: unit b :: unit c :: unit
+
+(*
+definition "partest = 
+  (\<lambda> s. par (loop (\<lambda> s. (do { outp a (); outp b (); Ret () })) s) {build\<^bsub>b\<^esub> ()} 
+        (loop (\<lambda> s. (do { outp b (); outp c (); Ret () })) s)) "
+*)
+
+definition "partest = 
+  (\<lambda> s. hide
+        (par (loop (\<lambda> s. (do { outp a (); outp b (); Ret () })) s) {build\<^bsub>b\<^esub> ()} 
+             (loop (\<lambda> s. (do { outp b (); outp c (); Ret () })) s)) {build\<^bsub>b\<^esub> ()})" 
+
+
 subsection \<open> Code Generation \<close>
 
-export_code mytest bitree buffer diverge deadlock in Haskell module_name ITree_Examples (string_classes)
+export_code mytest bitree buffer partest diverge deadlock in Haskell module_name ITree_Examples (string_classes)
 
 end

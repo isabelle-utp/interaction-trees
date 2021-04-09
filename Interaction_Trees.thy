@@ -107,7 +107,6 @@ syntax
 translations
   "P \<Zcomp> Q" == "CONST kleisli_comp (CONST bind) P Q"
 
-
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
 
