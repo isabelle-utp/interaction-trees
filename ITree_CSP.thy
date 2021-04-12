@@ -226,32 +226,42 @@ text \<open> The following function combines two choice functions for parallel c
 
 datatype (discs_sels) ('a, 'b) andor = Left 'a | Right 'b | Both "'a \<times> 'b"
 
-definition pmerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
-"pmerge f A g = 
+definition emerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
+"emerge f A g = 
   map_pfun Both (A \<Zdres> pfuse f g) + map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) + map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
 
-corec par :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" where
-"par P A Q =
+corec par :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('a \<times> 'b \<Rightarrow> 'c) \<Rightarrow> ('e, 'b) itree \<Rightarrow> ('e, 'c) itree" where
+"par P A f Q =
    (case (P, Q) of 
       \<comment> \<open> Silent events happen independently and have priority \<close>
-      (Sil P', _) \<Rightarrow> Sil (par P' A Q) |
-      (_, Sil Q') \<Rightarrow> Sil (par P A Q') |
+      (Sil P', _) \<Rightarrow> Sil (par P' A f Q) |
+      (_, Sil Q') \<Rightarrow> Sil (par P A f Q') |
       \<comment> \<open> Visible events are subject to synchronisation constraints \<close>
       (Vis F, Vis G) \<Rightarrow>
         Vis (map_pfun 
               (case_andor 
-                (\<lambda> P'. par P' A (Vis G)) \<comment> \<open> The left side advances independently \<close>
-                (\<lambda> Q'. par (Vis F) A Q') \<comment> \<open> The right side advances independently \<close>
-                (\<lambda> (P', Q'). par P' A Q')) \<comment> \<open> Both sides synchronise \<close>
-              (pmerge F A G)) |
+                (\<lambda> P'. par P' A f (Vis G)) \<comment> \<open> The left side advances independently \<close>
+                (\<lambda> Q'. par (Vis F) A f Q') \<comment> \<open> The right side advances independently \<close>
+                (\<lambda> (P', Q'). par P' A f Q')) \<comment> \<open> Both sides synchronise \<close>
+              (emerge F A G)) |
       \<comment> \<open> If both sides terminate, then they must agree on the returned value. This could be
            generalised using a merge function. \<close>
-      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {}\<^sub>p |
+      (Ret x, Ret y) \<Rightarrow> Ret (f (x, y)) |
       \<comment> \<open> A termination occurring on one side is pushed forward. Only events not requiring
            synchronisation can occur on the other side. \<close>
-      (Ret v, Vis G)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (par (Ret v) A P)) (A \<Zndres> G)) |
-      (Vis F, Ret v)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (par P A (Ret v))) (A \<Zndres> F))
+      (Ret v, Vis G)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (par (Ret v) A f P)) (A \<Zndres> G)) |
+      (Vis F, Ret v)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (par P A f (Ret v))) (A \<Zndres> F))
    )"
+
+consts 
+  interleave :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<interleave>" 55)
+  gparallel :: "'a \<Rightarrow> 'e set \<Rightarrow> 'a \<Rightarrow> 'a" ("_ \<parallel>\<^bsub>_\<^esub> _" [55, 0, 56] 56)
+
+abbreviation "gpar_csp P cs Q \<equiv> par P cs (\<lambda> _ . ()) Q"
+
+abbreviation "inter_csp P Q \<equiv> gpar_csp P {} Q"
+
+adhoc_overloading gparallel gpar_csp and interleave inter_csp
 
 subsection \<open> Hiding \<close>
 
