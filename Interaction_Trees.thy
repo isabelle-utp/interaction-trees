@@ -40,6 +40,9 @@ lemma unstableE: "\<lbrakk> unstable P; \<And> P'. P = Sil P' \<Longrightarrow> 
 lemma is_VisE [elim]: "\<lbrakk> is_Vis P; \<And> x. P = Vis x \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   using is_Vis_def by blast
 
+lemma is_RetE [elim]: "\<lbrakk> is_Ret P; \<And> x. P = Ret x \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
+  by (metis (mono_tags, hide_lams) is_Ret_def)
+
 theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes "\<phi> P Q" and
   "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
@@ -115,17 +118,17 @@ translations
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
 
-lemma bind_RetE [elim!]:
+lemma bind_RetD [dest!]:
   assumes "P \<bind> Q = Ret x"
   shows False
   by (metis assms bind_itree.disc(1) bind_itree.disc(2) itree.disc(7) itree.exhaust_disc stable_Ret)
 
-lemma bind_RetE' [elim!]:
+lemma bind_RetD' [dest!]:
   assumes "Ret x = P \<bind> Q"
   shows False
-  by (metis assms bind_RetE)
+  by (metis assms bind_RetD)
 
-lemma bind_VisE:
+lemma bind_VisE [elim]:
   assumes "P \<bind> Q = Vis F"
   obtains F' where "Vis F' = P" "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
 proof -
@@ -137,7 +140,7 @@ proof -
     using that by force
 qed
 
-lemma bind_VisE':
+lemma bind_VisE' [elim]:
   assumes "Vis F = P \<bind> Q"
   obtains F' where "Vis F' = P" "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
   by (metis assms bind_VisE)
@@ -146,12 +149,36 @@ lemma bind_Sil_dest:
   "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> R = Q x))"
   by (metis bind_itree.disc_iff(1) bind_itree.simps(3) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.disc(5) itree.sel(2))
 
-lemma bind_SilE:
+lemma bind_SilE [elim]:
   assumes "(P \<bind> Q) = Sil X"
     "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
     "\<And> x. \<lbrakk> P = Ret x; X = Q x \<rbrakk> \<Longrightarrow> R"
   shows R
   using assms bind_Sil_dest by blast
+
+lemma bind_SilE' [elim]:
+  assumes "Sil X = (P \<bind> Q)"
+    "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; X = Q x \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) bind_SilE)
+
+lemma bind_itree_right_unit:
+  shows "P \<bind> Ret = P"
+  apply (coinduction arbitrary: P rule: itree_strong_coind)
+     apply (auto)
+   apply (erule is_RetE)
+   apply (simp)
+  oops
+  (* Need to fix the definition of bind for @{const Ret *)
+
+lemma bind_itree_assoc:
+  fixes P :: "('e, 's) itree"
+  shows "P \<bind> (\<lambda> x. (Q x \<bind> R)) = (P \<bind> Q) \<bind> R"
+  apply (coinduction arbitrary: P Q R rule: itree_strong_coind)
+  apply (metis bind_itree.disc(1) bind_itree.disc(2) itree.distinct_disc(1) itree.distinct_disc(5) itree.exhaust_disc)
+  apply force+
+  done
 
 subsection \<open> Transitive Silent Steps \<close>
 
@@ -226,8 +253,8 @@ lemma bind_SilsE:
     "\<And> P'. \<lbrakk> P = Sils n P'; P' \<bind> Q = X \<rbrakk> \<Longrightarrow> R"
     "\<And> x m. \<lbrakk> m < n; P = Sils m (Ret x); Q x = Sils (n - (m + 1)) X \<rbrakk> \<Longrightarrow> R"
   shows R
-  using assms(1) assms(2) assms(3) bind_Sils_dest by blast
-  
+  using assms(1) assms(2) assms(3) bind_Sils_dest by blast  
+
 subsection \<open> Operational Semantics and Traces \<close>
 
 inductive trace_to :: "('e, 's) itree \<Rightarrow> 'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" ("_ \<midarrow>_\<leadsto> _" [55, 0, 55] 55) where
