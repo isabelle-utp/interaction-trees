@@ -149,7 +149,7 @@ definition "partest =
                   (loop (\<lambda> s. (do { outp b (); outp c (); Ret () })) s)) {build\<^bsub>b\<^esub> ()})" 
 
 subsection \<open> Code Generation \<close>
-
+             
 export_code mytest bitree buffer partest diverge deadlock in Haskell module_name ITree_Examples (string_classes)
 
 end

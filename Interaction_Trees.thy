@@ -79,7 +79,7 @@ primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightar
 "bind_itree u k = 
   (case u of
     \<comment> \<open> Pass the returned value to the continuation; the silent event is needed for friendliness. \<close>
-    Ret r \<Rightarrow> Sil (k r) | 
+    Ret r \<Rightarrow> (k r) | 
     \<comment> \<open> Execute the silent action and then the remainder of the binding. \<close>
     Sil t \<Rightarrow> Sil (bind_itree t k) | 
     \<comment> \<open> Apply the binding function to every possible continuation (non-trivial). \<close>
@@ -90,8 +90,8 @@ lemma map_pfun_alt_def: "map_pfun f g = pfun_of_map (map_option f \<circ> pfun_l
 
 adhoc_overloading bind bind_itree
 
-lemma bind_Ret [simp, code]: "Ret v \<bind> k = Sil (k v)"
-  by (simp add: bind_itree.ctr(1))
+lemma bind_Ret [simp, code]: "Ret v \<bind> k = (k v)"
+  by (simp add: bind_itree.code)
 
 lemma bind_Sil [simp, code]: "Sil t \<bind> k = Sil (t \<bind> k)"
   by (simp add: bind_itree.ctr)
@@ -110,75 +110,79 @@ translations
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
 
-lemma bind_RetD [dest!]:
+lemma bind_RetE [elim]:
   assumes "P \<bind> Q = Ret x"
-  shows False
-  by (metis assms bind_itree.disc(1) bind_itree.disc(2) itree.disc(7) itree.exhaust_disc stable_Ret)
-
-lemma bind_RetD' [dest!]:
+  obtains y where "P = Ret y" "Q y = Ret x"
+  by (metis (no_types, hide_lams) assms bind_Ret bind_itree.disc_iff(1) is_Ret_def)
+  
+lemma bind_RetE' [elim]:
   assumes "Ret x = P \<bind> Q"
-  shows False
-  by (metis assms bind_RetD)
+  obtains y where "P = Ret y" "Q y = Ret x"
+  by (metis assms bind_RetE)
 
 lemma bind_VisE [elim]:
   assumes "P \<bind> Q = Vis F"
-  obtains F' where "Vis F' = P" "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
-proof -
-  obtain F' where "Vis F' = P"
-    by (metis assms bind_itree.disc_iff(2) is_Vis_def)
-  moreover with assms have "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
-    by (auto simp add: fun_eq_iff)
-  ultimately show ?thesis
-    using that by force
-qed
+    "\<And> F'. \<lbrakk> P = Vis F'; F = map_pfun (\<lambda> x. x \<bind> Q) F' \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; Q x = Vis F \<rbrakk> \<Longrightarrow> R"
+  shows "R"
+  by (metis assms bind_Ret bind_Vis bind_itree.disc_iff(3) is_VisE itree.collapse(1) itree.disc(9) itree.sel(3))
+
 
 lemma bind_VisE' [elim]:
   assumes "Vis F = P \<bind> Q"
-  obtains F' where "Vis F' = P" "F = map_pfun (\<lambda> x. x \<bind> Q) F'"
+    "\<And> F'. \<lbrakk> P = Vis F'; F = map_pfun (\<lambda> x. x \<bind> Q) F' \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; Q x = Vis F \<rbrakk> \<Longrightarrow> R"
+  shows R
   by (metis assms bind_VisE)
 
 lemma bind_Sil_dest:
-  "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> R = Q x))"
-  by (metis bind_itree.disc_iff(1) bind_itree.simps(3) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.disc(5) itree.sel(2))
-
+  "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> Sil R = Q x))"
+  by (metis (no_types, lifting) bind_itree.code bind_itree.disc_iff(2) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.disc(5) itree.sel(2))
+  
 lemma bind_SilE [elim]:
   assumes "(P \<bind> Q) = Sil X"
     "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
-    "\<And> x. \<lbrakk> P = Ret x; X = Q x \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; Sil X = Q x \<rbrakk> \<Longrightarrow> R"
   shows R
   using assms bind_Sil_dest by blast
 
 lemma bind_SilE' [elim]:
   assumes "Sil X = (P \<bind> Q)"
     "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
-    "\<And> x. \<lbrakk> P = Ret x; X = Q x \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; Sil X = Q x \<rbrakk> \<Longrightarrow> R"
   shows R
   by (metis assms(1) assms(2) assms(3) bind_SilE)
 
 lemma bind_itree_right_unit:
   shows "P \<bind> Ret = P"
-  apply (coinduction arbitrary: P rule: itree_strong_coind)
-     apply (auto)
-   apply (erule is_RetE)
-   apply (simp)
-  oops
-  (* Need to fix the definition of bind for @{const Ret *)
+  by (coinduction arbitrary: P rule: itree_strong_coind, auto)
 
 lemma bind_itree_assoc:
   fixes P :: "('e, 's) itree"
   shows "P \<bind> (\<lambda> x. (Q x \<bind> R)) = (P \<bind> Q) \<bind> R"
   apply (coinduction arbitrary: P Q R rule: itree_strong_coind)
-  apply (metis bind_itree.disc(1) bind_itree.disc(2) itree.distinct_disc(1) itree.distinct_disc(5) itree.exhaust_disc)
-  apply force+
+     apply (smt (verit, best) bind_Ret bind_itree.disc(2) bind_itree.disc_iff(3) itree.collapse(1) itree.distinct_disc(1) itree.distinct_disc(3) itree.distinct_disc(6) itree.exhaust_disc)
+    apply force
+   apply (auto elim!: bind_SilE')
+   apply (metis itree.inject(2))
+  apply (auto elim!: bind_VisE')
+  apply metis
   done
 
 friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "bind_itree u k = 
   (case u of 
-    Ret r \<Rightarrow> Sil (k r) | 
+    Ret r \<Rightarrow> 
+      (case k r of 
+         Ret x \<Rightarrow> Ret x |
+         Vis F \<Rightarrow> Vis F |
+         Sil P \<Rightarrow> Sil P) |
     Sil t \<Rightarrow> Sil (bind_itree t k) | 
     Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
-  by (simp add: bind_itree.code, transfer_prover)
+   apply (simp add: bind_itree.code)
+   apply (metis (no_types, hide_lams) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.collapse(3) itree.exhaust_disc)
+  apply transfer_prover
+  done
 
 subsection \<open> Transitive Silent Steps \<close>
 
@@ -239,19 +243,19 @@ lemma Sils_Sil_shift [simp]: "Sils n (Sil P) = Sil (Sils n P)"
 lemma bind_Sils_dest:
   "P \<bind> Q = Sils n R \<Longrightarrow> 
   ((\<exists> P'. P = Sils n P' \<and> R = P' \<bind> Q) 
-    \<or> (\<exists> x m. m < n \<and> P = Sils m (Ret x) \<and> Q x = Sils (n - (m + 1)) R))"
+    \<or> (\<exists> x m. m \<le> n \<and> P = Sils m (Ret x) \<and> Q x = Sils (n - (m)) R))"
   apply (induct n arbitrary: P Q R)
    apply (auto)[1]
   apply (simp)
   apply (erule bind_SilE)
-   apply (metis Sils.simps(2) Suc_less_eq)
-  apply (metis Sils.simps(1) diff_zero zero_less_Suc)
+   apply (metis (no_types, hide_lams) Sils.simps(2) Suc_le_mono diff_Suc_Suc)
+  apply (metis Sils.simps(1) Sils.simps(2) diff_zero zero_le)
   done
 
 lemma bind_SilsE:
   assumes "(P \<bind> Q) = Sils n X"
     "\<And> P'. \<lbrakk> P = Sils n P'; P' \<bind> Q = X \<rbrakk> \<Longrightarrow> R"
-    "\<And> x m. \<lbrakk> m < n; P = Sils m (Ret x); Q x = Sils (n - (m + 1)) X \<rbrakk> \<Longrightarrow> R"
+    "\<And> x m. \<lbrakk> m \<le> n; P = Sils m (Ret x); Q x = Sils (n - m) X \<rbrakk> \<Longrightarrow> R"
   shows R
   using assms(1) assms(2) assms(3) bind_Sils_dest by blast  
 
@@ -420,6 +424,7 @@ lemma trace_to_bind_Nil_cases:
   apply (simp)
   apply (auto)
   apply (metis bind_Sils_dest trace_of_Sils trace_to_Nil_Sils trace_to_Sil)
+  apply (metis assms bind_Ret trace_to_Nil)
   done
 
 lemma trace_to_bind_single_cases:
@@ -437,6 +442,7 @@ lemma trace_to_bind_single_cases:
   apply (auto simp add: bind_eq_Some_conv)
   apply (metis trace_of_Sils trace_to_Sils trace_to_Vis trace_to_bind_Nil_cases)
   apply (metis trace_to_Nil trace_to_Sils trace_to_Vis)
+  apply (metis (full_types) trace_to_Nil trace_to_Sils trace_to_Vis)
   done
 
 lemma Vis_Cons_trns [simp]: "Vis F' \<midarrow>a # tr\<leadsto> P' \<longleftrightarrow> (a \<in> pdom(F') \<and> F' a \<midarrow>tr\<leadsto> P')"
@@ -465,6 +471,7 @@ lemma trace_to_bind_cases:
   apply (erule bind_VisE)
   apply (auto simp add: bind_eq_Some_conv)
   apply (smt (verit) append_Cons append_Nil domI option.sel trace_of_Sils trace_to_Vis trace_to_trans)
+  apply (metis trace_to_Sils trace_to_Vis)
   apply (metis trace_to_Sils trace_to_Vis)
   done
 
