@@ -88,14 +88,6 @@ primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightar
 lemma map_pfun_alt_def: "map_pfun f g = pfun_of_map (map_option f \<circ> pfun_lookup g)"
   by (simp add: map_pfun_def)
 
-friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
-"bind_itree u k = 
-  (case u of 
-    Ret r \<Rightarrow> Sil (k r) | 
-    Sil t \<Rightarrow> Sil (bind_itree t k) | 
-    Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
-  by (simp add: bind_itree.code, transfer_prover)
-
 adhoc_overloading bind bind_itree
 
 lemma bind_Ret [simp, code]: "Ret v \<bind> k = Sil (k v)"
@@ -179,6 +171,14 @@ lemma bind_itree_assoc:
   apply (metis bind_itree.disc(1) bind_itree.disc(2) itree.distinct_disc(1) itree.distinct_disc(5) itree.exhaust_disc)
   apply force+
   done
+
+friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
+"bind_itree u k = 
+  (case u of 
+    Ret r \<Rightarrow> Sil (k r) | 
+    Sil t \<Rightarrow> Sil (bind_itree t k) | 
+    Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
+  by (simp add: bind_itree.code, transfer_prover)
 
 subsection \<open> Transitive Silent Steps \<close>
 
