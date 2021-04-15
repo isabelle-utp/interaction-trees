@@ -75,6 +75,32 @@ lemma choice_diverge: "diverge \<box> P = diverge"
 lemma is_Sil_choice: "is_Sil (P \<box> Q) = (is_Sil P \<or> is_Sil Q)"
   using itree.exhaust_disc by (auto)
 
+lemma choice_Vis_iff: 
+  "P \<box> Q = Vis H \<longleftrightarrow> ((\<exists> F G. P = Vis F \<and> Q = Vis G \<and> H = (F \<odot> G)) \<or> (\<exists> x y. P = Ret x \<and> Q = Ret y \<and> x \<noteq> y \<and> H = {}\<^sub>p))"
+  (is "?lhs = ?rhs")
+proof
+  assume a: ?lhs
+  hence is_Vis: "is_Vis (P \<box> Q)"
+    by simp
+  thus ?rhs
+    apply (auto elim!: is_RetE is_VisE)
+    using a
+     apply (simp_all add: a extchoice_itree.code)
+    done
+next
+  assume ?rhs
+  thus ?lhs
+    by (auto simp add: extchoice_itree.code)
+qed
+
+lemma choice_VisE [elim!]:
+  assumes "Vis H = P \<box> Q"
+  "\<And> F G. \<lbrakk> P = Vis F; Q = Vis G; H = (F \<odot> G) \<rbrakk> \<Longrightarrow> R"
+  "\<And> x y. \<lbrakk> P = Ret x; Q = Ret y; x \<noteq> y; H = {}\<^sub>p \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) choice_Vis_iff)
+  
+
 lemma choice_Sils: "(Sils m P) \<box> Q = Sils m (P \<box> Q)"
   by (induct m, simp_all add: extchoice_itree.code)
 
@@ -212,13 +238,9 @@ next
     apply (auto)
     apply (smt extchoice_itree.simps(3) extchoice_itree.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
      apply (smt extchoice_itree.simps(3) extchoice_itree.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
-(*
-    apply (subgoal_tac "G x = Some y")
-    apply (metis choice_deadlock choice_deadlock' option.sel)
-    apply (smt extchoice_itree.simps(3) extchoice_itree.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
+    apply (metis choice_deadlock choice_deadlock' map_prod_commute)
     done
-*)
-    oops
+qed
 
 subsection \<open> Parallel Composition \<close>
 
