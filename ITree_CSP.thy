@@ -79,7 +79,7 @@ instance ..
 end
 
 lemma choice_diverge: "diverge \<box> P = diverge"
-  by (coinduction arbitrary: P, auto, metis diverge.code itree.simps(11))
+  by (coinduction arbitrary: P, auto elim!: stableE is_RetE is_VisE unstableE, metis diverge.code itree.simps(11))
 
 lemma is_Sil_choice: "is_Sil (P \<box> Q) = (is_Sil P \<or> is_Sil Q)"
   using itree.exhaust_disc by (auto)
@@ -256,6 +256,10 @@ lemma skip_stable_choice:
   shows "skip \<box> P = skip"
   by (metis (mono_tags, lifting) assms extchoice_itree.ctr(1) itree.discI(1) itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
 
+lemma "(P \<box> Q) \<bind> R = (P \<bind> R) \<box> (Q \<bind> R)"
+  apply (coinduction arbitrary: P Q rule: itree_coind)
+  oops
+
 subsection \<open> Parallel Composition \<close>
 
 text \<open> The following function combines two choice functions for parallel composition. \<close>
@@ -301,17 +305,12 @@ lemma par_Sil_left [simp]:
   "par (Sil P') E Q = Sil (par P' E Q)"
   by (simp add: par.code)
 
-lemma stableE [elim!]:
-  assumes "stable P" "is_Ret P \<Longrightarrow> Q" "is_Vis P \<Longrightarrow> Q"
-  shows Q
-  by (metis assms(1) assms(2) assms(3) itree.exhaust_disc)
-
 lemma par_Sil_stable_right:
   "stable P \<Longrightarrow> par P E (Sil Q') = Sil (par P E Q')"
-  by (auto simp add: par.code)
+  by (auto elim!: stableE simp add: par.code)
 
 lemma unstable_par [simp]: "unstable (par P E Q) = (unstable P \<or> unstable Q)"
-  by auto
+  by (auto elim!: stableE)
 
 lemma par_Ret_iff: "Ret x = par P E Q \<longleftrightarrow> (\<exists> a b. P = Ret a \<and> Q = Ret b \<and> x = (a, b))"
   (is "?lhs \<longleftrightarrow> ?rhs")
@@ -358,7 +357,7 @@ lemma par_SilE [elim!]:
   by (metis (full_types) assms(1) assms(2) assms(3) par_Sil_iff)
 
 lemma par_Sil_shift [simp]: "par P E (Sil Q) = par (Sil P) E Q"
-  by (coinduction arbitrary: P Q rule: itree_strong_coind, auto, metis)
+  by (coinduction arbitrary: P Q rule: itree_strong_coind, auto elim!: stableE, metis)
 
 lemma par_Sils_left [simp]: "par (Sils n P) E Q = Sils n (par P E Q)"
   by (induct n, simp_all)
@@ -436,20 +435,20 @@ lemma par_VisE [elim!]:
 
 lemma par_commute: "par P E Q = (par Q E P) \<bind> (\<lambda> (a, b). Ret (b, a))"
   apply (coinduction arbitrary: P Q rule: itree_strong_coind)
-     apply (auto elim!: is_RetE unstableE bind_RetE' bind_SilE' simp add: par_Ret_iff)
-  apply metis
-  apply metis
-  apply metis
-  apply (metis pdom_emerge_commute)
+     apply (auto elim!: is_RetE unstableE bind_RetE' bind_SilE' stableE simp add: par_Ret_iff)
+         apply metis
+        apply metis
+       apply metis
+      apply (metis pdom_emerge_commute)
      apply (metis pdom_emerge_commute)
     apply (simp add: emerge_def)
     apply (auto)
     apply (rename_tac e F G)
     apply (rule_tac x="F e" in exI)
     apply (rule_tac x="G e" in exI)
-  apply (simp)
-  apply (smt (verit, ccfv_threshold) map_pfun_apply merge_Vis_both pdom.rep_eq pdom_emerge_commute pdom_map_pfun pdom_merge_Vis pfun_app.rep_eq)
-  apply (metis (no_types, lifting) map_pfun_apply merge_Vis_left merge_Vis_right pdom.rep_eq pdom_emerge_commute pdom_map_pfun pdom_merge_Vis pfun_app.rep_eq)
+    apply (simp)
+    apply (smt (verit, ccfv_threshold) map_pfun_apply merge_Vis_both pdom.rep_eq pdom_emerge_commute pdom_map_pfun pdom_merge_Vis pfun_app.rep_eq)
+   apply (metis (no_types, lifting) map_pfun_apply merge_Vis_left merge_Vis_right pdom.rep_eq pdom_emerge_commute pdom_map_pfun pdom_merge_Vis pfun_app.rep_eq)
   apply (metis (no_types, lifting) map_pfun_apply merge_Vis_left merge_Vis_right pdom.rep_eq pdom_emerge_commute pdom_map_pfun pdom_merge_Vis pfun_app.rep_eq)
   done  
 
@@ -543,10 +542,10 @@ lemma is_Ret_hide [simp]: "is_Ret (hide P E) = is_Ret P"
   by (simp add: hide.code deadlock_def itree.case_eq_if)
 
 lemma is_Sil_hide [simp]: "is_Sil (hide P E) = (is_Sil P \<or> (is_Vis P \<and> card (E \<inter> pdom(un_Vis P)) = 1))"
-  by (auto simp add: hide.code deadlock_def itree.case_eq_if)
+  by (auto elim!: stableE simp add: hide.code deadlock_def itree.case_eq_if)
 
 lemma is_Vis_hide [simp]: "is_Vis (hide P E) = (is_Vis P \<and> (card (E \<inter> pdom(un_Vis P)) \<noteq> 1 \<or> E \<inter> pdom(un_Vis P) = {}))"
-  by (auto simp add: hide.code itree.case_eq_if deadlock_def)
+  by (auto elim!: stableE simp add: hide.code itree.case_eq_if deadlock_def)
 
 lemma hide_empty: "hide P {} = P"
   apply (coinduction arbitrary: P rule: itree_coind)

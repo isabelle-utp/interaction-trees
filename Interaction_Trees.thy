@@ -37,6 +37,11 @@ lemma stable_Vis [intro]: "stable (Vis F)"
 lemma unstableE: "\<lbrakk> unstable P; \<And> P'. P = Sil P' \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   using is_Sil_def by auto
 
+lemma stableE:
+  assumes "stable P" "is_Ret P \<Longrightarrow> Q" "is_Vis P \<Longrightarrow> Q"
+  shows Q
+  by (metis assms(1) assms(2) assms(3) itree.exhaust_disc)
+
 lemma is_VisE [elim]: "\<lbrakk> is_Vis P; \<And> x. P = Vis x \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   using is_Vis_def by blast
 
