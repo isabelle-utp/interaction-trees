@@ -51,18 +51,24 @@ text \<open> This is like race-free behaviour \<close>
 class extchoice = 
   fixes extchoice :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<box>" 59)
 
+text \<open> This is an completion of Hoare's bar operator. \<close>
+
 instantiation itree :: (type, type) extchoice 
 begin
+
+text \<open> cf. RAISE language "interlock" operator -- basic operators of CCS vs. CSP operators. Can
+  this be expressed in terms of operators? \<close>
 
 primcorec extchoice_itree :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree"  where
 "extchoice_itree P Q =
    (case (P, Q) of 
       (Vis F, Vis G) \<Rightarrow> Vis (F \<odot> G) |
-      (Sil P', _) \<Rightarrow> Sil (extchoice_itree P' Q) |
+      (Sil P', _) \<Rightarrow> Sil (extchoice_itree P' Q) | \<comment> \<open> Maximal progress \<close>
       (_, Sil Q') \<Rightarrow> Sil (extchoice_itree P Q') |
-      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {}\<^sub>p | 
-      (Ret v, Vis _)   \<Rightarrow> Ret v |
-      (Vis _, Ret v)   \<Rightarrow> Ret v
+      \<comment> \<open> cf. Butterfield's external choice miraculous issue and a quantum-like computation with reconciliation \<close>
+      (Ret x, Ret y) \<Rightarrow> if (x = y) then Ret x else Vis {}\<^sub>p |
+      (Ret v, Vis _) \<Rightarrow> Ret v | \<comment> \<open> Is this like sliding choice? \<close>
+      (Vis _, Ret v) \<Rightarrow> Ret v
    )"
 
 instance ..
@@ -288,6 +294,8 @@ abbreviation "inter_csp P Q \<equiv> gpar_csp P {} Q"
 adhoc_overloading gparallel gpar_csp and interleave inter_csp
 
 subsection \<open> Hiding \<close>
+
+text \<open> Could we prioritise events to keep determinism? \<close>
 
 corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree" where
 "hide P A = 

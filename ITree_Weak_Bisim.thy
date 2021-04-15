@@ -1,14 +1,17 @@
+section \<open> Weak Bisimulation \<close>
+
 theory ITree_Weak_Bisim
   imports ITree_Divergence
 begin
 
-subsection \<open> Weak Bisimulation \<close>
+text \<open> See Hennessy's paper relating CCS and CSP. If you forget divergence, i+1 equivalence and 
+  its limit. 2.5 equivalence. "ON THE RELATIONSHIP OF CCS AND CSP". \<close>
 
 coinductive wbisim :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>" 50) where
 wbisim_Ret [intro]: "Ret x \<approx> Ret x" |
 wbisim_Sil1 [intro]: "P \<approx> Q \<Longrightarrow> Sil P \<approx> Q" |
 wbisim_Sil2 [intro]: "P \<approx> Q \<Longrightarrow> P \<approx> Sil Q" |
-wbisim_Vis [intro]: "\<lbrakk> dom(F) = dom(G); \<And> e. e \<in> dom(F) \<Longrightarrow> the (F e) \<approx> the (G e) \<rbrakk> \<Longrightarrow> Vis F \<approx> Vis G"
+wbisim_Vis [intro]: "\<lbrakk> pdom(F) = pdom(G); \<And> e. e \<in> pdom(F) \<Longrightarrow> F e \<approx> G e \<rbrakk> \<Longrightarrow> Vis F \<approx> Vis G"
 
 lemma Sils_eq_Vis_iff [simp]: "Sils n P = Vis F \<longleftrightarrow> (n = 0 \<and> P = Vis F)"
   by (metis Sils.simps(1) is_Vis_Sils itree.disc(9))
@@ -28,8 +31,6 @@ lemma wbisim_sym [intro]: "P \<approx> Q \<Longrightarrow> Q \<approx> P"
 
 lemma wbisim_Sils [intro]: "Sils n P \<approx> P" 
   by (coinduction arbitrary: n P, auto, metis Sils.elims, metis Sils.elims Sils.simps(2) itree.exhaust)
-
-thm wbisim_SilE
 
 lemma wbisim_SilD: "Sil P \<approx> Q \<Longrightarrow> P \<approx> Q"
   apply (coinduction arbitrary: P Q, auto)
@@ -54,7 +55,7 @@ lemma stabilises_trace_toE: "\<lbrakk> stabilises P; \<And> F. \<lbrakk> P \<mid
   oops
 
 lemma "\<lbrakk> P \<approx> Q; stabilises P \<rbrakk> \<Longrightarrow> stabilises Q"
-  
+  oops  
 
 lemma wbisim_diverge: "P \<approx> diverge \<Longrightarrow> unstable P"
   apply (cases P rule: itree_cases, auto dest!: wbisim_SilsD)
