@@ -78,14 +78,20 @@ text \<open> A divergent interaction tree infinitely performs only silent steps.
 primcorec diverge :: "('e, 'r) itree" where
 "diverge = Sil diverge"
 
-lemma bind_diverge: "diverge \<bind> F = diverge"
+lemma bind_diverge [simp]: "diverge \<bind> F = diverge"
   by (coinduction, auto simp add: itree.case_eq_if)
 
 lemma unstable_diverge: "unstable diverge"
   by simp
 
+lemma is_Ret_diverge [simp]: "is_Ret diverge = False"
+  by (auto)
+
 lemma diverge_not_Ret [dest]: "diverge = Ret v \<Longrightarrow> False"
   by (metis diverge.code itree.simps(5))
+
+lemma is_Vis_diverge [simp]: "is_Vis diverge = False"
+  by (auto)
 
 lemma diverge_not_Vis [dest]: "diverge = Vis F \<Longrightarrow> False"
   by (metis diverge.code itree.distinct(5))
