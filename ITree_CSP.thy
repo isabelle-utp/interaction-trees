@@ -521,6 +521,9 @@ next
     by (auto simp add: gpar_csp_def skip_def)
 qed
 
+definition Interleave :: "'i set \<Rightarrow> ('i \<Rightarrow> ('e, unit) itree) \<Rightarrow> ('e, unit) itree" where
+"Interleave I P = Finite_Set.fold (\<interleave>) skip (P ` I)"
+
 subsection \<open> Hiding \<close>
 
 text \<open> Could we prioritise events to keep determinism? \<close>

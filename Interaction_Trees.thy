@@ -14,12 +14,24 @@ abbreviation ndres (infixr "\<Zndres>" 66) where "ndres A P \<equiv> (- A) \<Zdr
 declare [[coercion pfun_app]]
 declare [[coercion_enabled]]
 
+consts tick :: "'a \<Rightarrow> 'b" ("\<cmark>")
+
 subsection \<open> Interaction Tree Type \<close>
 
 codatatype ('e, 'r) itree = 
   Ret 'r | \<comment> \<open> Terminate, returning a value \<close>
-  Sil "('e, 'r) itree" | \<comment> \<open> Invisible event \<close>
+  Sil "('e, 'r) itree" ("\<tau>") | \<comment> \<open> Invisible event \<close>
   Vis "'e \<Zpfun> ('e, 'r) itree" \<comment> \<open> Visible events choosing the continuation \<close>
+
+adhoc_overloading tick Ret
+
+syntax
+  "_gchoice"      :: "pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<bbar> _ \<in> _ \<rightarrow> _" [0, 0, 100] 100)
+  "_gchoice_UNIV" :: "pttrn \<Rightarrow> logic \<Rightarrow> logic" ("\<bbar> _ \<rightarrow> _" [0, 100] 100)
+
+translations
+  "\<bbar> e \<in> E \<rightarrow> P" == "CONST Vis (\<lambda> e \<in> E \<bullet> P)"
+  "\<bbar> e \<rightarrow> P" == "CONST Vis (\<lambda> e \<bullet> P)"
 
 text \<open> A stable process has no possible internal activity \<close>
 
@@ -189,11 +201,39 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
   apply transfer_prover
   done
 
+subsection \<open> Run \<close>
+
+primcorec run :: "'e set \<Rightarrow> ('e, 's) itree" where
+"run E = Vis (map_pfun (\<lambda> x. run E) (pId_on E))"
+
+lemma Run_alt_def: "run E = (\<bbar> e \<in> E \<rightarrow> run E)"
+proof -
+  have "run E = Vis (map_pfun (\<lambda> x. run E) (pId_on E))"
+    by (metis run.code)
+  also have "... = \<bbar> x \<in> E \<rightarrow> run E"
+    by (simp add: map_pfun_as_pabs)
+  finally show ?thesis .
+qed
+
+lemma run_empty: "run {} = Vis {}\<^sub>p"
+  by (metis (no_types, lifting) pdom_map_pfun pdom_pId_on pdom_res_empty pdom_res_pdom run.code)
+
+lemma run_bind: "run E \<bind> K = run E"
+  apply (coinduction rule: itree_coind)
+  apply (metis bind_itree.disc(3) itree.distinct_disc(3) itree.distinct_disc(6) run.disc_iff)
+  apply (metis itree.disc(7) run.disc_iff)
+   apply (metis itree.disc(8) run.disc_iff)
+  apply (smt (verit, best) bind_VisE itree.disc(7) itree.sel(3) map_pfun_apply pdom_map_pfun run.disc_iff run.sel)
+  done  
+  
 subsection \<open> Transitive Silent Steps \<close>
 
 fun Sils :: "nat \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
 "Sils 0 P = P" |
 "Sils (Suc n) P = Sil (Sils n P)"
+
+lemma "Sils n P = (\<tau>^^n) P"
+  by (induct n, simp_all)
 
 lemma Sils_0 [intro]: "Sils 0 P = P"
   by (simp)

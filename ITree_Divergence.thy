@@ -76,7 +76,7 @@ subsection \<open> Divergence \<close>
 text \<open> A divergent interaction tree infinitely performs only silent steps. \<close>
 
 primcorec diverge :: "('e, 'r) itree" where
-"diverge = Sil diverge"
+"diverge = \<tau> diverge"
 
 lemma bind_diverge [simp]: "diverge \<bind> F = diverge"
   by (coinduction, auto simp add: itree.case_eq_if)
