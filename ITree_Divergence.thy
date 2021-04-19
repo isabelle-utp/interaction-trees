@@ -27,7 +27,6 @@ lemma stabilises_traceI: "\<lbrakk> P \<midarrow>tr\<leadsto> P'; tr \<noteq> []
 text \<open> An @{type itree} stabilises to a relation @{term R} if after stabilising and choosing a 
   new event, the continuation is in @{term R}. \<close>
 
-
 inductive stabilises_to :: "(('e, 's) itree \<Rightarrow> bool) \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" where
 ret_stbs [intro]: "stabilises_to R (Ret x)" |
 sil_stbs [intro]: "stabilises_to R P \<Longrightarrow> stabilises_to R (Sil P)" |
@@ -95,6 +94,9 @@ lemma is_Vis_diverge [simp]: "is_Vis diverge = False"
 
 lemma diverge_not_Vis [dest]: "diverge = Vis F \<Longrightarrow> False"
   by (metis diverge.code itree.distinct(5))
+
+lemma diverge_not_Vis' [dest]: "Vis F = diverge \<Longrightarrow> False"
+  by (metis diverge_not_Vis)
 
 text \<open> An interaction tree is divergent if it never stabilises. \<close>
 

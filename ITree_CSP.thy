@@ -1,7 +1,7 @@
 section \<open> CSP Operators \<close>
 
 theory ITree_CSP
-  imports ITree_Deadlock "Optics.Optics"
+  imports ITree_Deadlock ITree_Weak_Bisim "Optics.Optics"
 begin
 
 subsection \<open> Basic Constructs \<close>

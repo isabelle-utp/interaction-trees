@@ -6,7 +6,10 @@ begin
 
 subsection \<open> Preliminaries \<close>
 
-datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's ("\<cmark>")
+datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's
+
+adhoc_overloading
+  tick Term
 
 type_synonym ('e, 's) trace = "('e, 's) event list"
 type_synonym ('e, 's) refusal = "('e, 's) event set"
@@ -71,6 +74,14 @@ subsection \<open> Traces \<close>
 
 definition traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" where
 "traces P = {map Ev tr | tr. \<exists> P'. P \<midarrow>tr\<leadsto> P'} \<union> {map Ev tr @ [\<cmark>(v)] | tr v. P \<midarrow>tr\<leadsto> Ret v}"
+
+lemma wbisim_eq_traces: "P \<approx> Q \<Longrightarrow> traces(P) = traces(Q)"
+  apply (auto simp add: traces_def)
+  apply (metis wbisim_step)
+  apply (metis (no_types, hide_lams) wbisim_step_terminate)
+  apply (metis (no_types, lifting) wbisim_step wbisim_sym)
+  apply (metis (mono_tags, lifting) wbisim_step_terminate wbisim_sym)
+  done
 
 lemma trace_alt_def: "traces P = {s. \<exists> Q. P \<Midarrow>s\<Rightarrow> Q}"
   by (auto simp add: traces_def mstep_to_def)
@@ -223,6 +234,18 @@ lemma no_divergences_then_div_free: "divergences P = {} \<Longrightarrow> div_fr
   by (auto simp add: divergences_alt_def)
      (metis div_free_is_no_divergence no_divergence)
 
+lemma wbisim_le_divergences: 
+  assumes "P \<approx> Q"
+  shows "divergences(P) \<subseteq> divergences(Q)"
+  using assms
+  by (auto simp add: divergences_alt_def)
+     (metis diverge_wbisim1 diverges_then_diverge wbisim_step)
+
+lemma wbisim_eq_divergences: 
+  assumes "P \<approx> Q"
+  shows "divergences(P) = divergences(Q)"
+  by (metis antisym_conv assms wbisim_le_divergences wbisim_sym)
+
 definition divergence_strict_traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" ("traces\<^sub>\<bottom>") where
 "divergence_strict_traces P = traces P \<union> divergences P"
 
@@ -262,6 +285,9 @@ text \<open> A failure is recorded when there is a trace leading to a stable int
 
 definition refuses :: "('e, 's) itree \<Rightarrow> ('e, 's) refusal \<Rightarrow> bool" (infix "ref" 65) where
 "refuses P B = ((\<exists> F. P = Vis F \<and> B \<inter> Ev ` pdom F = {}) \<or> (\<exists> x. P = Ret x \<and> \<cmark>(x) \<notin> B))"
+
+lemma stable_refuses [simp]: "P ref A \<Longrightarrow> stable P"
+  by (auto simp add: refuses_def)
 
 lemma Ret_refuses [simp]: "Ret x ref B \<longleftrightarrow> \<cmark>(x) \<notin> B"
   by (simp add: refuses_def)
@@ -336,6 +362,33 @@ lemma F3: "\<lbrakk> (s, X) \<in> failures(P); Y \<inter> {x. s @ [x] \<in> trac
   apply (auto)
   apply (metis Vis_Cons_trns butlast_snoc snoc_eq_iff_butlast trace_to_ConsE trace_to_Nil trace_to_trans)
   done
+
+lemma wbisim_refusals_eq: "\<lbrakk> P \<approx> Q; stable P; stable Q \<rbrakk> \<Longrightarrow> P ref A \<longleftrightarrow> Q ref A"
+  apply (auto simp add: refuses_def elim!: wbisim_VisE)
+  apply (metis Vis_Sils is_Ret_Sils is_Vis_Sils itree.exhaust_disc)
+  apply (metis itree.discI(2) wbisim.cases wbisim_RetE)
+  apply (metis (mono_tags, lifting) Vis_Sils is_Ret_Sils is_Vis_Sils itree.exhaust_disc wbisim_Vis_eq wbisim_sym)
+  apply (metis itree.discI(2) wbisim.cases wbisim_RetE wbisim_sym)
+  done
+
+lemma wbisim_le_failures: 
+  assumes "P \<approx> Q"
+  shows "failures(P) \<subseteq> failures(Q)"
+proof (safe)
+  fix s X
+  assume "(s, X) \<in> failures P"
+  thus "(s, X) \<in> failures Q"
+    apply (auto simp add: in_failures_iff)
+    apply (smt (verit, best) append.right_neutral assms trace_of_Sils trace_to_trans wbisim_VisE wbisim_step)
+    apply (metis (no_types, lifting) assms wbisim_step_terminate)
+    apply (metis assms wbisim_step_terminate)
+  done
+qed
+
+lemma wbisim_eq_failures: 
+  assumes "P \<approx> Q"
+  shows "failures(P) = failures(Q)"
+  by (metis antisym_conv assms wbisim_le_failures wbisim_sym)
 
 definition stable_failures :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" ("failures\<^sub>\<bottom>") where
 "stable_failures P = failures(P) \<union> {(s, X). s \<in> divergences(P) \<and> X \<subseteq> range Ev}"
