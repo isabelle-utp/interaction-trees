@@ -228,12 +228,95 @@ next
     done
 qed
 
+lemma wbisim_coind: 
+  assumes 
+    "\<R> P Q"
+    "\<And> P Q. \<R> P Q \<Longrightarrow> \<R> Q P"
+    "\<And> P. \<R> diverge P \<Longrightarrow> P = diverge"
+    "\<And> n P Q. \<R> (Sils n P) Q \<Longrightarrow> \<R> P Q"
+    "\<And> P Q. \<lbrakk> \<R> P Q; stable P; stable Q \<rbrakk> \<Longrightarrow> (is_Vis P \<longleftrightarrow> is_Vis Q) \<and> (is_Ret P \<longleftrightarrow> is_Ret Q)"
+    "\<And> F G. \<R> (Vis F) (Vis G) \<Longrightarrow> pdom F = pdom G \<and> (\<forall> e \<in> pdom(F). \<R> (F e) (G e))"
+    "\<And> x y. \<R> (Ret x) (Ret y) \<Longrightarrow> x = y"
+  shows "P \<approx> Q"
+proof (rule wbisim.coinduct[of \<R>, OF assms(1)], simp)
+  fix P Q
+  assume PQ: "\<R> P Q"
+  show "P = diverge \<and> Q = diverge \<or> P \<approx>\<^bsub>(\<lambda> x y. \<R> x y \<or> x \<approx> y)\<^esub> Q"
+  proof (cases "divergent P")
+  case True    
+  then show ?thesis
+    by (metis PQ assms(3) diverges_then_diverge)
+  next
+    case False
+    hence ndiv: "P \<noteq> diverge \<and> Q \<noteq> diverge"
+      by (metis (no_types, lifting) PQ assms(2) assms(3) diverges_then_diverge)
+    have "P \<approx>\<^bsub>(\<lambda>x y. \<R> x y \<or> x \<approx> y)\<^esub> Q"
+    proof (cases P rule: itree_cases)
+      case (Vis m F)
+      hence R1: "\<R> (Vis F) Q"
+        by (metis PQ assms(4))
+      obtain n Q' where Q: "Q = Sils n Q'" "stable Q'"
+        by (metis diverges_then_diverge ndiv stabilises_def)
+      hence "\<R> (Vis F) Q'"
+        by (metis (no_types, lifting) R1 assms(2) assms(4))
+      then obtain G where Q': "Q' = Vis G"
+        by (metis (no_types, lifting) \<open>stable Q'\<close> assms(5) is_VisE itree.disc(9) stable_Vis)
+      have "pdom(F) = pdom(G)"
+        by (metis (mono_tags, lifting) \<open>Q' = Vis G\<close> \<open>\<R> (Vis F) Q'\<close> assms(6))
+      moreover have "(\<forall> e \<in> pdom(F). \<R> (F e) (G e))"
+        by (metis (no_types, lifting) Q' \<open>\<R> (Vis F) Q'\<close> assms(6))
+      ultimately have "P \<approx>\<^bsub>\<R>\<^esub> Q"
+        by (metis Q' Q(1) Vis wbisim_to_Sils1 wbisim_to_Sils2 wbisim_to_Vis)
+      thus ?thesis
+        by (metis (mono_tags, lifting) monotonic_wbisim_to predicate2I)
+    next
+      case (Ret m x)
+      then obtain n y where "Q = Sils n (Ret y)"
+        by (metis (no_types, hide_lams) PQ assms(2) assms(4) assms(5) itree.disc(4) itree.disc(7) itree.disc(9) itree.distinct_disc(6) itree_disj_cases ndiv)
+      with Ret show ?thesis
+        by (metis (no_types, lifting) PQ assms(2) assms(4) assms(7) wbisim_to_Ret wbisim_to_Sils1 wbisim_to_Sils2)
+    next
+      case diverge
+      then show ?thesis
+        by (metis ndiv)
+    qed
+    thus ?thesis
+      by metis
+  qed
+qed
+
+lemma wbisim_strong_coind: 
+  assumes 
+    "\<R> P Q"
+    "\<And> P Q. \<R> P Q \<Longrightarrow> \<R> Q P"
+    "\<And> P. \<R> diverge P \<Longrightarrow> P = diverge"
+    "\<And> n P Q. \<R> (Sils n P) Q \<Longrightarrow> \<R> P Q \<or> P \<approx> Q"
+    "\<And> P Q. \<lbrakk> \<R> P Q; stable P; stable Q \<rbrakk> \<Longrightarrow> (is_Vis P \<longleftrightarrow> is_Vis Q) \<and> (is_Ret P \<longleftrightarrow> is_Ret Q)"
+    "\<And> F G. \<R> (Vis F) (Vis G) \<Longrightarrow> pdom F = pdom G \<and> (\<forall> e \<in> pdom(F). \<R> (F e) (G e) \<or> (F e) \<approx> (G e))"
+    "\<And> x y. \<R> (Ret x) (Ret y) \<Longrightarrow> x = y"
+  shows "P \<approx> Q"
+  apply (rule wbisim_coind[of "\<lambda> x y. \<R> x y \<or> x \<approx> y"])
+  apply (simp_all add: assms)
+  apply (metis (mono_tags, lifting) assms(2) wbisim_sym)
+  apply (metis (full_types) assms(3) diverge_wbisim1)
+  apply (metis (mono_tags, lifting) assms(4))
+  apply (metis (no_types, lifting) assms(5) itree.case_eq_if itree.disc(5) itree.disc(9) itree.disc_eq_case(3) wbisim.cases wbisim_to.simps)
+  apply (metis assms(6) wbisim_both_VisE)
+  apply (metis (no_types, lifting) assms(7) itree.distinct(1) itree.inject(1) wbisim.cases wbisim_RetE)
+  done
+
 lemma wbisim_trace_to_Nil: "P \<midarrow>[]\<leadsto> P' \<Longrightarrow> P \<approx> P'"
   by auto
 
+lemma wbisim_step_rule: 
+  assumes 
+    "\<forall> tr P'. P \<midarrow>tr\<leadsto> P' \<longrightarrow> (\<exists> Q'. Q \<midarrow>tr\<leadsto> Q' \<and> P' \<approx> Q')"
+    "\<forall> tr Q'. Q \<midarrow>tr\<leadsto> Q' \<longrightarrow> (\<exists> P'. P \<midarrow>tr\<leadsto> P' \<and> P' \<approx> Q')"
+  shows "P \<approx> Q"
+  by (metis (mono_tags, lifting) assms(1) trace_to_Nil wbisim_sym wbisim_trace_to_Nil wbisim_trans)
+
 lemma wbsim_silent_step: "\<lbrakk> P \<approx> Q; P \<midarrow>[]\<leadsto> P' \<rbrakk> \<Longrightarrow> \<exists> Q'. Q \<midarrow>[]\<leadsto> Q' \<and> P' \<approx> Q'"
   by (metis (mono_tags, lifting) trace_to_Nil wbisim_sym wbisim_trace_to_Nil wbisim_trans)
-
 
 lemma wbisim_single_step: "\<lbrakk> P \<approx> Q; P \<midarrow>[e]\<leadsto> P' \<rbrakk> \<Longrightarrow> \<exists> Q'. Q \<midarrow>[e]\<leadsto> Q' \<and> P' \<approx> Q'"
   apply (erule trace_to_singleE)
@@ -296,6 +379,10 @@ lemma wbisim_step_stable:
   apply (auto elim!: wbisim_VisE)
   apply (metis wbisim_Sils_iff1)
   done
+
+lemma "(\<And>s. Q\<^sub>1 s \<approx> Q\<^sub>2 s) \<Longrightarrow> P \<bind> Q\<^sub>1 \<approx> P \<bind> Q\<^sub>2"
+  apply (rule wbisim_strong_coind[of "\<lambda> x y. \<exists> P Q. x = P \<bind> Q\<^sub>1 \<and> y = P \<bind> Q\<^sub>2 \<or> y = P \<bind> Q\<^sub>1 \<and> x = P \<bind> Q\<^sub>2"])
+  oops
   
 text \<open> For CCS, weak bisimulation is not a congruence with respect to choice. Hence, Milner creates
   a derived relation, observation congruence, which adds the requirement that an initial silent

@@ -182,7 +182,7 @@ lemma itree_disj_cases:
   "(\<exists> n F. P = Sils n (Vis F)) \<or> (\<exists> n x. P = Sils n (Ret x)) \<or> P = diverge"
   by (metis diverges_then_diverge is_Ret_def itree.collapse(3) itree.exhaust_disc stabilises_def)
 
-lemma itree_cases:
+lemma itree_cases [case_names Vis Ret diverge]:
   assumes 
     "\<And> n F. P = (Sils n (Vis F)) \<Longrightarrow> Q"
     "\<And> n x. P = (Sils n (Ret x)) \<Longrightarrow> Q"
@@ -312,5 +312,22 @@ lemma div_free_no_min_divergence: "div_free P \<Longrightarrow> \<not> P \<midar
 
 lemma divergent_trace_toI: "\<lbrakk> \<And> P'. P \<midarrow>[]\<leadsto> P' \<Longrightarrow> unstable P' \<rbrakk> \<Longrightarrow> divergent P"
   by (metis stabilises_def trace_of_Sils)
+
+subsection \<open> Iteration \<close>
+
+text \<open> For now we support only basic iteration for CSP processes. \<close>
+
+corec while :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
+"while b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (while b P))) else Ret s)"
+
+abbreviation "loop \<equiv> while (\<lambda> s. True)"
+
+abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
+
+lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
+  by (simp add: fun_eq_iff while.code)
+
+lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
+  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge while.code)
 
 end

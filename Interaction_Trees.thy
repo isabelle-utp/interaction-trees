@@ -225,7 +225,7 @@ lemma run_bind: "run E \<bind> K = run E"
    apply (metis itree.disc(8) run.disc_iff)
   apply (smt (verit, best) bind_VisE itree.disc(7) itree.sel(3) map_pfun_apply pdom_map_pfun run.disc_iff run.sel)
   done  
-  
+
 subsection \<open> Transitive Silent Steps \<close>
 
 fun Sils :: "nat \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where

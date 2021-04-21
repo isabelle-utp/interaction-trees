@@ -40,26 +40,6 @@ definition sync :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 
 definition guard :: "bool \<Rightarrow> ('e, unit) itree" where
 "guard b = (if b then Ret () else deadlock)"
 
-subsection \<open> Iteration \<close>
-
-text \<open> For now we support only basic iteration for CSP processes. \<close>
-
-corec while :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
-"while b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (while b P))) else Ret s)"
-
-abbreviation "loop \<equiv> while (\<lambda> s. True)"
-
-abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
-
-lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
-  by (simp add: fun_eq_iff while.code)
-
-lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
-  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge while.code)
-
-lemma iter_skip: "iter skip = diverge"
-  by (metis (no_types, lifting) Sil_fp_divergent bind_Ret comp_apply skip_def while.code)
-
 subsection \<open> External Choice \<close>
 
 definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
