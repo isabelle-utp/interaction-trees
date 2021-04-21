@@ -8,6 +8,8 @@ subsection \<open> Preliminaries \<close>
 
 datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's
 
+abbreviation "\<Sigma> \<equiv> range Ev"
+
 adhoc_overloading
   tick Term
 
@@ -473,8 +475,11 @@ lemma failures_bind:
 lemma "failures(Ret x) = failures(Vis F) \<Longrightarrow> False"
   by (simp add: failures_Ret failures_Vis, auto)
 
+lemma mstep_to_term: "P \<Midarrow>[\<cmark> v]\<Rightarrow> P' \<longleftrightarrow> (\<exists> n. P = Sils n (Ret v) \<and> P' = deadlock)"
+  by (metis append_Nil map_is_Nil_conv mstep_termE mstep_to_def trace_of_Sils trace_to_NilE)
+
 lemma 
-  assumes "P \<Midarrow>[a]\<Rightarrow> P'" "\<I>(P) \<inter> \<I>(Q) = {}" "is_Vis Q"
+  assumes "P \<Midarrow>[a]\<Rightarrow> P'" "a \<notin> \<I>(P)" "is_Vis Q"
   shows "P \<box> Q \<Midarrow>[a]\<Rightarrow> P'"
 proof -
   have "stabilises P"

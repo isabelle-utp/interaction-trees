@@ -558,5 +558,5 @@ text \<open> Termination is deterministic. \<close>
 lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P \<midarrow>tr\<leadsto> Ret y \<rbrakk> \<Longrightarrow> x = y"
   by (induct tr arbitrary: P, auto)
      (metis Sils_to_Ret Vis_Cons_trns trace_to_ConsE trace_to_singleE)
-     
+
 end

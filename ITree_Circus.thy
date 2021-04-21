@@ -26,7 +26,7 @@ lemma traces_deadlock: "traces(deadlock) = {[]}"
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
-definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree" where
+definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree" ("\<questiondown>_?") where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
 lemma test_true: "test (True)\<^sub>e = Skip"
@@ -38,6 +38,15 @@ lemma test_false: "test (False)\<^sub>e = Stop"
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
 
+lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
+  by (simp add: assigns_def Skip_def)
+
+lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ> \<sigma>\<rangle>\<^sub>a"
+  by (simp add: assigns_def)
+
+lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
+  by (simp add: assigns_def test_def fun_eq_iff expr_defs)
+
 text \<open> Hide the state of an action to produce a process \<close>
 
 definition proc :: "'s::default subst \<Rightarrow> ('e, 's) action \<Rightarrow> 'e process" where
@@ -45,29 +54,23 @@ definition proc :: "'s::default subst \<Rightarrow> ('e, 's) action \<Rightarrow
 
 abbreviation "abs_st P \<equiv> P \<Zcomp> assigns (\<lambda> s. ())"
 
-typ "'a::default"
 
 syntax
-  "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  ("'(_') := '(_')")  
   "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 92)
-  "_mk_usubst"      :: "svids \<Rightarrow> uexprs \<Rightarrow> 's subst"
 
 translations
   "_assignment x e" == "CONST assigns [x \<leadsto> e]"
-(*  "_assignment x v" <= "CONST assigns (CONST subst_upd [\<leadsto>] x v)" *)
 
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
-  apply (simp add: inp_def traces_Vis traces_Ret)
-  apply (auto simp add: inp_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
-   apply (metis (no_types, lifting) wb_prism_def)
-  apply (force simp add: traces_Ret)
+  apply (simp add: inp_in_def traces_Vis traces_Ret)
+  apply (auto simp add: inp_in_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
   done 
 
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
 
 definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a list) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
-"input_in c A P = (\<lambda> s. inp_in c (A s) \<bind> (\<lambda> x. P x s))"
+"input_in c A P = (\<lambda> s. inp_list c (A s) \<bind> (\<lambda> x. P x s))"
 
 syntax 
   "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [90, 0, 91] 91)
@@ -76,11 +79,17 @@ syntax
 translations "c?(x) \<rightarrow> P" == "CONST input c (\<lambda> (x). P)"
 translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambda> (x). P)"
 
+lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P(x))"
+  by (simp add: input_def assigns_def)
+
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
 "output c e P = (\<lambda> s. outp c (e s) \<then> P s)"
 
 syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_!'(_') \<rightarrow> _" [90, 0, 91] 91)
 translations "c!(e) \<rightarrow> P" == "CONST output c (e)\<^sub>e P"
+
+lemma assigns_output: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c!(e) \<rightarrow> P = c!(\<sigma> \<dagger> e) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P)"
+  by (simp add: assigns_def output_def expr_defs)
 
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
@@ -100,6 +109,9 @@ lemma extchoice_Stop: "Stop \<box> P = P"
 
 lemma extchoice_Div: "Div \<box> P = Div"
   by (simp add: choice_diverge extchoice_fun_def)
+
+lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> Q)"
+  by (simp add: extchoice_fun_def expr_defs assigns_def)
 
 subsection \<open> Examples \<close>
 
@@ -138,7 +150,7 @@ definition "buffer
 
 definition "mytest = loop (Input?(i) \<rightarrow> (\<lambda> s. Ret (s @ [i])) \<box> Stop)"
 
-definition "bitree = loop (\<lambda> s. inp_in Input [0,1,2,3] \<bind> outp Output)"
+definition "bitree = loop (\<lambda> s. inp_list Input [0,1,2,3] \<bind> outp Output)"
 
 chantype schan = 
   a :: unit b :: unit c :: unit

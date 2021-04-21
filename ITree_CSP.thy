@@ -9,14 +9,33 @@ subsection \<open> Basic Constructs \<close>
 definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
-definition inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree" where
-"inp c = Vis (pfun_of_map (\<lambda> e. match\<^bsub>c\<^esub> e \<bind> Some \<circ> Ret))"
+definition inp_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('e, 'a) itree" where
+"inp_in c A = (\<bbar> e \<in> (dom match\<^bsub>c\<^esub> \<inter> build\<^bsub>c\<^esub> ` A) \<rightarrow> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
 
-definition inp_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('e, 'a) itree" where
-"inp_in c B = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> v, Ret v). v \<leftarrow> B])"
+abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
+"inp c \<equiv> inp_in c UNIV"
+
+definition inp_list :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('e, 'a) itree" where
+"inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> ) B)))"
+
+lemma build_in_dom_match [simp]: "wb_prism c \<Longrightarrow> build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub>"
+  by (simp add: dom_def)
+
+text \<open> Is there a way to use this optimise the above definition when applied to a well-behaved prism? \<close>
+
+lemma inp_list_wb_prism: "wb_prism c \<Longrightarrow> inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> x)) B))"
+  by (simp add: inp_list_def)
+
+lemma inp_alist [code]:
+  "inp_in c (set B) = inp_list c B"
+  unfolding inp_in_def inp_list_def
+  by (simp only: set_map[THEN sym] inter_set_filter pabs_set filter_map comp_def, simp add: comp_def)
 
 definition outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
 "outp c v = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> v, Ret())])"
+
+definition sync :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, unit) itree" where
+"sync c = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> (), Ret())])"
 
 definition guard :: "bool \<Rightarrow> ('e, unit) itree" where
 "guard b = (if b then Ret () else deadlock)"
@@ -26,9 +45,20 @@ subsection \<open> Iteration \<close>
 text \<open> For now we support only basic iteration for CSP processes. \<close>
 
 corec while :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
-"while b P s = (if (b s) then Sil (P s \<bind> while b P) else Ret s)"
+"while b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (while b P))) else Ret s)"
 
 abbreviation "loop \<equiv> while (\<lambda> s. True)"
+
+abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
+
+lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
+  by (simp add: fun_eq_iff while.code)
+
+lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
+  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge while.code)
+
+lemma iter_skip: "iter skip = diverge"
+  by (metis (no_types, lifting) Sil_fp_divergent bind_Ret comp_apply skip_def while.code)
 
 subsection \<open> External Choice \<close>
 
@@ -78,6 +108,9 @@ instance ..
 
 end
 
+lemma choice_Vis_Vis [simp]: "(Vis F) \<box> (Vis G) = Vis (F \<odot> G)"
+  by (simp add: extchoice_itree.code)
+
 lemma choice_diverge: "diverge \<box> P = diverge"
   by (coinduction arbitrary: P, auto elim!: stableE is_RetE is_VisE unstableE, metis diverge.code itree.simps(11))
 
@@ -102,13 +135,12 @@ next
     by (auto simp add: extchoice_itree.code)
 qed
 
-lemma choice_VisE [elim!]:
+lemma choice_VisE [elim]:
   assumes "Vis H = P \<box> Q"
   "\<And> F G. \<lbrakk> P = Vis F; Q = Vis G; H = (F \<odot> G) \<rbrakk> \<Longrightarrow> R"
   "\<And> x y. \<lbrakk> P = Ret x; Q = Ret y; x \<noteq> y; H = {}\<^sub>p \<rbrakk> \<Longrightarrow> R"
   shows R
   by (metis assms(1) assms(2) assms(3) choice_Vis_iff)
-  
 
 lemma choice_Sils: "(Sils m P) \<box> Q = Sils m (P \<box> Q)"
   by (induct m, simp_all add: extchoice_itree.code)
@@ -244,7 +276,7 @@ next
 next
   case Vis
   then show ?case
-    apply (auto)
+    apply (auto elim!: choice_VisE)
     apply (smt extchoice_itree.simps(3) extchoice_itree.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
      apply (smt extchoice_itree.simps(3) extchoice_itree.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_prod_commute prod.sel(1) snd_conv)
     apply (metis choice_deadlock choice_deadlock' map_prod_commute)
@@ -256,9 +288,21 @@ lemma skip_stable_choice:
   shows "skip \<box> P = skip"
   by (metis (mono_tags, lifting) assms extchoice_itree.ctr(1) itree.discI(1) itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
 
-lemma "(P \<box> Q) \<bind> R = (P \<bind> R) \<box> (Q \<bind> R)"
-  apply (coinduction arbitrary: P Q rule: itree_coind)
-  oops
+lemma choice_RetE [elim]:
+  assumes "P \<box> Q = \<cmark> x" 
+    "\<lbrakk> P = Ret x; Q = Ret x\<rbrakk> \<Longrightarrow> R"
+    "\<lbrakk> P = Ret x; is_Vis Q \<rbrakk> \<Longrightarrow> R"
+    "\<lbrakk> Q = Ret x; is_Vis P \<rbrakk> \<Longrightarrow> R"
+  shows R
+  using assms apply (cases P)
+  apply (auto simp add: extchoice_itree.code)
+  apply (metis (mono_tags, lifting) assms(1) extchoice_itree.disc_iff(3) fst_conv is_Ret_def itree.case_eq_if itree.collapse(1) itree.disc(7) itree.distinct(1) itree.exhaust_disc itree.inject(1) snd_conv)
+  apply (metis (no_types, lifting) assms(1) is_Sil_choice itree.case_eq_if itree.collapse(1) itree.disc(4) itree.disc(7) itree.disc(9))
+  done
+
+lemma extchoice_Vis_bind:
+  "(Vis F \<box> Vis G) \<bind> R = (Vis F \<bind> R) \<box> (Vis G \<bind> R)"
+  by (simp add: map_prod_def)
 
 subsection \<open> Parallel Composition \<close>
 
@@ -269,6 +313,22 @@ datatype (discs_sels) ('a, 'b) andor = Left 'a | Right 'b | Both "'a \<times> 'b
 definition emerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
 "emerge f A g = 
   map_pfun Both (A \<Zdres> pfuse f g) + map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) + map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
+
+lemma emerge_alt_def:
+  "emerge F E G =
+     (\<lambda> e \<in> pdom(F) \<inter> pdom(G) \<inter> E \<bullet> Both(F(e), G(e)))
+     + (\<lambda> x \<in> pdom(F) - (E \<union> pdom(G)) \<bullet> Left(F x))
+     + (\<lambda> x \<in> pdom(G) - (E \<union> pdom(F)) \<bullet> Right(G x))"
+proof -
+  have 1: "map_pfun Both (E \<Zdres> pfuse F G) = (\<lambda> e \<in> pdom(F) \<inter> pdom(G) \<inter> E \<bullet> Both(F(e), G(e)))"
+    by (auto intro!: pabs_cong simp add: map_pfun_as_pabs pfuse_def)
+  have 2: "map_pfun Left ((E \<union> pdom(G)) \<Zndres> F) = (\<lambda> x \<in> pdom(F) - (E \<union> pdom(G)) \<bullet> Left(F x))"
+    by (auto intro: pabs_cong simp add: map_pfun_as_pabs)
+  have 3: "map_pfun Right ((E \<union> pdom(F)) \<Zndres> G) = (\<lambda> x \<in> pdom(G) - (E \<union> pdom(F)) \<bullet> Right(G x))"
+    by (auto intro: pabs_cong simp add: map_pfun_as_pabs)
+  show ?thesis
+    by (simp only: emerge_def 1 2 3)
+qed
 
 lemma pdom_pfuse [simp]: "pdom (pfuse f g) = pdom(f) \<inter> pdom(g)"
   by (metis (no_types, lifting) pdom_pfun_entries pfuse_def)
@@ -528,7 +588,7 @@ subsection \<open> Hiding \<close>
 
 text \<open> Could we prioritise events to keep determinism? \<close>
 
-corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree" where
+corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree" (infixl "\<setminus>" 90) where
 "hide P A = 
   (case P of
     Vis F \<Rightarrow> 
@@ -541,8 +601,22 @@ corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree"
     Sil P \<Rightarrow> Sil (hide P A) |
     Ret x \<Rightarrow> Ret x)"
 
-lemma is_Ret_hide [simp]: "is_Ret (hide P E) = is_Ret P"
-  by (simp add: hide.code deadlock_def itree.case_eq_if)
+lemma is_Ret_loop [simp]: "is_Ret (loop F s) = False"
+  by (metis bind_itree.disc_iff(1) comp_apply itree.disc(2) while.code)
+
+lemma is_Ret_hide [simp]: "is_Ret (P \<setminus> A) = is_Ret P"
+  by (auto simp add: hide.code deadlock_def itree.case_eq_if)
+
+lemma hide_sync: "(sync a \<bind> P) \<setminus> {build\<^bsub>a\<^esub> ()} = \<tau> (P ()) \<setminus> {build\<^bsub>a\<^esub> ()}"
+  by (simp add: sync_def hide.code)
+
+lemma "hide (iter (sync a)) {build\<^bsub>a\<^esub> ()} = diverge"
+  apply (coinduction, auto)
+   apply (simp add: while.code hide.code itree.case_eq_if)
+   apply (simp add: sync_def)
+  apply (simp add: while.code)
+  apply (simp add: hide_sync)
+  oops
 
 lemma is_Sil_hide [simp]: "is_Sil (hide P E) = (is_Sil P \<or> (is_Vis P \<and> card (E \<inter> pdom(un_Vis P)) = 1))"
   by (auto elim!: stableE simp add: hide.code deadlock_def itree.case_eq_if)
