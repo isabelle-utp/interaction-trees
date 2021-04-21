@@ -149,6 +149,17 @@ lemma Sil_fp_divergent [simp]: "Sil P = P \<longleftrightarrow> P = diverge"
 lemma Sil_nfp_stabilises [simp]: "Sil P \<noteq> P \<longleftrightarrow> stabilises P"
   by (metis Sil_fp_divergent diverges_diverge diverges_implies_equal)
 
+lemma Sil_Sil_drop: "\<tau> (\<tau> P) = P \<Longrightarrow> \<tau> P = P"
+  by (coinduction arbitrary: P, auto)
+     (metis (mono_tags, lifting) itree.discI(2), metis (full_types) itree.sel(2))
+
+lemma Sils_fp_diverge: "\<lbrakk> Sils n P = P; n > 0 \<rbrakk> \<Longrightarrow> P = diverge"
+  apply (coinduction arbitrary: P, auto)
+  apply (metis (mono_tags, hide_lams) gr_implies_not_zero is_Ret_Sils)
+  apply (metis is_Sil_Sils)
+  apply (metis (no_types, lifting) Sils_Sil_shift is_Sil_def itree.sel(2))
+  done
+
 lemma trace_of_divergent:
   assumes "P \<midarrow>t\<leadsto> P'" "divergent P"
   shows "(t, P') = ([], diverge)"

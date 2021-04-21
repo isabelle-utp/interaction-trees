@@ -607,22 +607,27 @@ lemma is_Ret_loop [simp]: "is_Ret (loop F s) = False"
 lemma is_Ret_hide [simp]: "is_Ret (P \<setminus> A) = is_Ret P"
   by (auto simp add: hide.code deadlock_def itree.case_eq_if)
 
-lemma hide_sync: "(sync a \<bind> P) \<setminus> {build\<^bsub>a\<^esub> ()} = \<tau> (P ()) \<setminus> {build\<^bsub>a\<^esub> ()}"
-  by (simp add: sync_def hide.code)
-
-lemma "hide (iter (sync a)) {build\<^bsub>a\<^esub> ()} = diverge"
-  apply (coinduction, auto)
-   apply (simp add: while.code hide.code itree.case_eq_if)
-   apply (simp add: sync_def)
-  apply (simp add: while.code)
-  apply (simp add: hide_sync)
-  oops
-
 lemma is_Sil_hide [simp]: "is_Sil (hide P E) = (is_Sil P \<or> (is_Vis P \<and> card (E \<inter> pdom(un_Vis P)) = 1))"
   by (auto elim!: stableE simp add: hide.code deadlock_def itree.case_eq_if)
 
 lemma is_Vis_hide [simp]: "is_Vis (hide P E) = (is_Vis P \<and> (card (E \<inter> pdom(un_Vis P)) \<noteq> 1 \<or> E \<inter> pdom(un_Vis P) = {}))"
   by (auto elim!: stableE simp add: hide.code itree.case_eq_if deadlock_def)
+
+lemma hide_Sil [simp]: "(\<tau> P) \<setminus> A = \<tau> (P \<setminus> A)"
+  by (metis (no_types, lifting) hide.code itree.simps(11))
+
+lemma hide_sync: "(sync a \<bind> P) \<setminus> {build\<^bsub>a\<^esub> ()} = \<tau> (P ()) \<setminus> {build\<^bsub>a\<^esub> ()}"
+  by (simp add: sync_def hide.code)
+
+lemma hide_sync_loop_diverge: "hide (iter (sync a)) {build\<^bsub>a\<^esub> ()} = diverge"
+  apply (coinduction rule:itree_coind, auto)
+  apply (simp add: while.code, simp add: sync_def)
+  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) while.code)
+  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) itree.distinct_disc(6) while.code)
+  apply (smt (z3) disjoint_iff empty_iff hide_sync insert_iff is_Vis_hide itree.disc(8) while.code)
+  apply (smt (z3) Sil_Sil_drop comp_apply hide_Sil hide_sync itree.inject(2) while.code)
+  apply (metis diverge.code itree.inject(2))
+  done
 
 lemma hide_empty: "hide P {} = P"
   apply (coinduction arbitrary: P rule: itree_coind)
@@ -631,7 +636,6 @@ lemma hide_empty: "hide P {} = P"
      apply (simp add: hide.code)
     apply (simp add: hide.code)
    apply (simp add: hide.code)
-  apply (simp add: hide.code)
   apply (auto simp add: itree.case_eq_if)
   apply (metis (no_types, lifting) hide.code itree.case_eq_if)
   oops
