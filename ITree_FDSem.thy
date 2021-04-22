@@ -312,6 +312,9 @@ lemma Vis_trace_to: "Vis F \<midarrow>tr\<leadsto> P \<longleftrightarrow> ((tr 
 definition failures :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" where
 "failures P = {(s, X). \<exists> Q. P \<Midarrow>s\<Rightarrow> Q \<and> Q ref X} \<union> {(s @ [\<cmark>(v)], X) | s v X. \<exists> Q. P \<Midarrow>s @ [\<cmark>(v)]\<Rightarrow> Q}"
 
+lemma failure_simpl_def: "failures P = {(s, X). \<exists> Q. P \<Midarrow>s\<Rightarrow> Q \<and> Q ref X}"
+  by (force simp add: failures_def refuses_def deadlock_def)
+
 lemma in_failuresE [elim]:
   assumes
   "f \<in> failures P"
@@ -427,6 +430,15 @@ lemma failures_Vis:
 lemma failures_deadlock: "failures deadlock = {([], X) | X. True}"
   by (auto simp add: deadlock_def failures_Vis)
 
+lemma failures_inp:
+  "wb_prism c \<Longrightarrow>
+   failures (inp_in c A) = 
+    {([], E) | E. \<forall> x\<in>A. Ev (build\<^bsub>c\<^esub> x) \<notin> E} 
+    \<union> {([Ev (build\<^bsub>c\<^esub> x)], E) | E x. x \<in> A \<and> \<cmark> () \<notin> E}
+    \<union> {([Ev (build\<^bsub>c\<^esub> x), \<cmark> ()], E) | E x. x \<in> A}"
+  by (simp add: inp_in_def failures_Vis failures_Ret, safe)
+     (auto simp add: wb_prism.range_build failures_Ret)  
+  
 lemma dom_bind [simp]: "Map.dom (\<lambda> x. P x \<bind> Q) = {x \<in> Map.dom P. the(P x) \<in> Map.dom Q}"
   by (auto)
 
