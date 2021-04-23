@@ -236,6 +236,9 @@ lemma no_divergences_then_div_free: "divergences P = {} \<Longrightarrow> div_fr
   by (auto simp add: divergences_alt_def)
      (metis div_free_is_no_divergence no_divergence)
 
+lemma div_free_iff_divergences_empty: "div_free P \<longleftrightarrow> divergences P = {}"
+  by (metis div_free_is_no_divergence diverges_diverge ex_in_conv in_divergenceE no_divergence no_divergences_then_div_free)
+  
 lemma wbisim_le_divergences: 
   assumes "P \<approx> Q"
   shows "divergences(P) \<subseteq> divergences(Q)"

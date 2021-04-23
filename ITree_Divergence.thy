@@ -251,6 +251,8 @@ lemma stabilises_to_is_no_diverge: "stabilises_to no_divergence = no_divergence"
 coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
 scons: "stabilises_to div_free P \<Longrightarrow> div_free P"
 
+find_theorems div_free
+
 lemma div_free_Ret [simp]: "div_free (Ret x)"
   by (simp add: div_free.intros ret_stbs)
 
@@ -282,6 +284,36 @@ lemma div_free_coind:
   apply (coinduction arbitrary: P rule: div_free.coinduct)
   apply (auto)
   apply (metis (mono_tags, lifting) mono_stabilises_to predicate1I rev_predicate1D)
+  done
+
+lemma div_free_coinduct:
+  assumes "\<phi> P"
+  "\<phi> diverge \<Longrightarrow> False"
+  "\<And> n F e. \<lbrakk> \<phi> (Sils n (Vis F)); e \<in> pdom(F) \<rbrakk> \<Longrightarrow> \<phi> (F e)"
+  shows "div_free P"
+proof (rule div_free_coind[of \<phi>, OF assms(1)], safe)
+  fix P
+  assume \<phi>P: "\<phi> P"
+  show "stabilises_to \<phi> P"
+  proof (cases P rule: itree_cases)
+    case (Vis e G)
+    then show ?thesis
+      by (simp, metis (no_types, lifting) \<phi>P assms(3) image_subset_iff mem_Collect_eq pran_pdom)
+  next
+    case (Ret n x)
+    then show ?thesis
+      by (metis (mono_tags, hide_lams) stabilises_to_Sils_RetI) 
+  next
+    case diverge
+    then show ?thesis
+      by (metis \<phi>P assms(2))
+  qed
+qed
+  
+lemma div_free_run: "div_free (run E)"
+  apply (coinduction rule: div_free_coinduct)
+  apply (metis (no_types, hide_lams) is_Vis_diverge run.disc_iff)
+  apply (metis Vis_Sils map_pfun_apply pdom_map_pfun run.code)
   done
 
 lemma no_divergence_in_div_free: "no_divergence \<le> div_free"

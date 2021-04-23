@@ -5,24 +5,16 @@ begin
 corec speak :: "('e, 's) itree" where
 "speak = Vis (map_pfun (\<lambda> _. Sil speak) pId)"
 
-lemma "div_free speak"
-  (* We need to find the right pattern to find divergence freedom using Tarki theorem *)
-  apply (coinduct rule: div_free_coind[where \<phi>="\<lambda> x. \<exists> n. x = Sils n speak"])
-  (* We need to show two things: (1) the our target process fits the pattern, and
-  (2) that it is a prefixed-point. *)
-  apply (rule_tac x="0" in exI)
-  apply (simp)
-  apply (auto)
-  apply (induct_tac n)
-  apply (simp)
-  apply (subst speak.code) back
-   apply (rule vis_stbs)
-   apply (simp add: pfun.set_map)
-  apply (rule_tac x="1" in exI, simp)
-  apply (simp)
-  apply (rule sil_stbs)
-  apply (simp)
-  done
+lemma div_free_speak: "div_free speak"
+proof -
+  text \<open> The pattern for divergence freedom \<close>
+  have d: "\<And> n. div_free (Sils n speak)"
+    apply (coinduction rule: div_free_coinduct)
+     apply (metis Sils_diverge Sils_injective diverge_not_Vis speak.code)
+    apply (metis (no_types, lifting) Sils.simps(2) Sils_Vis_inj Vis_Sils map_pfun_apply pdom_map_pfun speak.code)
+    done
+  from d[of 0] show ?thesis by simp
+qed 
 
 chantype Chan =
   Input :: integer
@@ -36,7 +28,6 @@ lemma "echo () \<midarrow>[build\<^bsub>Input\<^esub> 1, build\<^bsub>Output\<^e
   apply (subst while.code)
   apply (subst echo_def[THEN sym])
   apply (simp)
-  apply (rule trace_to_Sil)
   apply (simp add: inp_in_def)
   apply (subst bind_itree.code)
   oops
