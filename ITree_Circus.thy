@@ -6,10 +6,10 @@ begin
 
 subsection \<open> Main Operators \<close>
 
-type_synonym ('e, 's) action = "('e, 's) ktree"
+type_synonym ('e, 's) action = "('e, 's) htree"
 type_synonym 'e process = "('e, unit) itree"
 
-definition Skip :: "('e, 'r) ktree" where
+definition Skip :: "('e, 'r) htree" where
 "Skip = (\<lambda> s. Ret s)"
 
 expr_ctr subst_id
@@ -17,7 +17,7 @@ expr_ctr subst_id
 lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<cmark> [\<leadsto>]]})\<^sub>e"
   by (simp add: Skip_def straces_def traces_Ret, expr_simp)
 
-abbreviation Div :: "('e, 'r) ktree" where
+abbreviation Div :: "('e, 'r) htree" where
 "Div \<equiv> (\<lambda> s. diverge)"
 
 lemma traces_deadlock: "traces(deadlock) = {[]}"
@@ -26,7 +26,7 @@ lemma traces_deadlock: "traces(deadlock) = {[]}"
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
-definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree" ("\<questiondown>_?") where
+definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" ("\<questiondown>_?") where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
 lemma test_true: "test (True)\<^sub>e = Skip"
@@ -66,10 +66,10 @@ lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {
   apply (auto simp add: inp_in_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
   done 
 
-definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
+definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
 
-definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a list) \<Rightarrow> ('a \<Rightarrow> ('e, 's) ktree) \<Rightarrow> ('e, 's) ktree" where
+definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a list) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input_in c A P = (\<lambda> s. inp_list c (A s) \<bind> (\<lambda> x. P x s))"
 
 syntax 
@@ -82,7 +82,7 @@ translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambd
 lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P(x))"
   by (simp add: input_def assigns_def)
 
-definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
+definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "output c e P = (\<lambda> s. outp c (e s) \<then> P s)"
 
 syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_!'(_') \<rightarrow> _" [90, 0, 91] 91)

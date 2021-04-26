@@ -349,7 +349,7 @@ subsection \<open> Iteration \<close>
 
 text \<open> For now we support only basic iteration for CSP processes. \<close>
 
-corec while :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) ktree \<Rightarrow> ('e, 's) ktree" where
+corec while :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "while b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (while b P))) else Ret s)"
 
 abbreviation "loop \<equiv> while (\<lambda> s. True)"

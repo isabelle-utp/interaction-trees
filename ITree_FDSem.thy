@@ -88,7 +88,7 @@ lemma wbisim_eq_traces: "P \<approx> Q \<Longrightarrow> traces(P) = traces(Q)"
 lemma trace_alt_def: "traces P = {s. \<exists> Q. P \<Midarrow>s\<Rightarrow> Q}"
   by (auto simp add: traces_def mstep_to_def)
 
-definition straces :: "('e, 's) ktree \<Rightarrow> ('s \<Rightarrow> ('e, 's) trace set)" ("traces\<^sub>s") where
+definition straces :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> ('e, 's) trace set)" ("traces\<^sub>s") where
 "straces K = (\<lambda> s. traces (K s))"
 
 lemma Nil_in_traces [simp]: "[] \<in> traces P"

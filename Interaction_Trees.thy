@@ -88,9 +88,10 @@ text \<open> Configuring the code generator; either partial functions or associa
 
 code_datatype pfun_of_alist pfun_of_map
 
-subsection \<open> Kleisli Trees and Monad \<close>
+subsection \<open> Kleisli Trees and Monads \<close>
 
-type_synonym ('e, 'r) ktree = "'r \<Rightarrow> ('e, 'r) itree"
+type_synonym ('e, 'r, 's) ktree = "'r \<Rightarrow> ('e, 's) itree"
+type_synonym ('e, 'r) htree = "('e, 'r, 'r) ktree"
 
 primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, 's) itree" where
 "bind_itree u k = 
