@@ -504,8 +504,10 @@ proof -
   have "P'' \<box> Q \<Midarrow>[a]\<Rightarrow> P'"
   proof (cases P'')
     case (Ret x1)
-    then show ?thesis sorry
-  next
+    then show ?thesis oops
+
+ (*
+    next
     case (Sil x2)
     then show ?thesis
       using P'' by force
@@ -516,6 +518,7 @@ proof -
     with assms P'' show ?thesis
       apply (simp)
   oops
+*)
 
 lemma 
   assumes "\<I>(P) \<inter> \<I>(Q) = {}"

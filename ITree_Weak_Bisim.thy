@@ -383,6 +383,7 @@ lemma wbisim_step_stable:
 lemma "(\<And>s. Q\<^sub>1 s \<approx> Q\<^sub>2 s) \<Longrightarrow> P \<bind> Q\<^sub>1 \<approx> P \<bind> Q\<^sub>2"
   apply (rule wbisim_strong_coind[of "\<lambda> x y. \<exists> P Q. x = P \<bind> Q\<^sub>1 \<and> y = P \<bind> Q\<^sub>2 \<or> y = P \<bind> Q\<^sub>1 \<and> x = P \<bind> Q\<^sub>2"])
   oops
+
   
 text \<open> For CCS, weak bisimulation is not a congruence with respect to choice. Hence, Milner creates
   a derived relation, observation congruence, which adds the requirement that an initial silent
