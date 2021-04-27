@@ -113,24 +113,6 @@ lemma extchoice_Div: "Div \<box> P = Div"
 lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> Q)"
   by (simp add: extchoice_fun_def expr_defs assigns_def)
 
-subsection \<open> Examples \<close>
-
-alphabet State = 
-  buf :: "integer list"
-
-instantiation State_ext :: (default) default
-begin
-  definition default_State_ext :: "'a State_scheme" where
-    "default_State_ext = State.extend (State.make []) default"
-
-instance ..
-end
-
-chantype Chan =
-  Input :: integer
-  Output :: integer
-  State :: "integer list"
-
 no_notation conj  (infixr "&" 35)
 
 syntax
@@ -138,30 +120,5 @@ syntax
 
 translations
   "_cguard b P" == "(CONST test (b)\<^sub>e) \<Zcomp> P"
-
-lit_vars
-
-definition "buffer 
-  = proc 
-      ([buf \<leadsto> []] :: State \<Rightarrow> State)
-      (loop ((Input?(i):[0,1,2,3] \<rightarrow> buf := (buf @ [i]))
-            \<box> ((length(buf) > 0) & Output!(hd buf) \<rightarrow> buf := (tl buf) \<Zcomp> State!(buf) \<rightarrow> Skip)
-            \<box> State!(buf) \<rightarrow> Skip))"
-
-definition "mytest = loop (Input?(i) \<rightarrow> (\<lambda> s. Ret (s @ [i])) \<box> Stop)"
-
-definition "bitree = loop (\<lambda> s. inp_list Input [0,1,2,3] \<bind> outp Output)"
-
-chantype schan = 
-  a :: unit b :: unit c :: unit
-
-definition "partest = 
-  (\<lambda> s. hide
-        (gpar_csp (loop (\<lambda> s. (do { outp a (); outp b (); Ret () })) s) {build\<^bsub>b\<^esub> ()} 
-                  (loop (\<lambda> s. (do { outp b (); outp c (); Ret () })) s)) {build\<^bsub>b\<^esub> ()})" 
-
-subsection \<open> Code Generation \<close>
-             
-export_code mytest bitree buffer partest diverge deadlock in Haskell module_name ITree_Examples (string_classes)
 
 end
