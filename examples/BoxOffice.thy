@@ -9,6 +9,8 @@ alphabet BoxOffice =
   seating :: "SEAT set"
   sold :: "SEAT \<Zpfun> CUSTOMER"
 
+definition "BoxOffice_inv = (pdom(sold) \<subseteq> seating)\<^sub>e"
+
 instantiation BoxOffice_ext :: (default) default
 begin
   definition default_BoxOffice_ext :: "'a BoxOffice_scheme" where
