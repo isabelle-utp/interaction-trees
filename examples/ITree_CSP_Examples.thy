@@ -27,9 +27,9 @@ chantype Chan =
   Output :: integer
   State :: "integer list"
 
-definition "buffer = 
+definition "buffer A = 
   loop (\<lambda> s. 
-      do { i \<leftarrow> inp_in Input {0,1,2,3}; Ret (s @ [i]) }
+      do { i \<leftarrow> inp_in Input (set A); Ret (s @ [i]) }
     \<box> do { guard (length s > 0); outp Output (hd s); Ret (tl s) }
     \<box> do { outp State s; Ret s }
   )"

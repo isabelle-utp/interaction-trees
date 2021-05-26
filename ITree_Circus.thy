@@ -69,8 +69,8 @@ lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
 
-definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a list) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"input_in c A P = (\<lambda> s. inp_list c (A s) \<bind> (\<lambda> x. P x s))"
+definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_in c A P = (\<lambda> s. inp_in c (A s) \<bind> (\<lambda> x. P x s))"
 
 syntax 
   "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [90, 0, 91] 91)

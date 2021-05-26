@@ -24,11 +24,11 @@ chantype Chan =
   Output :: integer
   State :: "integer list"
 
-definition "buffer 
+definition "buffer I
   = proc 
       ([buf \<leadsto> []] :: State \<Rightarrow> State)
-      (loop ((Input?(i):[0,1,2,3] \<rightarrow> buf := (buf @ [i]))
-            \<box> ((length(buf) > 0) & Output!(hd buf) \<rightarrow> buf := (tl buf) \<Zcomp> State!(buf) \<rightarrow> Skip)
+      (loop ((Input?(i):I \<rightarrow> buf := (buf @ [i]))
+            \<box> ((length(buf) > 0) & Output!(hd buf) \<rightarrow> buf := (tl buf))
             \<box> State!(buf) \<rightarrow> Skip))"
 
 subsection \<open> Other Examples \<close>
