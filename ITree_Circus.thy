@@ -26,13 +26,16 @@ lemma traces_deadlock: "traces(deadlock) = {[]}"
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
-definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" ("\<questiondown>_?") where
+definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
-lemma test_true: "test (True)\<^sub>e = Skip"
+syntax "_test" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
+translations "_test b" == "CONST test (b)\<^sub>e"
+
+lemma test_true: "\<questiondown>True? = Skip"
   by (simp add: test_def Skip_def)
 
-lemma test_false: "test (False)\<^sub>e = Stop"
+lemma test_false: "\<questiondown>False? = Stop"
   by (simp add: test_def)
 
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
