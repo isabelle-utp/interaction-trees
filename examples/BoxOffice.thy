@@ -1,5 +1,5 @@
 theory BoxOffice
-  imports "../ITree_Circus"
+  imports "../ITree_Extraction"
 begin lit_vars
 
 type_synonym SEAT = integer
@@ -9,15 +9,9 @@ alphabet BoxOffice =
   seating :: "SEAT set"
   sold :: "SEAT \<Zpfun> CUSTOMER"
 
+record_default BoxOffice
+
 definition "BoxOffice_inv = (pdom(sold) \<subseteq> seating)\<^sub>e"
-
-instantiation BoxOffice_ext :: (default) default
-begin
-  definition default_BoxOffice_ext :: "'a BoxOffice_scheme" where
-    "default_BoxOffice_ext = BoxOffice.extend (BoxOffice.make {} {}\<^sub>p) default"
-
-instance ..
-end
 
 definition BoxOfficeInit :: "integer set \<Rightarrow> BoxOffice subst" where
 "BoxOfficeInit initalloc = [seating \<leadsto> initalloc, sold \<leadsto> {}\<^sub>p]"
