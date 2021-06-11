@@ -1,29 +1,16 @@
 section \<open> Dwarf Signal \<close>
 
 theory DwarfSignal
-  imports "../ITree_Circus"
+  imports "../ITree_Extraction" "HOL-Library.Word"
 begin lit_vars
 
 subsection \<open> State Space \<close>
 
-datatype LampId = L1 | L2 | L3
-
-instantiation LampId :: enum
-begin
-
-definition "enum_LampId = [L1, L2, L3]"
-definition "enum_all_LampId P = (P L1 \<and> P L2 \<and> P L3)"
-definition "enum_ex_LampId P = (P L1 \<or> P L2 \<or> P L3)"
-
-instance
-  by (intro_classes, auto simp add: enum_LampId_def enum_all_LampId_def enum_ex_LampId_def)
-     (metis LampId.exhaust)+
-
-end
+enumtype LampId = L1 | L2 | L3
 
 type_synonym Signal = "LampId set"
 
-datatype ProperState = dark | stop | warning | drive
+enumtype ProperState = dark | stop | warning | drive
 
 definition "ProperState = {dark, stop, warning, drive}"
 
@@ -48,13 +35,7 @@ schema Dwarf =
     "(current_state - turn_off) \<union> turn_on = signalLamps desired_proper_state"
     "turn_on \<inter> turn_off = {}"
 
-instantiation Dwarf_ext :: (default) default
-begin
-  definition default_Dwarf_ext :: "'a Dwarf_scheme" where
-    "default_Dwarf_ext = Dwarf.extend (Dwarf.make dark {} {} (signalLamps stop) (signalLamps stop) stop) default"
-
-instance ..
-end
+record_default Dwarf
 
 definition "NeverShowAll = (@Dwarf \<and> current_state \<noteq> {L1, L2, L3})\<^sub>e"
 
