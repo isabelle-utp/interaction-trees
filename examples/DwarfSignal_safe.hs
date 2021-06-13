@@ -413,13 +413,6 @@ gpar_csp ::
   forall a b c. (Eq a) => Itree a b -> Set a -> Itree a c -> Itree a ();
 gpar_csp p cs q = bind_itree (par p cs q) (\ (_, _) -> Ret ());
 
-top_set :: forall a. Set a;
-top_set = Coset [];
-
-input ::
-  forall a b c. Prism_ext a b () -> (a -> c -> Itree b c) -> c -> Itree b c;
-input c p = (\ s -> bind_itree (inp_in c top_set) (\ x -> p x s));
-
 output ::
   forall a b c.
     Prism_ext a b () -> (c -> a) -> (c -> Itree b c) -> c -> Itree b c;
@@ -477,7 +470,7 @@ input_in c a p = (\ s -> bind_itree (inp_in c (a s)) (\ x -> p x s));
 
 sP345 :: forall a. (Eq a) => a -> Itree Chan a;
 sP345 =
-  input lastProperStatea
+  input_in lastProperStatea (sexp (\ _ -> properState))
     (\ l ->
       extchoice_fun
         (extchoice_fun

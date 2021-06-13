@@ -103,7 +103,7 @@ definition "Dwarf
 text \<open> A separate controller process for preserving safety properties \<close>
 definition "
   SP345 = 
-    lastProperState?(l) \<rightarrow> 
+    lastProperState?(l):(ProperState) \<rightarrow> 
       (
           (l = stop) & setNewProperState?(st):(ProperState - {drive}) \<rightarrow> Skip
         \<box> (l = dark) & setNewProperState?(st):{dark, stop} \<rightarrow> Skip
