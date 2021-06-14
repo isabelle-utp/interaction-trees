@@ -95,7 +95,15 @@ definition
 
 definition "Shine = shine!(current_state) \<rightarrow> Skip"
 
-definition "LastProperState = lastProperState!(last_proper_state) \<rightarrow> Skip"
+(* This query is only available at a stable state;
+In the original document, safety properties 3, 4, and 5 depends on
+last_proper_state. Actually, last_proper_state would be 
+desired_proper_state in the definition of SetNewProperState.
+So here the controller should query desired_proper_state
+*)
+definition "LastProperState = 
+  \<questiondown>current_state = signalLamps desired_proper_state? \<Zcomp>
+  lastProperState!(desired_proper_state) \<rightarrow> Skip"
 
 definition "Dwarf
   = proc Init (loop (SetNewProperState \<box> TurnOn \<box> TurnOff \<box> Shine \<box> LastProperState))"
@@ -103,7 +111,7 @@ definition "Dwarf
 text \<open> A separate controller process for preserving safety properties \<close>
 definition "
   SP345 = 
-    lastProperState?(l):(ProperState) \<rightarrow> 
+    lastProperState?(l):(ProperState) \<rightarrow>
       (
           (l = stop) & setNewProperState?(st):(ProperState - {drive}) \<rightarrow> Skip
         \<box> (l = dark) & setNewProperState?(st):{dark, stop} \<rightarrow> Skip
@@ -114,14 +122,22 @@ definition "
 definition Ctrl:: "chan process" where
 "Ctrl  = proc ([\<leadsto>]:: Dwarf \<Rightarrow> Dwarf) (loop (SP345))"
 
-definition Dwarf_safe :: "chan process" where
-  "Dwarf_safe = 
+definition Dwarf_safe_nh :: "chan process" where
+  "Dwarf_safe_nh = 
     (Dwarf 
       \<parallel>\<^bsub>set ([lastProperState_C (s). s \<leftarrow> [dark, stop, warning, drive]] 
            @ [setNewProperState_C (s). s \<leftarrow> [dark, stop, warning, drive]])\<^esub>
      Ctrl)
 "
 
-export_code Dwarf_safe in Haskell module_name DwarfSignal_safe (string_classes)
+definition Dwarf_safe :: "chan process" where
+  "Dwarf_safe = 
+    hide Dwarf_safe_nh (set ([lastProperState_C (s). s \<leftarrow> [dark, stop, warning, drive]]))
+"
+
+export_code Dwarf Dwarf_safe_nh Dwarf_safe in Haskell 
+  (* module_name DwarfSignal_safe *)
+  file_prefix DwarfSignal
+  (string_classes)
 
 end
