@@ -90,26 +90,26 @@ definition
     \<questiondown>current_state = signalLamps desired_proper_state? \<Zcomp> 
     setNewProperState?(st):(ProperState - {desired_proper_state}) \<rightarrow> 
       (last_proper_state := desired_proper_state \<Zcomp>
-       turn_off := (current_state - signalLamps st) \<Zcomp>
-       turn_on := (signalLamps st - current_state) \<Zcomp>
+       turn_off := current_state - signalLamps st \<Zcomp>
+       turn_on := signalLamps st - current_state \<Zcomp>
        last_state := current_state \<Zcomp>
        desired_proper_state := st)"
 
 definition
   "TurnOff =
    turnOff?(l):turn_off \<rightarrow> 
-    (turn_off := (turn_off - {l}) \<Zcomp>
-     turn_on := (turn_on - {l}) \<Zcomp>
+    (turn_off := turn_off - {l} \<Zcomp>
+     turn_on := turn_on - {l} \<Zcomp>
      last_state := current_state \<Zcomp>
-     current_state := (current_state - {l}))"
+     current_state := current_state - {l})"
 
 definition
   "TurnOn =
    turnOn?(l):turn_on \<rightarrow> 
-    (turn_off := (turn_off - {l}) \<Zcomp>
-     turn_on := (turn_on - {l}) \<Zcomp>
+    (turn_off := turn_off - {l} \<Zcomp>
+     turn_on := turn_on - {l} \<Zcomp>
      last_state := current_state \<Zcomp>
-     current_state := (current_state \<union> {l}))"
+     current_state := current_state \<union> {l})"
 
 definition "Shine = shine!(current_state) \<rightarrow> Skip"
 
