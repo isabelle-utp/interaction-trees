@@ -751,6 +751,15 @@ cRing =
                    (3 :: Integer)])
              (upto zero_int (int_of_nat (minus_nat maxring one_nat)))));
 
+isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
+isPrefixOf [] _         =  True;
+isPrefixOf _  []        =  False;
+isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
+
+removeSubstr :: String -> String -> String;
+removeSubstr w "" = "";
+removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
+
 simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
 simulate_cnt n (Sil p) = 
@@ -762,13 +771,13 @@ simulate_cnt n (Sil p) =
      };
 simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
 simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
-  do { Prelude.putStrLn ("Events: " ++ Prelude.show (map fst m));
+  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
        e <- Prelude.getLine;
        case (Prelude.reads e) of
          []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
-         [(v, _)] -> case (Prelude.lookup v m) of
-                       Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
-                       Just k -> simulate_cnt 0 k
+         [(v, _)] -> if (v > Prelude.length m)
+                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       else simulate_cnt 0 (snd (m !! (v - 1)))
      };
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();

@@ -8,6 +8,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified Simulate;
 
 data Nat = Zero_nat | Suc Nat deriving (Prelude.Read, Prelude.Show);
 
@@ -241,28 +242,5 @@ fib :: Itree Chan ();
 fib = proc init
         (kleisli_comp bind_itree initFib
           (while (\ _ -> True) (extchoice_fun outFib (\ _ -> deadlock))));
-
-simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
-simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
-simulate_cnt n (Sil p) = 
-  do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
-       if (n >= 20) then do { Prelude.putStr "Many steps (> 20); Continue? [Y/N]"; q <- Prelude.getLine; 
-                              if (q == "Y") then simulate_cnt 0 p else Prelude.putStrLn "Ended early.";
-                            }
-                    else simulate_cnt (n + 1) p
-     };
-simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
-simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
-  do { Prelude.putStrLn ("Events: " ++ Prelude.show (map fst m));
-       e <- Prelude.getLine;
-       case (Prelude.reads e) of
-         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
-         [(v, _)] -> case (Prelude.lookup v m) of
-                       Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
-                       Just k -> simulate_cnt 0 k
-     };
-
-simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
-simulate = simulate_cnt 0;
 
 }

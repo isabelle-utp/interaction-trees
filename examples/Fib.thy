@@ -54,9 +54,6 @@ code_thms Fib
 code_printing code_module "Simulate" \<rightharpoonup> (Haskell)
 \<open>module Simulate (simulate) where
 
-data Itree a b = Ret b | Sil (Itree a b) | Vis (Pfun a (Itree a b));
-data Pfun a b = Pfun_of_alist [(a, b)] | Pfun_of_map (a -> Maybe b);
-
 simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
 simulate_cnt n (Sil p) = 
