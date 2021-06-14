@@ -8,7 +8,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
-import qualified Simulate;
+{-# import qualified Simulate; #-}
 
 data Nat = Zero_nat | Suc Nat deriving (Prelude.Read, Prelude.Show);
 

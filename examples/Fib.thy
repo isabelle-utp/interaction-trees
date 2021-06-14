@@ -39,6 +39,9 @@ definition
 definition
   "OutFib = out!(x+y) \<rightarrow> (\<langle>[ x \<leadsto> y, y \<leadsto> x+y]\<rangle>\<^sub>a)"
 
+term "Stop"
+term "(InitFib \<Zcomp> loop (OutFib \<box> Stop)) \<box> Stop"
+
 text \<open> Use of (OutFib \<box> Stop), instead of OutFib, is just for the sake of 
 generating of chan_equal, which will be used by simulate in generated haskell
  code.\<close>
@@ -49,12 +52,13 @@ definition Fib :: "chan process" where
 print_codeproc
 code_thms Fib
 *)
-(* definition simulate where "simulate = True" *)
 
+(*
 code_printing code_module "Simulate" \<rightharpoonup> (Haskell)
 \<open>module Simulate (simulate) where
+import qualified Interaction_Trees;
 
-simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
+simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Interaction_Trees.Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
 simulate_cnt n (Sil p) = 
   do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
@@ -74,11 +78,32 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
                        Just k -> simulate_cnt 0 k
      };
 
-simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
+simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interaction_Trees.Itree e s -> Prelude.IO ();
 simulate = simulate_cnt 0;\<close>
+*)
+(* code_reserved Haskell Simulate *)
 
-code_reserved Haskell Simulate
+term "pfun_of_alist"
+term "xx::('a \<Rightarrow>\<^sub>p'b)"
 
-export_code Fib in Haskell module_name Fib (string_classes)
+(* export_code ITree pfun in Haskell module_name Itree (string_classes) *)
+
+(*
+export_code proc in Haskell 
+  module_name proc 
+  file_prefix itree 
+    (string_classes)
+*)
+
+(*
+code_identifier
+  code_module Simulate  \<rightharpoonup> (Haskell) Fib |
+  code_module Fib  \<rightharpoonup> (Haskell) Fib
+*)
+
+export_code open Fib in Haskell 
+  (* module_name Fib *)
+  file_prefix Fib
+    (string_classes)
 
 end
