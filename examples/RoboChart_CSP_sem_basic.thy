@@ -29,6 +29,7 @@ subsection \<open> stm0 \<close>
 datatype SIDS_stm0 = SID_stm0
   | SID_stm0_s0
 
+definition "SIDS_stm0_set = {SID_stm0, SID_stm0_s0}"
 definition "SIDS_stm0_list = [SID_stm0, SID_stm0_s0]"
 
 datatype TIDS_stm0 = NULLTRANSITION
@@ -190,6 +191,20 @@ definition I_stm0_i0 where
 "I_stm0_i0 = (\<lambda> (id::integer) . 
   do {outp internal_stm0 TID_stm0_t0 ; 
       outp set_x_stm0 0; 
+      outp enter_stm0 (SID_stm0, SID_stm0_s0);
+      outp entered_stm0 (SID_stm0, SID_stm0_s0)
+  })
+"
+
+(* We need an interrupt operator for during actions *) 
+definition State_stm0_s0 where 
+"State_stm0_s0 = (\<lambda> (id::integer) . 
+  do {sd \<leftarrow> inp_in enter_stm0 {(s, SID_stm0_s0) . (s \<in> (SIDS_stm0_set-{SID_stm0_s0}))} ; 
+      outp entered_stm0 (fst sd, SID_stm0_s0);
+      do {t \<leftarrow> inp_in e1__stm0 {(TID_stm0_t1, din, l) . (l \<in> core_int_set)} ;
+            outp set_l_stm0 (snd (snd t)) ; 
+            outp exit_stm0 (SID_stm0_s0, SID_stm0_s0)
+          } ;
       outp enter_stm0 (SID_stm0, SID_stm0_s0);
       outp entered_stm0 (SID_stm0, SID_stm0_s0)
   })
