@@ -145,6 +145,28 @@ definition stm0_s0_triggers where
 )
 "
 
+definition stm0_l_events where
+"stm0_l_events = 
+    set (
+        [get_l_stm0_C l . l \<leftarrow> core_int_list] @
+        [set_l_stm0_C l . l \<leftarrow> core_int_list]
+    )
+"
+
+definition stm0_x_events where
+"stm0_x_events = 
+    set (
+        [get_x_stm0_C x . x \<leftarrow> core_int_list] @
+        [set_x_stm0_C x . x \<leftarrow> core_int_list] @
+        [set_EXT_x_stm0_C x . x \<leftarrow> core_int_list]
+    )
+"
+
+definition stm0_MachineInternalEvents where
+"stm0_MachineInternalEvents = 
+  set ([internal_stm0_C t . t \<leftarrow> TIDS_stm0_list])
+"
+
 subsubsection \<open> State Machine Memory \<close>
 text \<open> Memory cell processes \<close>
 (* for the shared variable x *)
@@ -191,7 +213,7 @@ definition stm0_MemoryTransitions_opt_1 where
   )
 "
 
-subsubsection \<open> State Machine \<close>
+subsubsection \<open> States \<close>
 definition I_stm0_i0 where
 "I_stm0_i0 = (\<lambda> (id::integer) . 
   do {outp internal_stm0 TID_stm0_t0 ; 
@@ -297,7 +319,108 @@ definition State_stm0_s0 where
 )
 "
 
-export_code stm0_Memory_opt_l stm0_MemoryTransitions_opt_0 in Haskell 
+definition State_stm0_s0_R where
+"State_stm0_s0_R (idd::integer) = 
+   (do { State_stm0_s0(idd) ; Ret ()}) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_stm0 - stm0_s0_triggers) \<^esub> 
+   skip
+"
+
+definition STM_stm0 where
+"STM_stm0 (idd::integer) = 
+   (I_stm0_i0(idd))
+    \<parallel>\<^bsub> set (
+        [enter_stm0_C (s, d). 
+          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          d \<leftarrow> [SID_stm0_s0]] @ 
+        [entered_stm0_C (s, d). 
+          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          d \<leftarrow> [SID_stm0_s0]] @ 
+        [exit_stm0_C (s, d). 
+          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          d \<leftarrow> [SID_stm0_s0]] @ 
+        [exited_stm0_C (s, d). 
+          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          d \<leftarrow> [SID_stm0_s0]] 
+        ) \<^esub> 
+   State_stm0_s0_R(idd)
+"
+
+definition par_hide where
+"par_hide P s Q = (hide (P \<parallel>\<^bsub> s \<^esub> Q) s)"
+
+definition discard_state where
+"discard_state P = do {P ; Ret ()}"
+
+definition stm0_e1_x_internal_set where
+"stm0_e1_x_internal_set = 
+  set ([e1__stm0_C (tid, dir, n). 
+          tid \<leftarrow> [TID_stm0_t1], 
+          dir \<leftarrow> [din, dout], 
+          n \<leftarrow> core_int_list] @ 
+       [internal_stm0_C TID_stm0_t2] @
+       [set_x_stm0_C n. n \<leftarrow> core_int_list]
+)"
+
+(*
+(Memory_opt_x(0)
+ [| {|set_EXT_x,get_x,set_x|} |] 
+ (
+  (	
+   (
+     ((Memory_opt_l(0) [| {|get_l,set_l|} |] STM_core(id__))\ {|get_l,set_l|})
+     [| {|internal__.TID_stm0_t0|} |]
+     MemoryTransitions_opt_0(id__)
+   ) \ {|internal__.TID_stm0_t0|}
+  )
+  [| {|e1__.TID_stm0_t1,internal__.TID_stm0_t2,set_x|} |]
+  MemoryTransitions_opt_1(id__)
+ )\{|internal__.TID_stm0_t2|}
+) \ {|get_x|}
+*)
+
+subsubsection \<open> State machine \<close>
+definition MemorySTM_opt_stm0 where
+"MemorySTM_opt_stm0 (idd::integer) = 
+  (hide
+    (
+      (discard_state (stm0_Memory_opt_x idd))
+      \<parallel>\<^bsub> stm0_x_events \<^esub>
+      (hide 
+        (
+          (par_hide
+            (par_hide (discard_state (stm0_Memory_opt_l idd)) stm0_l_events (STM_stm0 idd))
+            {internal_stm0_C TID_stm0_t0}
+            (discard_state (stm0_MemoryTransitions_opt_0 idd))
+          )
+          \<parallel>\<^bsub> stm0_e1_x_internal_set \<^esub> 
+          (discard_state (stm0_MemoryTransitions_opt_1 idd))
+        )
+        {internal_stm0_C TID_stm0_t2}
+      )
+    )
+    (set [get_x_stm0_C n. n \<leftarrow> core_int_list])
+  )   
+"
+
+(* Exception: P [| A |> Q*)
+(* Renaming *)
+definition AUX_opt_stm0 where
+"AUX_opt_stm0 (idd::integer) = 
+  (hide 
+    ( 
+      (MemorySTM_opt_stm0 idd)
+    )
+    stm0_MachineInternalEvents
+  )
+"
+
+definition D__stm0 where
+"D__stm0 (idd::integer) = 
+  hide (AUX_opt_stm0 idd) internal_events_stm0
+"
+
+export_code stm0_Memory_opt_l stm0_MemoryTransitions_opt_0 D__stm0 in Haskell 
   module_name RoboChart_basic 
   file_prefix RoboChart_basic 
   (string_classes) 
