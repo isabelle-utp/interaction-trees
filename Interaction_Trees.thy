@@ -25,6 +25,8 @@ codatatype ('e, 'r) itree =
 
 definition "Sil P = Tau (csingle P)"
 
+definition "miracle = Tau cempty"
+
 adhoc_overloading tick Ret
 
 syntax
@@ -100,6 +102,21 @@ text \<open> Configuring the code generator; either partial functions or associa
 
 code_datatype pfun_of_alist pfun_of_map
 
+subsection \<open> Internal Choice \<close>
+
+text \<open> A first attempt at internal choice. How does this interact with divergence? \<close>
+
+primcorec ichoice :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
+"ichoice P Q = 
+  (case (P, Q) of
+     (Tau A, Tau B) \<Rightarrow> Tau (cUn A B) |
+     (Tau A, _) \<Rightarrow> Tau (cinsert Q A) |
+     (_, Tau B) \<Rightarrow> Tau (cinsert P B) |
+     _ \<Rightarrow> Tau (cinsert P (csingle Q)))"
+
+lemma "ichoice miracle (Tau A) = Tau A"
+  by (simp add: ichoice.code miracle_def)
+
 subsection \<open> Kleisli Trees and Monads \<close>
 
 type_synonym ('e, 'r, 's) ktree = "'r \<Rightarrow> ('e, 's) itree"
@@ -171,7 +188,12 @@ lemma bind_VisE' [elim]:
   by (metis assms bind_VisE)
 
 lemma bind_Sil_dest:
+  "P \<bind> Q = Tau A \<Longrightarrow> ((\<exists> B. P = Tau P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> Sil R = Q x))"
+  oops
+
+lemma bind_Sil_dest:
   "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> Sil R = Q x))"
+  apply (simp add: Sil_def)
   by (metis (no_types, lifting) bind_itree.code bind_itree.disc_iff(2) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.disc(5) itree.sel(2))
   
 lemma bind_SilE [elim]:
