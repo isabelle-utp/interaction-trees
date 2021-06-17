@@ -4,6 +4,12 @@ theory RoboChart_CSP_sem_basic
   imports "../ITree_CSP"
 begin
 
+definition par_hide where
+"par_hide P s Q = (hide (P \<parallel>\<^bsub> s \<^esub> Q) s)"
+
+definition discard_state where
+"discard_state P = do {P ; skip}"
+
 subsection \<open> General definitions \<close>
 definition "int_max = (2::integer)"
 definition "int_min = (-2::integer)"
@@ -22,7 +28,8 @@ abbreviation "core_int_set \<equiv> set core_int_list"
 
 datatype InOut = din | dout
 
-definition "InOut_set = {din, dout}"
+definition "InOut_list = [din, dout]"
+definition "InOut_set = set InOut_list"
 
 definition set2list:: "'a set \<Rightarrow> 'a list" where
 "set2list s = (SOME l. set l = s)"
@@ -256,19 +263,20 @@ definition State_stm0_s0 where
 definition State_stm0_s0 where 
 "State_stm0_s0 = 
   loop (\<lambda> (id::integer).
-    do {sd \<leftarrow> inp_in enter_stm0 {(s, SID_stm0_s0) . (s \<in> (SIDS_stm0_set-{SID_stm0_s0}))} ; 
+    do {sd \<leftarrow> inp_in enter_stm0 (set 
+          [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]) ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
         \<comment> \<open> State_stm0_s0_execute \<close>
         (while 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
-           \<comment> \<open> condition \<close>
+           \<comment> \<open> P \<close>
            (\<lambda> s.
             do {
               outp entered_stm0 (snd (snd s), SID_stm0_s0);
                 \<comment> \<open> T_stm0_t1 \<close>
-                do {t \<leftarrow> inp_in e1__stm0 {(TID_stm0_t1, din, l) . (l \<in> core_int_set)} ;
+                do {t \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, l) . l \<leftarrow> core_int_list]) ;
                       outp set_l_stm0 (snd (snd t)) ; 
                       outp exit_stm0 (SID_stm0_s0, SID_stm0_s0);
                       outp exited_stm0 (SID_stm0_s0, SID_stm0_s0);
@@ -287,26 +295,33 @@ definition State_stm0_s0 where
                         Ret(True, fst (snd s), snd (snd s))
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in internal_stm0 (TIDS_stm0_set - {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2});
-                    y \<leftarrow> inp_in exit_stm0 {(s, SID_stm0_s0). s \<in> (SIDS_stm0_set - {SID_stm0_s0})};
+                    x \<leftarrow> inp_in internal_stm0 
+                      (set (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
+                          TIDS_stm0_list));
+                    y \<leftarrow> inp_in exit_stm0 (set 
+                      [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), snd (snd s))
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in e1__stm0 {(s, d, l) . 
-                        (s \<in> (TIDS_stm0_set - {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2})) \<and> 
-                        (d \<in> InOut_set) \<and>
-                        (l \<in> core_int_set)} ;
-                    y \<leftarrow> inp_in exit_stm0 {(s, SID_stm0_s0). s \<in> (SIDS_stm0_set - {SID_stm0_s0})};
+                    x \<leftarrow> inp_in e1__stm0 (set [(s, d, l) . 
+                        s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
+                          TIDS_stm0_list), 
+                        d \<leftarrow> InOut_list,
+                        l \<leftarrow> core_int_list]) ;
+                    y \<leftarrow> inp_in exit_stm0 (set 
+                        [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), snd (snd s))
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in e3__stm0 {(s, d, l) . 
-                        (s \<in> (TIDS_stm0_set - {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2})) \<and> 
-                        (d \<in> InOut_set) \<and>
-                        (l \<in> core_int_set)} ;
-                    y \<leftarrow> inp_in exit_stm0 {(s, SID_stm0_s0). s \<in> (SIDS_stm0_set - {SID_stm0_s0})};
+                    x \<leftarrow> inp_in e3__stm0 (set [(s, d, l) . 
+                        s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
+                          TIDS_stm0_list), 
+                        d \<leftarrow> InOut_list,
+                        l \<leftarrow> core_int_list]) ;
+                    y \<leftarrow> inp_in exit_stm0 (set 
+                        [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), snd (snd s))
                     }
@@ -321,7 +336,7 @@ definition State_stm0_s0 where
 
 definition State_stm0_s0_R where
 "State_stm0_s0_R (idd::integer) = 
-   (do { State_stm0_s0(idd) ; Ret ()}) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_stm0_s0 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
     \<parallel>\<^bsub> (int_int_stm0 - stm0_s0_triggers) \<^esub> 
    skip
 "
@@ -345,12 +360,6 @@ definition STM_stm0 where
         ) \<^esub> 
    State_stm0_s0_R(idd)
 "
-
-definition par_hide where
-"par_hide P s Q = (hide (P \<parallel>\<^bsub> s \<^esub> Q) s)"
-
-definition discard_state where
-"discard_state P = do {P ; Ret ()}"
 
 definition stm0_e1_x_internal_set where
 "stm0_e1_x_internal_set = 
@@ -420,7 +429,7 @@ definition D__stm0 where
   hide (AUX_opt_stm0 idd) internal_events_stm0
 "
 
-export_code stm0_Memory_opt_l stm0_MemoryTransitions_opt_0 D__stm0 in Haskell 
+export_code State_stm0_s0 stm0_Memory_opt_l stm0_MemoryTransitions_opt_0 D__stm0 in Haskell 
   module_name RoboChart_basic 
   file_prefix RoboChart_basic 
   (string_classes) 
