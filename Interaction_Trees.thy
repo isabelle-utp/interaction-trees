@@ -2,7 +2,7 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Partial_Fun"
+  "Z_Toolkit.Partial_Fun" "HOL-Library.Countable_Set_Type"
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -20,8 +20,10 @@ subsection \<open> Interaction Tree Type \<close>
 
 codatatype ('e, 'r) itree = 
   Ret 'r | \<comment> \<open> Terminate, returning a value \<close>
-  Sil "('e, 'r) itree" ("\<tau>") | \<comment> \<open> Invisible event \<close>
+  Tau "('e, 'r) itree cset" ("\<tau>") | \<comment> \<open> Invisible event \<close>
   Vis "'e \<Zpfun> ('e, 'r) itree" \<comment> \<open> Visible events choosing the continuation \<close>
+
+definition "Sil P = Tau (csingle P)"
 
 adhoc_overloading tick Ret
 
@@ -35,7 +37,7 @@ translations
 
 text \<open> A stable process has no possible internal activity \<close>
 
-abbreviation "unstable P \<equiv> is_Sil P"
+abbreviation "unstable P \<equiv> is_Tau P"
 abbreviation "stable P \<equiv> \<not> unstable P"
 
 translations "CONST stable P" <= "\<not> CONST unstable P"
@@ -46,8 +48,8 @@ lemma stable_Ret [intro]: "stable (Ret x)"
 lemma stable_Vis [intro]: "stable (Vis F)"
   by simp
 
-lemma unstableE: "\<lbrakk> unstable P; \<And> P'. P = Sil P' \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
-  using is_Sil_def by auto
+lemma unstableE: "\<lbrakk> unstable P; \<And> P'. P = Tau P' \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
+  using is_Tau_def by auto
 
 lemma stableE:
   assumes "stable P" "is_Ret P \<Longrightarrow> Q" "is_Vis P \<Longrightarrow> Q"
@@ -60,25 +62,35 @@ lemma is_VisE [elim]: "\<lbrakk> is_Vis P; \<And> x. P = Vis x \<Longrightarrow>
 lemma is_RetE [elim]: "\<lbrakk> is_Ret P; \<And> x. P = Ret x \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (metis (mono_tags, hide_lams) is_Ret_def)
 
-theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
+notation cin (infix "\<in>\<^sub>c" 50)
+
+theorem itree_coind[elim, consumes 1, case_names wform Ret Tau Vis, induct pred: "HOL.eq"]:
   assumes "\<phi> P Q" and
-  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Tau P \<longleftrightarrow> is_Tau Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
   "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
-  "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q" and
+  "\<And> A B. \<phi> (Tau A) (Tau B) \<Longrightarrow> (\<forall> P. P \<in>\<^sub>c A \<longrightarrow> (\<exists> Q. Q \<in>\<^sub>c B \<and> \<phi> P Q))" and
+  "\<And> A B. \<phi> (Tau A) (Tau B) \<Longrightarrow> (\<forall> Q. Q \<in>\<^sub>c B \<longrightarrow> (\<exists> P. P \<in>\<^sub>c A \<and> \<phi> P Q))" and
   "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (pdom(F) = pdom(G) \<and> (\<forall> x\<in>pdom(F). \<phi> (F x) (G x)))"
   shows "P = Q"
   using assms
-  by (coinduct rule: itree.coinduct, auto simp add: relt_pfun_iff)
+  apply (coinduct rule: itree.coinduct, auto simp add: relt_pfun_iff rel_cset_iff)
+  apply (metis (no_types, lifting) itree.collapse(2))
+  apply (metis (mono_tags, hide_lams) itree.collapse(2))
+  done
 
 theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes phi: "\<phi> P Q" and
-  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Tau P \<longleftrightarrow> is_Tau Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
   "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
-  "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q \<or> P = Q" and
+  "\<And> A B. \<phi> (Tau A) (Tau B) \<Longrightarrow> (\<forall> P. P \<in>\<^sub>c A \<longrightarrow> (\<exists> Q. Q \<in>\<^sub>c B \<and> (\<phi> P Q \<or> P = Q)))" and
+  "\<And> A B. \<phi> (Tau A) (Tau B) \<Longrightarrow> (\<forall> Q. Q \<in>\<^sub>c B \<longrightarrow> (\<exists> P. P \<in>\<^sub>c A \<and> (\<phi> P Q \<or> P = Q)))" and
   "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (pdom(F) = pdom(G) \<and> (\<forall> x\<in>pdom(F). \<phi> (F x) (G x) \<or> F x = G x))"
   shows "P = Q"
   using assms
-  by (coinduct rule: itree.coinduct_strong, auto elim!: is_VisE simp add: relt_pfun_iff)
+  apply (coinduct rule: itree.coinduct_strong, auto elim!: is_VisE simp add: relt_pfun_iff rel_cset_iff)
+  apply (metis (no_types, hide_lams) itree.collapse(2))
+  apply (metis (no_types, hide_lams) itree.collapse(2))
+  done
 
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
  cf. "Coinduction all the way up". Davide Sangiorgi. Replace R \<subseteq> F(R) prove R \<subseteq> C(F(R)). \<close>
@@ -93,13 +105,15 @@ subsection \<open> Kleisli Trees and Monads \<close>
 type_synonym ('e, 'r, 's) ktree = "'r \<Rightarrow> ('e, 's) itree"
 type_synonym ('e, 'r) htree = "('e, 'r, 'r) ktree"
 
+term cimage
+
 primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, 's) itree" where
 "bind_itree u k = 
   (case u of
     \<comment> \<open> Pass the returned value to the continuation; the silent event is needed for friendliness. \<close>
     Ret r \<Rightarrow> (k r) | 
     \<comment> \<open> Execute the silent action and then the remainder of the binding. \<close>
-    Sil t \<Rightarrow> Sil (bind_itree t k) | 
+    Tau A \<Rightarrow> Tau (cimage (\<lambda> t. bind_itree t k) A) | 
     \<comment> \<open> Apply the binding function to every possible continuation (non-trivial). \<close>
     Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
 
@@ -111,8 +125,11 @@ adhoc_overloading bind bind_itree
 lemma bind_Ret [simp, code]: "Ret v \<bind> k = (k v)"
   by (simp add: bind_itree.code)
 
-lemma bind_Sil [simp, code]: "Sil t \<bind> k = Sil (t \<bind> k)"
+lemma bind_Tau [simp, code]: "Tau A \<bind> k = Tau (cimage (\<lambda> t. t \<bind> k) A)"
   by (simp add: bind_itree.ctr)
+
+lemma bind_Sil [simp, code]: "Sil t \<bind> k = Sil (t \<bind> k)"
+  by (simp add: bind_itree.ctr Sil_def)
 
 lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind_itree x k) t)"
   by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
