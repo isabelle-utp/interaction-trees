@@ -1,14 +1,16 @@
 section \<open> Dwarf Signal \<close>
 
 theory DwarfSignal
-  imports "../ITree_Circus"
+  imports "../ITree_Extraction" "HOL-Library.Word"
 begin lit_vars
 
-datatype LampId = L1 | L2 | L3
+subsection \<open> State Space \<close>
+
+enumtype LampId = L1 | L2 | L3
 
 type_synonym Signal = "LampId set"
 
-datatype ProperState = dark | stop | warning | drive
+enumtype ProperState = dark | stop | warning | drive
 
 definition "ProperState = {dark, stop, warning, drive}"
 
@@ -22,32 +24,47 @@ text \<open> Could we have separate processes for the actual lamp and its contro
   try to verify that the controller preserves the lamp-based safety properties. The current
   set up doesn't preserve them. \<close>
 
-alphabet Dwarf = 
+schema Dwarf = 
   last_proper_state :: "ProperState"
   turn_off :: "LampId set"
   turn_on  :: "LampId set"
   last_state :: "Signal"
   current_state :: "Signal"
   desired_proper_state :: "ProperState"
+  where 
+    "(current_state - turn_off) \<union> turn_on = signalLamps desired_proper_state"
+    "turn_on \<inter> turn_off = {}"
 
-definition Dwarf_inv :: "Dwarf \<Rightarrow> bool" where
-  "Dwarf_inv = 
-  ((current_state - turn_off) \<union> turn_on = signalLamps desired_proper_state
-  \<and> turn_on \<inter> turn_off = {})\<^sub>e"
+record_default Dwarf
 
-instantiation Dwarf_ext :: (default) default
-begin
-  definition default_Dwarf_ext :: "'a Dwarf_scheme" where
-    "default_Dwarf_ext = Dwarf.extend (Dwarf.make dark {} {} (signalLamps stop) (signalLamps stop) stop) default"
+definition "NeverShowAll = (@Dwarf \<and> current_state \<noteq> {L1, L2, L3})\<^sub>e"
 
-instance ..
-end
+definition "MaxOneLampChange = 
+  (@Dwarf \<and> 
+  (\<exists> l. current_state - last_state = {l} \<or> last_state - current_state = {l} \<or> last_state = current_state))\<^sub>e"
+
+definition "ForbidStopToDrive =
+  (@Dwarf \<and> (last_proper_state = stop \<longrightarrow> desired_proper_state \<noteq> drive))\<^sub>e"
+
+definition "DarkOnlyToStop =
+  (@Dwarf \<and> (last_proper_state = dark \<longrightarrow> desired_proper_state = stop))\<^sub>e"
+
+definition "DarkOnlyFromStop =
+  (@Dwarf \<and> (desired_proper_state = dark \<longrightarrow> last_proper_state = stop))\<^sub>e"
+
+definition "DwarfReq = 
+  (@NeverShowAll 
+  \<and> @MaxOneLampChange 
+  \<and> @ForbidStopToDrive 
+  \<and> @DarkOnlyToStop 
+  \<and> @DarkOnlyFromStop)\<^sub>e"
 
 chantype chan =
   shine :: "LampId set"
   setNewProperState :: ProperState
   turnOff :: "LampId"
   turnOn :: "LampId"
+  violation :: String.literal
 
 definition Init :: "Dwarf subst" where
   "Init = 
@@ -61,37 +78,44 @@ definition Init :: "Dwarf subst" where
 lemma Init_establishes_inv: "Init \<dagger> Dwarf_inv = (True)\<^sub>e"
   by (simp add: Dwarf_inv_def Init_def usubst_eval)
 
+definition "CheckReq = 
+  (\<questiondown>\<not> @NeverShowAll? \<Zcomp> violation!(STR ''NeverShowAll'') \<rightarrow> Skip) \<box>
+  (\<questiondown>\<not> @MaxOneLampChange? \<Zcomp> violation!(STR ''MaxOneLampChange'') \<rightarrow> Skip) \<box>
+  (\<questiondown>\<not> @ForbidStopToDrive? \<Zcomp> violation!(STR ''ForbidStopToDrive'') \<rightarrow> Skip) \<box>
+  (\<questiondown>\<not> @DarkOnlyToStop? \<Zcomp> violation!(STR ''DarkOnlyToStop'') \<rightarrow> Skip) \<box>
+  (\<questiondown>\<not> @DarkOnlyFromStop? \<Zcomp> violation!(STR ''DarkOnlyFromStop'') \<rightarrow> Skip)"
+
 definition 
   "SetNewProperState = 
     \<questiondown>current_state = signalLamps desired_proper_state? \<Zcomp> 
     setNewProperState?(st):(ProperState - {desired_proper_state}) \<rightarrow> 
       (last_proper_state := desired_proper_state \<Zcomp>
-       turn_off := (current_state - signalLamps st) \<Zcomp>
-       turn_on := (signalLamps st - current_state) \<Zcomp>
+       turn_off := current_state - signalLamps st \<Zcomp>
+       turn_on := signalLamps st - current_state \<Zcomp>
        last_state := current_state \<Zcomp>
        desired_proper_state := st)"
 
 definition
   "TurnOff =
    turnOff?(l):turn_off \<rightarrow> 
-    (turn_off := (turn_off - {l}) \<Zcomp>
-     turn_on := (turn_on - {l}) \<Zcomp>
+    (turn_off := turn_off - {l} \<Zcomp>
+     turn_on := turn_on - {l} \<Zcomp>
      last_state := current_state \<Zcomp>
-     current_state := (current_state - {l}))"
+     current_state := current_state - {l})"
 
 definition
   "TurnOn =
    turnOn?(l):turn_on \<rightarrow> 
-    (turn_off := (turn_off - {l}) \<Zcomp>
-     turn_on := (turn_on - {l}) \<Zcomp>
+    (turn_off := turn_off - {l} \<Zcomp>
+     turn_on := turn_on - {l} \<Zcomp>
      last_state := current_state \<Zcomp>
-     current_state := (current_state \<union> {l}))"
+     current_state := current_state \<union> {l})"
 
 definition "Shine = shine!(current_state) \<rightarrow> Skip"
 
-definition "Dwarf
-  = proc Init (loop (SetNewProperState \<box> TurnOn \<box> TurnOff \<box> Shine))"
+definition "DwarfSignal
+  = proc Init (loop (CheckReq \<box> SetNewProperState \<box> TurnOn \<box> TurnOff \<box> Shine))"
 
-export_code Dwarf in Haskell module_name DwarfSignal (string_classes)
+export_code DwarfSignal in Haskell module_name DwarfSignal (string_classes)
 
 end

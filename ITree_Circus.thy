@@ -57,9 +57,8 @@ definition proc :: "'s::default subst \<Rightarrow> ('e, 's) action \<Rightarrow
 
 abbreviation "abs_st P \<equiv> P \<Zcomp> assigns (\<lambda> s. ())"
 
-
 syntax
-  "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 92)
+  "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 61)
 
 translations
   "_assignment x e" == "CONST assigns [x \<leadsto> e]"
@@ -76,8 +75,9 @@ definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow
 "input_in c A P = (\<lambda> s. inp_in c (A s) \<bind> (\<lambda> x. P x s))"
 
 syntax 
-  "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [90, 0, 91] 91)
-  "_input_in" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [90, 0, 0, 91] 91)
+  "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
+  "_input_in" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [60, 0, 0, 61] 61)
+
 
 translations "c?(x) \<rightarrow> P" == "CONST input c (\<lambda> (x). P)"
 translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambda> (x). P)"

@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module DwarfSignal(Chan, Itree, Dwarf_ext, dwarf) where {
+module DwarfSignal(Chan, Itree, Dwarf_ext, dwarfSignal) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -46,7 +46,8 @@ equal_LampId L1 L1 = True;
 data Set a = Set [a] | Coset [a] deriving (Prelude.Read, Prelude.Show);
 
 data Chan = Shine_C (Set LampId) | SetNewProperState_C ProperState
-  | TurnOff_C LampId | TurnOn_C LampId deriving (Prelude.Read, Prelude.Show);
+  | TurnOff_C LampId | TurnOn_C LampId | Violation_C String
+  deriving (Prelude.Read, Prelude.Show);
 
 membera :: forall a. (Eq a) => [a] -> a -> Bool;
 membera [] y = False;
@@ -57,7 +58,11 @@ member x (Coset xs) = not (membera xs x);
 member x (Set xs) = membera xs x;
 
 less_eq_set :: forall a. (Eq a) => Set a -> Set a -> Bool;
-less_eq_set (Coset []) (Set []) = False;
+less_eq_set (Coset xs) (Set ys) =
+  (if null xs && null ys then False
+    else (error :: forall a. String -> (() -> a) -> a)
+           "subset_eq (List.coset _) (List.set _) requires type class instance card_UNIV"
+           (\ _ -> less_eq_set (Coset xs) (Set ys)));
 less_eq_set a (Coset ys) = all (\ y -> not (member y a)) ys;
 less_eq_set (Set xs) b = all (\ x -> member x b) xs;
 
@@ -69,18 +74,27 @@ instance Eq LampId where {
 };
 
 equal_chan :: Chan -> Chan -> Bool;
+equal_chan (TurnOn_C x4) (Violation_C x5) = False;
+equal_chan (Violation_C x5) (TurnOn_C x4) = False;
+equal_chan (TurnOff_C x3) (Violation_C x5) = False;
+equal_chan (Violation_C x5) (TurnOff_C x3) = False;
 equal_chan (TurnOff_C x3) (TurnOn_C x4) = False;
 equal_chan (TurnOn_C x4) (TurnOff_C x3) = False;
+equal_chan (SetNewProperState_C x2) (Violation_C x5) = False;
+equal_chan (Violation_C x5) (SetNewProperState_C x2) = False;
 equal_chan (SetNewProperState_C x2) (TurnOn_C x4) = False;
 equal_chan (TurnOn_C x4) (SetNewProperState_C x2) = False;
 equal_chan (SetNewProperState_C x2) (TurnOff_C x3) = False;
 equal_chan (TurnOff_C x3) (SetNewProperState_C x2) = False;
+equal_chan (Shine_C x1) (Violation_C x5) = False;
+equal_chan (Violation_C x5) (Shine_C x1) = False;
 equal_chan (Shine_C x1) (TurnOn_C x4) = False;
 equal_chan (TurnOn_C x4) (Shine_C x1) = False;
 equal_chan (Shine_C x1) (TurnOff_C x3) = False;
 equal_chan (TurnOff_C x3) (Shine_C x1) = False;
 equal_chan (Shine_C x1) (SetNewProperState_C x2) = False;
 equal_chan (SetNewProperState_C x2) (Shine_C x1) = False;
+equal_chan (Violation_C x5) (Violation_C y5) = x5 == y5;
 equal_chan (TurnOn_C x4) (TurnOn_C y4) = equal_LampId x4 y4;
 equal_chan (TurnOff_C x3) (TurnOff_C y3) = equal_LampId x3 y3;
 equal_chan (SetNewProperState_C x2) (SetNewProperState_C y2) =
@@ -100,6 +114,39 @@ class Default a where {
 
 instance Default () where {
   defaulta = default_unit;
+};
+
+enum_all_LampId :: (LampId -> Bool) -> Bool;
+enum_all_LampId = (\ p -> (p L1 && p L2) && p L3);
+
+enum_ex_LampId :: (LampId -> Bool) -> Bool;
+enum_ex_LampId = (\ p -> p L1 || p L2 || p L3);
+
+enum_LampId :: [LampId];
+enum_LampId = [L1, L2, L3];
+
+class Countable a where {
+};
+
+class (Countable a) => Finite a where {
+};
+
+class (Finite a) => Enum a where {
+  enum :: [a];
+  enum_all :: (a -> Bool) -> Bool;
+  enum_ex :: (a -> Bool) -> Bool;
+};
+
+instance Countable LampId where {
+};
+
+instance Finite LampId where {
+};
+
+instance Enum LampId where {
+  enum = enum_LampId;
+  enum_all = enum_all_LampId;
+  enum_ex = enum_ex_LampId;
 };
 
 instance Eq ProperState where {
@@ -179,8 +226,14 @@ instance (Eq a) => Eq (Dwarf_ext a) where {
   a == b = equal_Dwarf_ext a b;
 };
 
+default_ProperState :: ProperState;
+default_ProperState = Dark;
+
 bot_set :: forall a. Set a;
 bot_set = Set [];
+
+default_set :: forall a. Set a;
+default_set = bot_set;
 
 desired_proper_state_v :: forall a. Dwarf_ext a -> ProperState;
 desired_proper_state_v
@@ -223,23 +276,6 @@ extend r more =
   Dwarf_ext (last_proper_state_v r) (turn_off_v r) (turn_on_v r)
     (last_state_v r) (current_state_v r) (desired_proper_state_v r) more;
 
-removeAll :: forall a. (Eq a) => a -> [a] -> [a];
-removeAll x [] = [];
-removeAll x (y : xs) = (if x == y then removeAll x xs else y : removeAll x xs);
-
-inserta :: forall a. (Eq a) => a -> [a] -> [a];
-inserta x xs = (if membera xs x then xs else x : xs);
-
-insert :: forall a. (Eq a) => a -> Set a -> Set a;
-insert x (Coset xs) = Coset (removeAll x xs);
-insert x (Set xs) = Set (inserta x xs);
-
-signalLamps :: ProperState -> Set LampId;
-signalLamps Dark = bot_set;
-signalLamps Stop = insert L1 (insert L2 bot_set);
-signalLamps Warning = insert L1 (insert L3 bot_set);
-signalLamps Drive = insert L2 (insert L3 bot_set);
-
 make ::
   ProperState ->
     Set LampId ->
@@ -251,7 +287,9 @@ make last_proper_state_v turn_off_v turn_on_v last_state_v current_state_v
 
 default_Dwarf_ext :: forall a. (Default a) => Dwarf_ext a;
 default_Dwarf_ext =
-  extend (make Dark bot_set bot_set (signalLamps Stop) (signalLamps Stop) Stop)
+  extend
+    (make default_ProperState default_set default_set default_set default_set
+      default_ProperState)
     defaulta;
 
 instance (Default a) => Default (Dwarf_ext a) where {
@@ -262,9 +300,23 @@ data Prism_ext a b c = Prism_ext (b -> Maybe a) (a -> b) c;
 
 data Lens_ext a b c = Lens_ext (b -> a) (b -> a -> b) c;
 
+ex :: forall a. (Enum a) => (a -> Bool) -> Bool;
+ex p = enum_ex p;
+
 fold :: forall a b. (a -> b -> b) -> [a] -> b -> b;
 fold f (x : xs) s = fold f xs (f x s);
 fold f [] s = s;
+
+removeAll :: forall a. (Eq a) => a -> [a] -> [a];
+removeAll x [] = [];
+removeAll x (y : xs) = (if x == y then removeAll x xs else y : removeAll x xs);
+
+inserta :: forall a. (Eq a) => a -> [a] -> [a];
+inserta x xs = (if membera xs x then xs else x : xs);
+
+insert :: forall a. (Eq a) => a -> Set a -> Set a;
+insert x (Coset xs) = Coset (removeAll x xs);
+insert x (Set xs) = Set (inserta x xs);
 
 remove :: forall a. (Eq a) => a -> Set a -> Set a;
 remove x (Coset xs) = Coset (inserta x xs);
@@ -368,6 +420,12 @@ lens_put (Lens_ext lens_get lens_put more) = lens_put;
 subst_upd :: forall a b c. (a -> b) -> Lens_ext c b () -> (a -> c) -> a -> b;
 subst_upd sigma x e = (\ s -> lens_put x (sigma s) (e s));
 
+signalLamps :: ProperState -> Set LampId;
+signalLamps Dark = bot_set;
+signalLamps Stop = insert L1 (insert L2 bot_set);
+signalLamps Warning = insert L1 (insert L3 bot_set);
+signalLamps Drive = insert L2 (insert L3 bot_set);
+
 subst_id :: forall a. a -> a;
 subst_id = (\ s -> s);
 
@@ -407,33 +465,26 @@ inp_list c b =
 inp_in :: forall a b. Prism_ext a b () -> Set a -> Itree b a;
 inp_in c (Set b) = inp_list c b;
 
-extchoice_fun :: forall a b. (Extchoice b) => (a -> b) -> (a -> b) -> a -> b;
-extchoice_fun p q = (\ s -> extchoice (p s) (q s));
+lens_get :: forall a b c. Lens_ext a b c -> b -> a;
+lens_get (Lens_ext lens_get lens_put more) = lens_get;
 
-un_setNewProperState_C :: Chan -> ProperState;
-un_setNewProperState_C (SetNewProperState_C x2) = x2;
+un_shine_C :: Chan -> Set LampId;
+un_shine_C (Shine_C x1) = x1;
 
-is_setNewProperState_C :: Chan -> Bool;
-is_setNewProperState_C (Shine_C x1) = False;
-is_setNewProperState_C (SetNewProperState_C x2) = True;
-is_setNewProperState_C (TurnOff_C x3) = False;
-is_setNewProperState_C (TurnOn_C x4) = False;
+is_shine_C :: Chan -> Bool;
+is_shine_C (Shine_C x1) = True;
+is_shine_C (SetNewProperState_C x2) = False;
+is_shine_C (TurnOff_C x3) = False;
+is_shine_C (TurnOn_C x4) = False;
+is_shine_C (Violation_C x5) = False;
 
 ctor_prism ::
   forall a b. (a -> b) -> (b -> Bool) -> (b -> a) -> Prism_ext a b ();
 ctor_prism ctor disc sel =
   Prism_ext (\ d -> (if disc d then Just (sel d) else Nothing)) ctor ();
 
-setNewProperStatea :: Prism_ext ProperState Chan ();
-setNewProperStatea =
-  ctor_prism SetNewProperState_C is_setNewProperState_C un_setNewProperState_C;
-
-kleisli_comp :: forall a b c d. (a -> b -> c) -> (d -> a) -> b -> d -> c;
-kleisli_comp bnd f g = (\ x -> bnd (f x) g);
-
-minus_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
-minus_set a (Coset xs) = Set (filter (\ x -> member x a) xs);
-minus_set a (Set xs) = fold remove xs a;
+shinea :: Prism_ext (Set LampId) Chan ();
+shinea = ctor_prism Shine_C is_shine_C un_shine_C;
 
 map_pfun :: forall a b c. (a -> b) -> Pfun c a -> Pfun c b;
 map_pfun f (Pfun_of_alist m) = Pfun_of_alist (map (\ (k, v) -> (k, f v)) m);
@@ -443,25 +494,229 @@ bind_itree (Vis t) k = Vis (map_pfun (\ x -> bind_itree x k) t);
 bind_itree (Sil t) k = Sil (bind_itree t k);
 bind_itree (Ret v) k = k v;
 
-lens_get :: forall a b c. Lens_ext a b c -> b -> a;
-lens_get (Lens_ext lens_get lens_put more) = lens_get;
-
-properState :: Set ProperState;
-properState = insert Dark (insert Stop (insert Warning (insert Drive bot_set)));
-
-input_in ::
+output ::
   forall a b c.
-    Prism_ext a b () -> (c -> Set a) -> (a -> c -> Itree b c) -> c -> Itree b c;
-input_in c a p = (\ s -> bind_itree (inp_in c (a s)) (\ x -> p x s));
+    Prism_ext a b () -> (c -> a) -> (c -> Itree b c) -> c -> Itree b c;
+output c e p = (\ s -> bind_itree (outp c (e s)) (\ _ -> p s));
+
+skip :: forall a b. a -> Itree b a;
+skip = Ret;
+
+shine :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
+shine = output shinea (sexp (lens_get current_state)) skip;
+
+kleisli_comp :: forall a b c d. (a -> b -> c) -> (d -> a) -> b -> d -> c;
+kleisli_comp bnd f g = (\ x -> bnd (f x) g);
 
 assigns :: forall a b c. (a -> b) -> a -> Itree c b;
 assigns sigma = (\ s -> Ret (sigma s));
+
+proc :: forall a b. (Default a) => (a -> a) -> (a -> Itree b a) -> Itree b ();
+proc i a =
+  kleisli_comp bind_itree
+    (kleisli_comp bind_itree
+      (kleisli_comp bind_itree (assigns (\ _ -> defaulta)) (assigns i)) a)
+    (assigns (\ _ -> ())) ();
 
 deadlock :: forall a b. Itree a b;
 deadlock = Vis zero_pfun;
 
 test :: forall a b. (a -> Bool) -> a -> Itree b a;
 test b = (\ s -> (if b s then Ret s else deadlock));
+
+sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
+sup_set (Coset xs) a = Coset (filter (\ x -> not (member x a)) xs);
+sup_set (Set xs) a = fold insert xs a;
+
+un_turnOn_C :: Chan -> LampId;
+un_turnOn_C (TurnOn_C x4) = x4;
+
+is_turnOn_C :: Chan -> Bool;
+is_turnOn_C (Shine_C x1) = False;
+is_turnOn_C (SetNewProperState_C x2) = False;
+is_turnOn_C (TurnOff_C x3) = False;
+is_turnOn_C (TurnOn_C x4) = True;
+is_turnOn_C (Violation_C x5) = False;
+
+turnOna :: Prism_ext LampId Chan ();
+turnOna = ctor_prism TurnOn_C is_turnOn_C un_turnOn_C;
+
+input_in ::
+  forall a b c.
+    Prism_ext a b () -> (c -> Set a) -> (a -> c -> Itree b c) -> c -> Itree b c;
+input_in c a p = (\ s -> bind_itree (inp_in c (a s)) (\ x -> p x s));
+
+turnOn :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
+turnOn =
+  input_in turnOna (sexp (lens_get turn_on))
+    (\ l ->
+      kleisli_comp bind_itree
+        (kleisli_comp bind_itree
+          (kleisli_comp bind_itree
+            (assigns
+              (subst_upd subst_id turn_off
+                (sexp (\ s -> remove l (lens_get turn_off s)))))
+            (assigns
+              (subst_upd subst_id turn_on
+                (sexp (\ s -> remove l (lens_get turn_on s))))))
+          (assigns
+            (subst_upd subst_id last_state (sexp (lens_get current_state)))))
+        (assigns
+          (subst_upd subst_id current_state
+            (sexp (\ s ->
+                    sup_set (lens_get current_state s) (insert l bot_set))))));
+
+un_turnOff_C :: Chan -> LampId;
+un_turnOff_C (TurnOff_C x3) = x3;
+
+is_turnOff_C :: Chan -> Bool;
+is_turnOff_C (Shine_C x1) = False;
+is_turnOff_C (SetNewProperState_C x2) = False;
+is_turnOff_C (TurnOff_C x3) = True;
+is_turnOff_C (TurnOn_C x4) = False;
+is_turnOff_C (Violation_C x5) = False;
+
+turnOffa :: Prism_ext LampId Chan ();
+turnOffa = ctor_prism TurnOff_C is_turnOff_C un_turnOff_C;
+
+turnOff :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
+turnOff =
+  input_in turnOffa (sexp (lens_get turn_off))
+    (\ l ->
+      kleisli_comp bind_itree
+        (kleisli_comp bind_itree
+          (kleisli_comp bind_itree
+            (assigns
+              (subst_upd subst_id turn_off
+                (sexp (\ s -> remove l (lens_get turn_off s)))))
+            (assigns
+              (subst_upd subst_id turn_on
+                (sexp (\ s -> remove l (lens_get turn_on s))))))
+          (assigns
+            (subst_upd subst_id last_state (sexp (lens_get current_state)))))
+        (assigns
+          (subst_upd subst_id current_state
+            (sexp (\ s -> remove l (lens_get current_state s))))));
+
+extchoice_fun :: forall a b. (Extchoice b) => (a -> b) -> (a -> b) -> a -> b;
+extchoice_fun p q = (\ s -> extchoice (p s) (q s));
+
+minus_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
+minus_set a (Coset xs) = Set (filter (\ x -> member x a) xs);
+minus_set a (Set xs) = fold remove xs a;
+
+inf_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
+inf_set a (Coset xs) = fold remove xs a;
+inf_set a (Set xs) = Set (filter (\ x -> member x a) xs);
+
+dwarf_inv :: forall a. Dwarf_ext a -> Bool;
+dwarf_inv =
+  sexp (\ s ->
+         equal_set
+           (sup_set (minus_set (lens_get current_state s) (lens_get turn_off s))
+             (lens_get turn_on s))
+           (signalLamps (lens_get desired_proper_state s)) &&
+           equal_set (inf_set (lens_get turn_on s) (lens_get turn_off s))
+             bot_set);
+
+forbidStopToDrive :: Dwarf_ext () -> Bool;
+forbidStopToDrive =
+  sexp (\ s ->
+         dwarf_inv s &&
+           (if equal_ProperState (lens_get last_proper_state s) Stop
+             then not (equal_ProperState (lens_get desired_proper_state s)
+                        Drive)
+             else True));
+
+maxOneLampChange :: Dwarf_ext () -> Bool;
+maxOneLampChange =
+  sexp (\ s ->
+         dwarf_inv s &&
+           ex (\ l ->
+                equal_set
+                  (minus_set (lens_get current_state s) (lens_get last_state s))
+                  (insert l bot_set) ||
+                  (equal_set
+                     (minus_set (lens_get last_state s)
+                       (lens_get current_state s))
+                     (insert l bot_set) ||
+                    equal_set (lens_get last_state s)
+                      (lens_get current_state s))));
+
+darkOnlyFromStop :: Dwarf_ext () -> Bool;
+darkOnlyFromStop =
+  sexp (\ s ->
+         dwarf_inv s &&
+           (if equal_ProperState (lens_get desired_proper_state s) Dark
+             then equal_ProperState (lens_get last_proper_state s) Stop
+             else True));
+
+un_violation_C :: Chan -> String;
+un_violation_C (Violation_C x5) = x5;
+
+is_violation_C :: Chan -> Bool;
+is_violation_C (Shine_C x1) = False;
+is_violation_C (SetNewProperState_C x2) = False;
+is_violation_C (TurnOff_C x3) = False;
+is_violation_C (TurnOn_C x4) = False;
+is_violation_C (Violation_C x5) = True;
+
+violation :: Prism_ext String Chan ();
+violation = ctor_prism Violation_C is_violation_C un_violation_C;
+
+darkOnlyToStop :: Dwarf_ext () -> Bool;
+darkOnlyToStop =
+  sexp (\ s ->
+         dwarf_inv s &&
+           (if equal_ProperState (lens_get last_proper_state s) Dark
+             then equal_ProperState (lens_get desired_proper_state s) Stop
+             else True));
+
+neverShowAll :: Dwarf_ext () -> Bool;
+neverShowAll =
+  sexp (\ s ->
+         dwarf_inv s &&
+           not (equal_set (lens_get current_state s)
+                 (insert L1 (insert L2 (insert L3 bot_set)))));
+
+checkReq :: Dwarf_ext () -> Itree Chan (Dwarf_ext ());
+checkReq =
+  extchoice_fun
+    (extchoice_fun
+      (extchoice_fun
+        (extchoice_fun
+          (kleisli_comp bind_itree (test (sexp (\ s -> not (neverShowAll s))))
+            (output violation (sexp (\ _ -> "NeverShowAll")) skip))
+          (kleisli_comp bind_itree
+            (test (sexp (\ s -> not (maxOneLampChange s))))
+            (output violation (sexp (\ _ -> "MaxOneLampChange")) skip)))
+        (kleisli_comp bind_itree
+          (test (sexp (\ s -> not (forbidStopToDrive s))))
+          (output violation (sexp (\ _ -> "ForbidStopToDrive")) skip)))
+      (kleisli_comp bind_itree (test (sexp (\ s -> not (darkOnlyToStop s))))
+        (output violation (sexp (\ _ -> "DarkOnlyToStop")) skip)))
+    (kleisli_comp bind_itree (test (sexp (\ s -> not (darkOnlyFromStop s))))
+      (output violation (sexp (\ _ -> "DarkOnlyFromStop")) skip));
+
+while :: forall a b. (a -> Bool) -> (a -> Itree b a) -> a -> Itree b a;
+while b p s = (if b s then bind_itree (p s) (Sil . while b p) else Ret s);
+
+un_setNewProperState_C :: Chan -> ProperState;
+un_setNewProperState_C (SetNewProperState_C x2) = x2;
+
+is_setNewProperState_C :: Chan -> Bool;
+is_setNewProperState_C (Shine_C x1) = False;
+is_setNewProperState_C (SetNewProperState_C x2) = True;
+is_setNewProperState_C (TurnOff_C x3) = False;
+is_setNewProperState_C (TurnOn_C x4) = False;
+is_setNewProperState_C (Violation_C x5) = False;
+
+setNewProperStatea :: Prism_ext ProperState Chan ();
+setNewProperStatea =
+  ctor_prism SetNewProperState_C is_setNewProperState_C un_setNewProperState_C;
+
+properState :: Set ProperState;
+properState = insert Dark (insert Stop (insert Warning (insert Drive bot_set)));
 
 setNewProperState :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
 setNewProperState =
@@ -494,113 +749,26 @@ setNewProperState =
           (assigns
             (subst_upd subst_id desired_proper_state (sexp (\ _ -> st))))));
 
-while :: forall a b. (a -> Bool) -> (a -> Itree b a) -> a -> Itree b a;
-while b p s = (if b s then bind_itree (p s) (Sil . while b p) else Ret s);
-
-un_turnOff_C :: Chan -> LampId;
-un_turnOff_C (TurnOff_C x3) = x3;
-
-is_turnOff_C :: Chan -> Bool;
-is_turnOff_C (Shine_C x1) = False;
-is_turnOff_C (SetNewProperState_C x2) = False;
-is_turnOff_C (TurnOff_C x3) = True;
-is_turnOff_C (TurnOn_C x4) = False;
-
-turnOffa :: Prism_ext LampId Chan ();
-turnOffa = ctor_prism TurnOff_C is_turnOff_C un_turnOff_C;
-
-turnOff :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
-turnOff =
-  input_in turnOffa (sexp (lens_get turn_off))
-    (\ l ->
-      kleisli_comp bind_itree
-        (kleisli_comp bind_itree
-          (kleisli_comp bind_itree
-            (assigns
-              (subst_upd subst_id turn_off
-                (sexp (\ s -> remove l (lens_get turn_off s)))))
-            (assigns
-              (subst_upd subst_id turn_on
-                (sexp (\ s -> remove l (lens_get turn_on s))))))
-          (assigns
-            (subst_upd subst_id last_state (sexp (lens_get current_state)))))
-        (assigns
-          (subst_upd subst_id current_state
-            (sexp (\ s -> remove l (lens_get current_state s))))));
-
-sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
-sup_set (Coset xs) a = Coset (filter (\ x -> not (member x a)) xs);
-sup_set (Set xs) a = fold insert xs a;
-
-un_turnOn_C :: Chan -> LampId;
-un_turnOn_C (TurnOn_C x4) = x4;
-
-is_turnOn_C :: Chan -> Bool;
-is_turnOn_C (Shine_C x1) = False;
-is_turnOn_C (SetNewProperState_C x2) = False;
-is_turnOn_C (TurnOff_C x3) = False;
-is_turnOn_C (TurnOn_C x4) = True;
-
-turnOna :: Prism_ext LampId Chan ();
-turnOna = ctor_prism TurnOn_C is_turnOn_C un_turnOn_C;
-
-turnOn :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
-turnOn =
-  input_in turnOna (sexp (lens_get turn_on))
-    (\ l ->
-      kleisli_comp bind_itree
-        (kleisli_comp bind_itree
-          (kleisli_comp bind_itree
-            (assigns
-              (subst_upd subst_id turn_off
-                (sexp (\ s -> remove l (lens_get turn_off s)))))
-            (assigns
-              (subst_upd subst_id turn_on
-                (sexp (\ s -> remove l (lens_get turn_on s))))))
-          (assigns
-            (subst_upd subst_id last_state (sexp (lens_get current_state)))))
-        (assigns
-          (subst_upd subst_id current_state
-            (sexp (\ s ->
-                    sup_set (lens_get current_state s) (insert l bot_set))))));
-
-proc :: forall a b. (Default a) => (a -> a) -> (a -> Itree b a) -> Itree b ();
-proc i a =
-  kleisli_comp bind_itree
-    (kleisli_comp bind_itree
-      (kleisli_comp bind_itree (assigns (\ _ -> defaulta)) (assigns i)) a)
-    (assigns (\ _ -> ())) ();
-
-un_shine_C :: Chan -> Set LampId;
-un_shine_C (Shine_C x1) = x1;
-
-is_shine_C :: Chan -> Bool;
-is_shine_C (Shine_C x1) = True;
-is_shine_C (SetNewProperState_C x2) = False;
-is_shine_C (TurnOff_C x3) = False;
-is_shine_C (TurnOn_C x4) = False;
-
-shinea :: Prism_ext (Set LampId) Chan ();
-shinea = ctor_prism Shine_C is_shine_C un_shine_C;
-
-output ::
-  forall a b c.
-    Prism_ext a b () -> (c -> a) -> (c -> Itree b c) -> c -> Itree b c;
-output c e p = (\ s -> bind_itree (outp c (e s)) (\ _ -> p s));
-
-skip :: forall a b. a -> Itree b a;
-skip = Ret;
-
-shine :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
-shine = output shinea (sexp (lens_get current_state)) skip;
-
-dwarf :: Itree Chan ();
-dwarf =
+dwarfSignal :: Itree Chan ();
+dwarfSignal =
   proc init
     (while (\ _ -> True)
       (extchoice_fun
-        (extchoice_fun (extchoice_fun setNewProperState turnOn) turnOff)
+        (extchoice_fun
+          (extchoice_fun (extchoice_fun checkReq setNewProperState) turnOn)
+          turnOff)
         shine));
+
+-- These library functions help us to trim the "_C" strings from pretty printed events
+
+isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
+isPrefixOf [] _         =  True;
+isPrefixOf _  []        =  False;
+isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
+
+removeSubstr :: String -> String -> String;
+removeSubstr w "" = "";
+removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
 simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
@@ -613,7 +781,7 @@ simulate_cnt n (Sil p) =
      };
 simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
 simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
-  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
+  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
        e <- Prelude.getLine;
        case (Prelude.reads e) of
          []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
