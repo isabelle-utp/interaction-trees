@@ -209,8 +209,7 @@ definition stm0_MemoryTransitions_opt_1 where
   loop (\<lambda> id::integer.
     do {x \<leftarrow> inp_in get_x_stm0 core_int_set ; 
       (
-        do {inp_in e1__stm0 
-              {(TID_stm0_t1, din, l) . (l \<in> core_int_set) \<and> (x = 0)}
+        do {inp_in e1__stm0 (set [(TID_stm0_t1, din, l). l \<leftarrow> core_int_list, (x = 0)])
               ; Ret (id)} \<box>
         do {guard (x \<noteq> 0); outp internal_stm0 TID_stm0_t2 ; Ret (id)} \<box>
         do {x \<leftarrow> inp_in set_x_stm0 core_int_set; Ret (id)} \<box>
