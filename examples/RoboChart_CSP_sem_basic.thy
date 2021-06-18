@@ -31,15 +31,19 @@ datatype InOut = din | dout
 definition "InOut_list = [din, dout]"
 definition "InOut_set = set InOut_list"
 
+(* This is not going to work because it is not sort of an enum type. *)
+(*
 definition set2list:: "'a set \<Rightarrow> 'a list" where
 "set2list s = (SOME l. set l = s)"
+*)
 
 subsection \<open> stm0 \<close>
 datatype SIDS_stm0 = SID_stm0
   | SID_stm0_s0
 
-definition "SIDS_stm0_set = {SID_stm0, SID_stm0_s0}"
 definition "SIDS_stm0_list = [SID_stm0, SID_stm0_s0]"
+definition "SIDS_stm0_set = set SIDS_stm0_list"
+definition "SIDS_stm0_without_s0 = (removeAll SID_stm0_s0 SIDS_stm0_list)"
 
 datatype TIDS_stm0 = NULLTRANSITION_stm0
 	              | TID_stm0_t0
@@ -345,16 +349,16 @@ definition STM_stm0 where
    (I_stm0_i0(idd))
     \<parallel>\<^bsub> set (
         [enter_stm0_C (s, d). 
-          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          s \<leftarrow> SIDS_stm0_without_s0, 
           d \<leftarrow> [SID_stm0_s0]] @ 
         [entered_stm0_C (s, d). 
-          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          s \<leftarrow> SIDS_stm0_without_s0, 
           d \<leftarrow> [SID_stm0_s0]] @ 
         [exit_stm0_C (s, d). 
-          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          s \<leftarrow> SIDS_stm0_without_s0, 
           d \<leftarrow> [SID_stm0_s0]] @ 
         [exited_stm0_C (s, d). 
-          s \<leftarrow> set2list (SIDS_stm0_set - {SID_stm0_s0}), 
+          s \<leftarrow> SIDS_stm0_without_s0, 
           d \<leftarrow> [SID_stm0_s0]] 
         ) \<^esub> 
    State_stm0_s0_R(idd)
@@ -429,7 +433,7 @@ definition D__stm0 where
 "
 
 export_code State_stm0_s0 stm0_Memory_opt_l stm0_MemoryTransitions_opt_0 D__stm0 in Haskell 
-  module_name RoboChart_basic 
+  (* module_name RoboChart_basic *)
   file_prefix RoboChart_basic 
   (string_classes) 
 
