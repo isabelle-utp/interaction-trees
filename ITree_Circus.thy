@@ -119,7 +119,7 @@ lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<box> 
 no_notation conj  (infixr "&" 35)
 
 syntax
-  "_cguard" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_ & _" [70, 71] 70)
+  "_cguard" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_ & _" [50, 51] 50)
 
 translations
   "_cguard b P" == "(CONST test (b)\<^sub>e) \<Zcomp> P"
