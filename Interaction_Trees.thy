@@ -26,6 +26,11 @@ codatatype ('e, 'r) itree =
 definition Sil ("\<tau>") where
 "Sil P = Tau (csingle P)"
 
+definition "is_Sil P = (is_Tau P \<and> (\<exists> P'. un_Tau P = csingle P'))"
+
+lemma is_Sil [simp]: "is_Sil (Sil P)" "is_Sil (Ret x) \<Longrightarrow> False" "is_Sil (Vis F) \<Longrightarrow> False"
+  by (simp_all add: Sil_def is_Sil_def)
+
 definition "miracle = Tau cempty"
 
 adhoc_overloading tick Ret
@@ -310,19 +315,23 @@ lemma is_Vis_Sils [simp]: "is_Vis (Sils n P) \<longleftrightarrow> n = 0 \<and> 
   by (metis Sil_def Sils.elims itree.disc(5) itree.distinct_disc(6) less_Suc_eq_0_disj less_numeral_extra(3))
 
 lemma is_Sil_Sils: "is_Sil (Sils n P) \<longleftrightarrow> (n > 0 \<or> is_Sil P)"
-  by (metis Sils.simps(1) is_Ret_Sils is_Vis_Sils itree.exhaust_disc neq0_conv)
+  by (metis Sils.elims Sils.simps(1) is_Sil(1) neq0_conv)
 
 lemma un_Sil_Sils [simp]: "un_Sil (Sils n P) = (if n = 0 then un_Sil P else Sils (n - 1) P)"
   by (cases n, simp_all)
 
+
 lemma Sils_Sils [simp]: "Sils m (Sils n P) = Sils (m + n) P"
   by (induct m, simp_all)
+
+lemma Sil_injective [simp]: "Sil P = Sil Q \<longleftrightarrow> P = Q"
+  by (metis Sil_def csingleton_inject itree.inject(2))
 
 lemma Sils_injective: "Sils n P = Sils n Q \<Longrightarrow> P = Q"
   by (induct n, simp_all)
 
 lemma Vis_Sils: "Vis F = Sils n (Vis G) \<longleftrightarrow> (n = 0 \<and> F = G)"
-  by (metis Sils.elims is_Vis_Sils itree.disc(8) itree.disc(9) itree.inject(3))
+  by (metis Sils.simps(1) is_Vis_Sils itree.disc(9) itree.sel(3))
 
 lemma Sils_Vis_inj: "Sils m (Vis F) = Sils n (Vis G) \<Longrightarrow> (m = n \<and> F = G)"
   apply (induct m, auto simp add: Vis_Sils)
