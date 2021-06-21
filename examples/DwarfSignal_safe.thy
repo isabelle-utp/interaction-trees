@@ -113,9 +113,9 @@ definition "
   SP345 = 
     lastProperState?(l):(ProperState) \<rightarrow>
       (
-          (l = stop) & setNewProperState?(st):(ProperState - {drive}) \<rightarrow> Skip
-        \<box> (l = dark) & setNewProperState?(st):{dark, stop} \<rightarrow> Skip
-        \<box> (l \<noteq> dark \<and> l \<noteq> stop) & setNewProperState?(st):(ProperState - {dark}) \<rightarrow> Skip
+          \<questiondown>(l = stop) ? \<Zcomp> setNewProperState?(st):(ProperState - {drive}) \<rightarrow> Skip
+        \<box> \<questiondown>(l = dark) ? \<Zcomp>  setNewProperState?(st):{dark, stop} \<rightarrow> Skip
+        \<box> \<questiondown>(l \<noteq> dark \<and> l \<noteq> stop) ? \<Zcomp> setNewProperState?(st):(ProperState - {dark}) \<rightarrow> Skip
       )
  "
 

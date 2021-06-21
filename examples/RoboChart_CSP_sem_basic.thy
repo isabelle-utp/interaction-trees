@@ -50,10 +50,11 @@ datatype TIDS_stm0 = NULLTRANSITION_stm0
 	              | TID_stm0_t1
 	              | TID_stm0_t2
 
-definition "TIDS_stm0_set = {NULLTRANSITION_stm0, TID_stm0_t0, TID_stm0_t1, TID_stm0_t2}"
 definition "TIDS_stm0_list = [NULLTRANSITION_stm0, TID_stm0_t0, TID_stm0_t1, TID_stm0_t2]"
+definition "TIDS_stm0_set = set TIDS_stm0_list"
 
-definition "ITIDS_stm0 = {TID_stm0_t1, TID_stm0_t2}"
+definition "ITIDS_stm0_list = [TID_stm0_t1, TID_stm0_t2]"
+definition "ITIDS_stm0 = set ITIDS_stm0_list"
 
 chantype Chan_stm0 =
 (* flow channels *)
@@ -300,7 +301,7 @@ definition State_stm0_s0 where
                 do {
                     x \<leftarrow> inp_in internal_stm0 
                       (set (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
-                          TIDS_stm0_list));
+                          ITIDS_stm0_list));
                     y \<leftarrow> inp_in exit_stm0 (set 
                       [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
@@ -309,7 +310,7 @@ definition State_stm0_s0 where
                 do {
                     x \<leftarrow> inp_in e1__stm0 (set [(s, d, l) . 
                         s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
-                          TIDS_stm0_list), 
+                          ITIDS_stm0_list), 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
@@ -320,7 +321,7 @@ definition State_stm0_s0 where
                 do {
                     x \<leftarrow> inp_in e3__stm0 (set [(s, d, l) . 
                         s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
-                          TIDS_stm0_list), 
+                          ITIDS_stm0_list), 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
@@ -432,7 +433,7 @@ definition D__stm0 where
   hide (AUX_opt_stm0 idd) internal_events_stm0
 "
 
-export_code State_stm0_s0 stm0_Memory_opt_l stm0_MemoryTransitions_opt_0 D__stm0 in Haskell 
+export_code D__stm0 in Haskell 
   (* module_name RoboChart_basic *)
   file_prefix RoboChart_basic 
   (string_classes) 

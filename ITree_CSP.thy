@@ -6,6 +6,8 @@ begin
 
 subsection \<open> Basic Constructs \<close>
 
+definition "stop = deadlock"
+
 definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
@@ -619,5 +621,13 @@ lemma hide_empty: "hide P {} = P"
   apply (auto simp add: itree.case_eq_if)
   apply (metis (no_types, lifting) hide.code itree.case_eq_if)
   oops
+
+subsection \<open> Interrupt \<close>
+term "\<Delta>"
+
+subsection \<open> Exception or Throw \<close>
+term "\<Theta>"
+
+subsection \<open> Renaming \<close>
 
 end
