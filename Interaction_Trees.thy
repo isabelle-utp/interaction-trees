@@ -23,6 +23,8 @@ codatatype ('e, 'r) itree =
   Tau "('e, 'r) itree cset" | \<comment> \<open> Internal choice \<close>
   Vis "'e \<Zpfun> ('e, 'r) itree" \<comment> \<open> Visible events choosing the continuation \<close>
 
+print_theorems
+
 definition Sil ("\<tau>") where
 "Sil P = Tau (csingle P)"
 
@@ -30,6 +32,14 @@ definition "is_Sil P = (is_Tau P \<and> (\<exists> P'. un_Tau P = csingle P'))"
 
 lemma is_Sil [simp]: "is_Sil (Sil P)" "is_Sil (Ret x) \<Longrightarrow> False" "is_Sil (Vis F) \<Longrightarrow> False"
   by (simp_all add: Sil_def is_Sil_def)
+
+lemma Sil_dists [simp]: "Sil P \<noteq> Vis F" "Vis F \<noteq> Sil P" "Sil P \<noteq> Ret x" "Ret x \<noteq> Sil P"
+  by (simp_all add: Sil_def)
+
+definition "un_Sil P = (SOME P'. P = Tau (csingle P'))"
+
+lemma un_Sil [simp]: "un_Sil (Sil P) = P"
+  by (simp add: Sil_def un_Sil_def)
 
 definition "miracle = Tau cempty"
 
@@ -213,6 +223,9 @@ lemma bind_TauE' [elim]:
   shows R
   by (metis assms(1) assms(2) assms(3) bind_TauE cset.map_cong0)
 
+lemma miracle_bind [simp]: "miracle \<bind> P = miracle"
+  by (simp add: miracle_def)
+
 (* Is this true? *)
 
 lemma bind_Sil_dest:
@@ -320,7 +333,6 @@ lemma is_Sil_Sils: "is_Sil (Sils n P) \<longleftrightarrow> (n > 0 \<or> is_Sil 
 lemma un_Sil_Sils [simp]: "un_Sil (Sils n P) = (if n = 0 then un_Sil P else Sils (n - 1) P)"
   by (cases n, simp_all)
 
-
 lemma Sils_Sils [simp]: "Sils m (Sils n P) = Sils (m + n) P"
   by (induct m, simp_all)
 
@@ -359,6 +371,7 @@ lemma bind_Sils [simp]: "Sils n P \<bind> Q = Sils n (P \<bind> Q)"
 lemma Sils_Sil_shift [simp]: "Sils n (Sil P) = Sil (Sils n P)"
   by (metis Sils.simps(1) Sils.simps(2) Sils_Sils add_Suc_right)
 
+(*
 lemma bind_Sils_dest:
   "P \<bind> Q = Sils n R \<Longrightarrow> 
   ((\<exists> P'. P = Sils n P' \<and> R = P' \<bind> Q) 
@@ -377,18 +390,23 @@ lemma bind_SilsE:
     "\<And> x m. \<lbrakk> m \<le> n; P = Sils m (Ret x); Q x = Sils (n - m) X \<rbrakk> \<Longrightarrow> R"
   shows R
   using assms(1) assms(2) assms(3) bind_Sils_dest by blast  
+*)
 
 subsection \<open> Operational Semantics and Traces \<close>
 
 inductive trace_to :: "('e, 's) itree \<Rightarrow> 'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" ("_ \<midarrow>_\<leadsto> _" [55, 0, 55] 55) where
 trace_to_Nil [intro]: "P \<midarrow>[]\<leadsto> P" | 
-trace_to_Sil [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sil P \<midarrow>tr\<leadsto> P'" |
+trace_to_Tau [intro]: "\<lbrakk> P \<in>\<^sub>c A; P \<midarrow>tr\<leadsto> P' \<rbrakk> \<Longrightarrow> Tau A \<midarrow>tr\<leadsto> P'" |
 trace_to_Vis [intro]: "\<lbrakk> e \<in> pdom F; F e \<midarrow>tr\<leadsto> P' \<rbrakk> \<Longrightarrow> Vis F \<midarrow>e # tr\<leadsto> P'"
 
 inductive_cases
   trace_to_VisE [elim]: "Vis F \<midarrow>tr\<leadsto> P" and
   trace_to_RetE [elim]: "Ret x \<midarrow>tr\<leadsto> P" and
+  trace_to_TauE [elim]: "Tau P \<midarrow>tr\<leadsto> P'" and
   trace_to_SilE [elim]: "Sil P \<midarrow>tr\<leadsto> P'"
+
+lemma trace_to_Sil [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sil P \<midarrow>tr\<leadsto> P'"
+  by (auto simp add: Sil_def)
 
 lemma trace_to_Sils [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sils n P \<midarrow>tr\<leadsto> P'"
   by (induct n, auto)
@@ -406,8 +424,9 @@ lemma trace_to_prefix_closed:
   case (trace_to_Nil P)
   then show ?case by (auto)
 next
-  case (trace_to_Sil P tr' P' tr)
-  then show ?case by (auto)
+  case (trace_to_Tau P A tr' P' tr)
+  then show ?case
+    by (meson trace_to.trace_to_Tau)
 next
   case (trace_to_Vis e F tr' P' tr)
   then show ?case
@@ -430,8 +449,8 @@ lemma trace_to_Nil_Sils:
   shows "\<exists> n. Sils n P' = P"
 proof - 
   have "\<And> tr. P \<midarrow>tr\<leadsto> P' \<Longrightarrow> tr = [] \<longrightarrow> (\<exists> n. P = Sils n P')"
-    by (induct_tac rule: trace_to.induct, auto
-       , metis (mono_tags) Sils_0, metis (mono_tags) Sils.simps(2))
+    apply (induct_tac rule: trace_to.induct, auto simp add: assms)
+    apply (metis Sils.simps(1))
   thus ?thesis
     using assms by fastforce
 qed
