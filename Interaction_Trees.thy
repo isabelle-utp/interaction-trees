@@ -20,10 +20,11 @@ subsection \<open> Interaction Tree Type \<close>
 
 codatatype ('e, 'r) itree = 
   Ret 'r | \<comment> \<open> Terminate, returning a value \<close>
-  Tau "('e, 'r) itree cset" ("\<tau>") | \<comment> \<open> Invisible event \<close>
+  Tau "('e, 'r) itree cset" | \<comment> \<open> Internal choice \<close>
   Vis "'e \<Zpfun> ('e, 'r) itree" \<comment> \<open> Visible events choosing the continuation \<close>
 
-definition "Sil P = Tau (csingle P)"
+definition Sil ("\<tau>") where
+"Sil P = Tau (csingle P)"
 
 definition "miracle = Tau cempty"
 
@@ -283,11 +284,11 @@ lemma run_empty: "run {} = Vis {}\<^sub>p"
 
 lemma run_bind: "run E \<bind> K = run E"
   apply (coinduction rule: itree_coind)
-  apply (metis bind_itree.disc(3) itree.distinct_disc(3) itree.distinct_disc(6) run.disc_iff)
-  apply (metis itree.disc(7) run.disc_iff)
+      apply (metis bind_itree.disc(3) itree.distinct_disc(3) itree.distinct_disc(6) run.disc_iff)
+     apply (metis itree.disc(7) run.disc_iff)
+    apply (metis itree.disc(8) run.disc_iff)
    apply (metis itree.disc(8) run.disc_iff)
-  apply (metis itree.disc(8) run.disc_iff)
-  
+  apply (smt (verit, best) bind_VisE itree.disc(7) itree.sel(3) map_pfun_apply pdom_map_pfun run.disc_iff run.sel)
   done  
 
 subsection \<open> Transitive Silent Steps \<close>
@@ -303,10 +304,10 @@ lemma Sils_0 [intro]: "Sils 0 P = P"
   by (simp)
 
 lemma is_Ret_Sils [simp]: "is_Ret (Sils n P) \<longleftrightarrow> n = 0 \<and> is_Ret P"
-  by (metis Sils.elims itree.disc(2) less_numeral_extra(3) zero_less_Suc)
+  by (metis Sil_def Sils.elims is_Ret_def itree.disc(4) itree.disc(5) less_Suc_eq_0_disj less_numeral_extra(3))
 
 lemma is_Vis_Sils [simp]: "is_Vis (Sils n P) \<longleftrightarrow> n = 0 \<and> is_Vis P"
-  by (metis Sils.elims Sils.simps(1) itree.disc(8))
+  by (metis Sil_def Sils.elims itree.disc(5) itree.distinct_disc(6) less_Suc_eq_0_disj less_numeral_extra(3))
 
 lemma is_Sil_Sils: "is_Sil (Sils n P) \<longleftrightarrow> (n > 0 \<or> is_Sil P)"
   by (metis Sils.simps(1) is_Ret_Sils is_Vis_Sils itree.exhaust_disc neq0_conv)
