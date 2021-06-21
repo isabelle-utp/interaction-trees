@@ -134,6 +134,8 @@ primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightar
     \<comment> \<open> Apply the binding function to every possible continuation (non-trivial). \<close>
     Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
 
+print_theorems
+
 lemma map_pfun_alt_def: "map_pfun f g = pfun_of_map (map_option f \<circ> pfun_lookup g)"
   by (simp add: map_pfun_def)
 
@@ -187,28 +189,44 @@ lemma bind_VisE' [elim]:
   shows R
   by (metis assms bind_VisE)
 
-lemma bind_Sil_dest:
-  "P \<bind> Q = Tau A \<Longrightarrow> ((\<exists> B. P = Tau P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> Sil R = Q x))"
-  oops
+lemma bind_Tau_dest:
+  "P \<bind> Q = Tau A \<Longrightarrow> ((\<exists> B P'. P = Tau B \<and> A = cimage (\<lambda> t. t \<bind> Q) B) \<or> (\<exists> x. P = Ret x \<and> Tau A = Q x))"
+  by (auto, metis bind_Ret bind_Tau bind_Vis itree.distinct(5) itree.exhaust itree.inject(2))
+
+lemma bind_TauE [elim]:
+  assumes "(P \<bind> Q) = Tau A"
+    "\<And> B. \<lbrakk> P = Tau B; A = cimage (\<lambda> t. t \<bind> Q) B \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; Tau A = Q x \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) bind_Ret bind_Tau bind_itree.disc_iff(2) is_Tau_def itree.collapse(1) itree.sel(2))
+
+lemma bind_TauE' [elim]:
+  assumes "Tau A = (P \<bind> Q)"
+    "\<And> B. \<lbrakk> P = Tau B; A = cimage (\<lambda> t. t \<bind> Q) B \<rbrakk> \<Longrightarrow> R"
+    "\<And> x. \<lbrakk> P = Ret x; Tau A = Q x \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) bind_TauE cset.map_cong0)
+
+(* Is this true? *)
 
 lemma bind_Sil_dest:
   "P \<bind> Q = Sil R \<Longrightarrow> ((\<exists> P'. P = Sil P' \<and> R = P' \<bind> Q) \<or> (\<exists> x. P = Ret x \<and> Sil R = Q x))"
-  apply (simp add: Sil_def)
-  by (metis (no_types, lifting) bind_itree.code bind_itree.disc_iff(2) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.disc(5) itree.sel(2))
-  
+  apply (simp add: Sil_def, drule bind_Tau_dest, auto)
+  oops
+
 lemma bind_SilE [elim]:
   assumes "(P \<bind> Q) = Sil X"
     "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
     "\<And> x. \<lbrakk> P = Ret x; Sil X = Q x \<rbrakk> \<Longrightarrow> R"
   shows R
-  using assms bind_Sil_dest by blast
+  oops
 
 lemma bind_SilE' [elim]:
   assumes "Sil X = (P \<bind> Q)"
     "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
     "\<And> x. \<lbrakk> P = Ret x; Sil X = Q x \<rbrakk> \<Longrightarrow> R"
   shows R
-  by (metis assms(1) assms(2) assms(3) bind_SilE)
+  oops
 
 lemma bind_itree_right_unit:
   shows "P \<bind> Ret = P"
@@ -220,8 +238,13 @@ lemma bind_itree_assoc:
   apply (coinduction arbitrary: P Q R rule: itree_strong_coind)
      apply (smt (verit, best) bind_Ret bind_itree.disc(2) bind_itree.disc_iff(3) itree.collapse(1) itree.distinct_disc(1) itree.distinct_disc(3) itree.distinct_disc(6) itree.exhaust_disc)
     apply force
-   apply (auto elim!: bind_SilE')
-   apply (metis itree.inject(2))
+   apply (auto elim!: bind_TauE')
+  apply auto[1]
+  apply blast
+  apply (metis itree.sel(2))
+  apply auto[1]
+  apply blast
+  apply (metis itree.sel(2))
   apply (auto elim!: bind_VisE')
   apply metis
   done
@@ -233,8 +256,8 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
       (case k r of 
          Ret x \<Rightarrow> Ret x |
          Vis F \<Rightarrow> Vis F |
-         Sil P \<Rightarrow> Sil P) |
-    Sil t \<Rightarrow> Sil (bind_itree t k) | 
+         Tau A \<Rightarrow> Tau A) |
+    Tau A \<Rightarrow> Tau (cimage (\<lambda> t. bind_itree t k) A) | 
     Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
    apply (simp add: bind_itree.code)
    apply (metis (no_types, hide_lams) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.collapse(3) itree.exhaust_disc)
@@ -263,7 +286,8 @@ lemma run_bind: "run E \<bind> K = run E"
   apply (metis bind_itree.disc(3) itree.distinct_disc(3) itree.distinct_disc(6) run.disc_iff)
   apply (metis itree.disc(7) run.disc_iff)
    apply (metis itree.disc(8) run.disc_iff)
-  apply (smt (verit, best) bind_VisE itree.disc(7) itree.sel(3) map_pfun_apply pdom_map_pfun run.disc_iff run.sel)
+  apply (metis itree.disc(8) run.disc_iff)
+  
   done  
 
 subsection \<open> Transitive Silent Steps \<close>
