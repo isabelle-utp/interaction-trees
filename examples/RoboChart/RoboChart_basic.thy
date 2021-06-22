@@ -1,7 +1,7 @@
 section \<open> A very basic RoboChart CSP Semantics \<close>
 
-theory RoboChart_CSP_sem_basic
-  imports "../ITree_CSP"
+theory RoboChart_basic
+  imports "../../ITree_CSP"
 begin
 
 definition par_hide where
