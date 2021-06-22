@@ -620,4 +620,65 @@ lemma hide_empty: "hide P {} = P"
   apply (metis (no_types, lifting) hide.code itree.case_eq_if)
   oops
 
+subsection \<open> Interruption \<close>
+
+primcorec interrupt :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<triangle>" 59) where
+"interrupt P Q =
+   (case (P, Q) of
+     (Sil P, _) \<Rightarrow> Sil (interrupt P Q) |
+     (_, Sil Q) \<Rightarrow> Sil (interrupt P Q) |
+     (Ret x, _) \<Rightarrow> Ret x |
+     (_, Ret y) \<Rightarrow> Ret y |
+     (Vis F, Vis G) \<Rightarrow> 
+        Vis (map_pfun 
+              (\<lambda>x. case x of 
+                     Left P' \<Rightarrow> interrupt P' Q \<comment> \<open> Left side acts independently \<close>
+                   | Right Q' \<Rightarrow> Q' \<comment> \<open> Right side acts independently \<close>)
+              (emerge (pdom(G) \<Zndres> F) {} G)))"
+
+lemma diverge_interrupt_left [simp]: "diverge \<triangle> P = diverge"
+  by (coinduction arbitrary: P, auto, metis diverge.ctr itree.case(2))
+
+lemma diverge_interrupt_right [simp]: "P \<triangle> diverge = diverge"
+  by (coinduction arbitrary: P, auto simp add: itree.case_eq_if, meson itree.exhaust_disc)
+
+lemma Sils_interrupt_left [simp]: "Sils n P \<triangle> Q = Sils n (P \<triangle> Q)"
+  by (induct n, simp_all add: interrupt.code)
+
+lemma Sil_interrupt_right_stable [simp]: "stable P \<Longrightarrow> P \<triangle> Sil Q = Sil (P \<triangle> Q)"
+  by (cases P, simp_all, auto simp add: interrupt.code)
+
+lemma Sils_interrupt_right_stable [simp]: "stable P \<Longrightarrow> P \<triangle> Sils n Q = Sils n (P \<triangle> Q)"
+  by (induct n, auto)
+
+lemma Sils_interrupt_right [simp]: "P \<triangle> Sils n Q = Sils n (P \<triangle> Q)"
+proof (cases "stabilises P")
+  case True
+  then obtain m P' where P: "P = Sils m P'" "stable P'"
+    by (metis stabilises_def)
+  then have "Sils m P' \<triangle> Sils n Q = Sils (m + n) (P' \<triangle> Q)"
+    by (simp)
+  then show ?thesis
+    by (simp add: P(1) add.commute)
+next
+  case False
+  then show ?thesis
+    by (metis Sils_diverge diverge_interrupt_left diverges_then_diverge)
+qed
+
+lemma deadlock_interrupt_stable: "stable P \<Longrightarrow> deadlock \<triangle> P = P"
+  by (cases P, simp_all add: deadlock_def interrupt.code emerge_def pfun_eq_iff)
+
+lemma deadlock_interrupt: "deadlock \<triangle> P = P"
+proof (cases "stabilises P")
+  case True
+  then show ?thesis
+    by (metis Sils_interrupt_right deadlock_interrupt_stable stabilises_def)
+next
+  case False
+  then show ?thesis
+    by (metis diverge_interrupt_right diverges_then_diverge)
+qed
+
+
 end
