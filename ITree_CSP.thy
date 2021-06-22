@@ -680,5 +680,36 @@ next
     by (metis diverge_interrupt_right diverges_then_diverge)
 qed
 
+subsection \<open> Exception \<close>
+
+primcorec exception :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<lbrakk>_\<Zrres>" 65) where
+"exception P A Q =
+  (case P of
+    Ret x  \<Rightarrow> Ret x |
+    Sil P' \<Rightarrow> Sil (exception P' A Q) |
+    Vis F  \<Rightarrow> 
+      Vis (map_pfun 
+              (\<lambda>x. case x of 
+                     Left P' \<Rightarrow> exception P' A Q \<comment> \<open> Left side acts independently \<close>
+                   | Right Q' \<Rightarrow> Q' \<comment> \<open> Right side acts independently \<close>)
+              (emerge 
+                \<comment> \<open> Non-exceptional behaviours from @{term P}\<close>
+                (A \<Zndres> F)
+                \<comment> \<open> No synchronisation\<close> 
+                {} 
+                \<comment> \<open> Exceptional behaviours: events in @{term A} enables by @{term P}, leading to @{term Q}\<close>
+                (pfun_entries (A \<inter> pdom(F)) (fun_pfun (\<lambda> _. Q))))))"
+
+subsection \<open> Renaming \<close>
+
+primcorec rename :: "('e\<^sub>2 \<Rightarrow> 'e\<^sub>1) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+"rename \<rho> P = 
+  (case P of
+    Ret x \<Rightarrow> Ret x |
+    Sil P \<Rightarrow> Sil (rename \<rho> P) |
+    Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p fun_pfun \<rho>)))"
+
+lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
+  by (simp add: deadlock_def rename.code)
 
 end
