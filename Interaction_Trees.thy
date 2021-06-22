@@ -60,10 +60,10 @@ abbreviation "stable P \<equiv> \<not> unstable P"
 
 translations "CONST stable P" <= "\<not> CONST unstable P"
 
-lemma stable_Ret [intro]: "stable (Ret x)"
+lemma stable_Ret [intro!]: "stable (Ret x)"
   by simp
 
-lemma stable_Vis [intro]: "stable (Vis F)"
+lemma stable_Vis [intro!]: "stable (Vis F)"
   by simp
 
 lemma unstableE: "\<lbrakk> unstable P; \<And> P'. P = Tau P' \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
@@ -403,7 +403,8 @@ inductive_cases
   trace_to_VisE [elim]: "Vis F \<midarrow>tr\<leadsto> P" and
   trace_to_RetE [elim]: "Ret x \<midarrow>tr\<leadsto> P" and
   trace_to_TauE [elim]: "Tau P \<midarrow>tr\<leadsto> P'" and
-  trace_to_SilE [elim]: "Sil P \<midarrow>tr\<leadsto> P'"
+  trace_to_SilE [elim]: "Sil P \<midarrow>tr\<leadsto> P'" and
+  trace_to_NilE [elim]: "P \<midarrow>[]\<leadsto> P'"
 
 lemma trace_to_Sil [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sil P \<midarrow>tr\<leadsto> P'"
   by (auto simp add: Sil_def)
@@ -444,6 +445,9 @@ next
   qed
 qed
 
+text \<open> None of the trace results about @{const Sils} hold in the non-deterministic setting \<close>
+
+(*
 lemma trace_to_Nil_Sils:
   assumes "P \<midarrow>[]\<leadsto> P'" 
   shows "\<exists> n. Sils n P' = P"
@@ -459,6 +463,35 @@ lemma trace_to_NilE [elim]:
   assumes "P \<midarrow>[]\<leadsto> P'" 
   obtains n where "P = Sils n P'"
   using assms trace_to_Nil_Sils by auto
+*)
+
+lemma trace_Nil_trans:
+  assumes "P \<midarrow>[]\<leadsto> P'" "P' \<midarrow>[]\<leadsto> Q"
+  shows "P \<midarrow>[]\<leadsto> Q"
+proof -
+  have "\<And> tr. P \<midarrow>tr\<leadsto> P' \<Longrightarrow> (length tr = 0 \<and> P' \<midarrow>[]\<leadsto> Q \<longrightarrow> P \<midarrow>tr\<leadsto> Q)"
+  proof -
+    fix tr
+    show "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> (length tr = 0 \<and> P' \<midarrow>[]\<leadsto> Q \<longrightarrow> P \<midarrow>tr\<leadsto> Q)"
+      by (induct arbitrary: Q rule: trace_to.induct, auto)
+  qed
+  thus ?thesis
+    by (meson assms(1) assms(2) list.size(3))
+qed
+
+lemma trace_to_singleE [elim]: 
+  assumes "P \<midarrow>[a]\<leadsto> Q"
+  obtains P' where "stable(P')" "P \<midarrow>[]\<leadsto> P'" "P' \<midarrow>[a]\<leadsto> Q"
+proof -
+  have "\<And> tr. P \<midarrow>tr\<leadsto> Q \<Longrightarrow> (length tr = 1 \<longrightarrow> (\<exists> P'. stable(P') \<and> P \<midarrow>[]\<leadsto> P' \<and> P' \<midarrow>[hd tr]\<leadsto> Q))"
+  proof -
+    fix tr
+    show "P \<midarrow>tr\<leadsto> Q \<Longrightarrow> (length tr = 1 \<longrightarrow> (\<exists> P'. stable(P') \<and> P \<midarrow>[]\<leadsto> P' \<and> P' \<midarrow>[hd tr]\<leadsto> Q))"
+      by (induct rule: trace_to.induct, auto)
+  qed
+  thus ?thesis
+    by (metis One_nat_def assms length_Cons list.sel(1) list.size(3) that)
+qed
 
 lemma trace_to_ConsE:
   assumes "P \<midarrow>x # xs\<leadsto> Q" 
@@ -475,6 +508,30 @@ proof -
     by (metis assms list.distinct(1) list.sel(1) list.sel(3) that)
 qed
 
+lemma trace_to_Nil_first: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> P' \<midarrow>[]\<leadsto> Q \<Longrightarrow> P \<midarrow>tr\<leadsto> Q"
+  by (induct arbitrary: Q rule: trace_to.induct, auto)
+
+lemma trace_to_Nil_second: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> P' \<midarrow>[]\<leadsto> Q \<Longrightarrow> P \<midarrow>tr\<leadsto> Q"
+  oops
+
+lemma "P \<midarrow>[a]\<leadsto> P' \<Longrightarrow> P' \<midarrow>tr\<leadsto> Q \<Longrightarrow> P \<midarrow>a # tr\<leadsto> Q"
+  apply (induct tr arbitrary: a P P' Q)
+
+
+lemma "P \<midarrow>[]\<leadsto> P' \<Longrightarrow> P' \<midarrow>tr\<leadsto> Q \<Longrightarrow> P \<midarrow>tr\<leadsto> Q"
+  apply (induct tr arbitrary: P P' Q)
+  apply (meson trace_Nil_trans trace_to_Nil trace_to_Tau)
+  apply (erule trace_to_ConsE)
+  apply (erule trace_to_singleE)
+    apply (auto)[1]
+
+lemma trace_to_trans:
+  "\<lbrakk> P \<midarrow>tr\<leadsto> P'; P' \<midarrow>tr'\<leadsto> P'' \<rbrakk> \<Longrightarrow> P \<midarrow>tr @ tr'\<leadsto> P''"
+  apply (induct tr arbitrary: P P' P'' tr')
+  apply (auto)
+
+
+(*
 lemma trace_to_singleE [elim!]:
   assumes "P \<midarrow>[a]\<leadsto> P'"
   obtains m n F  where "P = Sils m (Vis F)" "a \<in> pdom F" "F a = Sils n P'"
@@ -489,12 +546,19 @@ proof -
   thus ?thesis
     by (metis One_nat_def assms length_Cons list.sel(1) list.size(3) that)
 qed
+*)
 
+(*
 lemma trace_to_single_iff: "P \<midarrow>[a]\<leadsto> P' \<longleftrightarrow> (\<exists> m n F. P = Sils m (Vis F) \<and> a \<in> pdom F \<and> F a = Sils n P')"
   by (metis trace_of_Sils trace_to_Sils trace_to_Vis trace_to_singleE)
+*)
+
+
+
 
 lemma trace_to_Cons [intro]:
   "\<lbrakk> P \<midarrow>[x]\<leadsto> P'; P' \<midarrow>xs\<leadsto> P'' \<rbrakk> \<Longrightarrow> P \<midarrow>x # xs\<leadsto> P''"
+  apply (rule)
   by force
 
 lemma trace_to_appendE:
