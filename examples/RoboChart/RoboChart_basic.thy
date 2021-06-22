@@ -1,69 +1,17 @@
 section \<open> A very basic RoboChart CSP Semantics \<close>
 
 theory RoboChart_basic
-  imports "../../ITree_CSP"
+  imports "../../ITree_RoboChart"
 begin
-
-definition par_hide where
-"par_hide P s Q = (hide (P \<parallel>\<^bsub> s \<^esub> Q) s)"
-
-definition prhide where
-"prhide P es = foldl (\<lambda> Q e. hide Q {e}) P es"
-
-definition discard_state where
-"discard_state P = do {P ; skip}"
-
-(*
-definition "input c = (\<lambda> x. inp c)"
-definition "input_in c A = (\<lambda> x. inp_in c A)"
-
-syntax 
-  "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
-  "_input_in" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [60, 0, 0, 61] 61)
-  (*"_output"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_!'(_') \<rightarrow> _" [90, 0, 91] 91)*)
-  "_output"   :: "id \<Rightarrow> logic \<Rightarrow> logic" ("_!'(_')" [90, 0] 91)
-
-translations "c?(x) \<rightarrow> P" == "CONST input c \<Zcomp> (\<lambda> (x). P)"
-translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A) \<Zcomp> (\<lambda> (x). P)"
-(* translations "c!(e) \<rightarrow> P" == "CONST outp c (e) \<Zcomp> P" *)
-translations "c!(e)" == "CONST outp c (e)"
-*)
 
 subsection \<open> General definitions \<close>
 definition "int_max = (2::integer)"
 definition "int_min = (-2::integer)"
 
-type_synonym core_int = integer
-
-fun int2integer_list :: "int list \<Rightarrow> integer list" where
-"int2integer_list Nil = Nil" |
-"int2integer_list (Cons x xs) 
-  = Cons (integer_of_int x) (int2integer_list xs)"
-
-definition int_to_integer_list :: "int list \<Rightarrow> integer list" where
-"int_to_integer_list = map (integer_of_int)"
-
-lemma "int2integer_list xs = int_to_integer_list xs"
-  apply (simp add: int_to_integer_list_def)
-  apply (induction xs)
-  apply simp
-  by simp
-
 abbreviation "core_int_list \<equiv> 
   int2integer_list [(int_of_integer int_min)..(int_of_integer int_max)]"
 
 abbreviation "core_int_set \<equiv> set core_int_list"
-
-datatype InOut = din | dout
-
-definition "InOut_list = [din, dout]"
-definition "InOut_set = set InOut_list"
-
-(* This is not going to work because it is not sort of an enum type. *)
-(*
-definition set2list:: "'a set \<Rightarrow> 'a list" where
-"set2list s = (SOME l. set l = s)"
-*)
 
 subsection \<open> stm0 \<close>
 datatype SIDS_stm0 = SID_stm0
