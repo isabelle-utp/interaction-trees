@@ -5,8 +5,8 @@ theory RoboChart_basic
 begin
 
 subsection \<open> General definitions \<close>
-definition "int_max = (2::integer)"
-definition "int_min = (-2::integer)"
+definition "int_max = (1::integer)"
+definition "int_min = (-1::integer)"
 
 abbreviation "core_int_list \<equiv> 
   int2integer_list [(int_of_integer int_min)..(int_of_integer int_max)]"
@@ -157,34 +157,15 @@ definition stm0_MachineInternalEvents where
 
 subsubsection \<open> State Machine Memory \<close>
 text \<open> Memory cell processes \<close>
-(* for the shared variable x *)
 
+(* for the shared variable x *)
 definition stm0_Memory_opt_x where
 "stm0_Memory_opt_x = 
-  loop (\<lambda> s.
-  (do {outp get_x_stm0 s; Ret (s)} \<box> 
-   do {x \<leftarrow> inp_in set_x_stm0 core_int_set; Ret (x)} \<box>
-   do {x \<leftarrow> inp_in set_EXT_x_stm0 core_int_set; Ret (x)})
-)"
-(*
-term "set_x_stm0?(x):(core_int_set) \<rightarrow> (Ret (x))"
-
-definition stm0_Memory_opt_x1 where
-"stm0_Memory_opt_x1 = 
-  loop (\<lambda> s.
-  (do {get_x_stm0!(s) ; Ret (s)}  \<box> 
-   do {set_x_stm0?(x):(core_int_set) \<rightarrow> (Ret (x))} \<box>
-   do {x \<leftarrow> inp_in set_EXT_x_stm0 core_int_set; Ret (x)})
-)"
-*)
+  mem_of_svar get_x_stm0 set_x_stm0 set_EXT_x_stm0 core_int_set"
 
 (* for the local variable l *)
 definition stm0_Memory_opt_l where
-"stm0_Memory_opt_l = 
-  loop (\<lambda> s.
-  (do {outp get_l_stm0 s; Ret (s)} \<box> 
-   do {l \<leftarrow> inp_in set_l_stm0 core_int_set; Ret (l)})
-)"
+"stm0_Memory_opt_l = mem_of_lvar get_l_stm0 set_l_stm0 core_int_set"
 
 text \<open> Memory transition processes \<close>
 definition stm0_MemoryTransitions_opt_0 where
@@ -193,9 +174,6 @@ definition stm0_MemoryTransitions_opt_0 where
     (do {outp internal_stm0 TID_stm0_t0 ; Ret (id)} \<box> deadlock)
   )
 "
-term "do {outp internal_stm0 TID_stm0_t0 ; Ret (id)}"
-term "outp internal_stm0 TID_stm0_t0"
-term "Ret (id)"
 
 definition stm0_MemoryTransitions_opt_1 where
 "stm0_MemoryTransitions_opt_1 = 
@@ -222,33 +200,12 @@ definition I_stm0_i0 where
   })
 "
 
-term "(\<lambda> s. Ret (s)) \<Zcomp> (\<lambda> s. Ret (SID_stm0_s0))"
-term "do { Ret (SID_stm0_s0) ; Ret (SID_stm0_s0)}"
-term "do { sd \<leftarrow> inp_in enter_stm0 {(s, SID_stm0_s0) . (s \<in> (SIDS_stm0_set-{SID_stm0_s0}))} ; Ret (snd sd) }"
-term "(\<lambda> s. Ret (s)) \<Zcomp> (\<lambda> s. while (\<lambda> s. fst s) (\<lambda> s. do { Ret (s)}) (s))"
-
-term "(\<lambda> s. do {
-        sd \<leftarrow> inp_in enter_stm0 {(s, SID_stm0_s0) . (s \<in> (SIDS_stm0_set-{SID_stm0_s0}))} ; 
-          Ret (True, idd::integer, fst sd)}) \<Zcomp> 
-          (\<lambda> s. while (\<lambda> s. fst s) (\<lambda> s. 
-            do { Ret (s)}) (s))
-  "
-
-(*
-definition State_stm0_s0 where 
-"State_stm0_s0 = 
-  loop (\<lambda> (id::integer).
-    do {sd \<leftarrow> inp_in enter_stm0 {(s, SID_stm0_s0) . (s \<in> (SIDS_stm0_set-{SID_stm0_s0}))} ; 
-        ret \<leftarrow> Ret (True, id, fst sd) ; 
-        (while (\<lambda> s. fst s) 
-         (\<lambda> s.
-          do {Ret (ret)
-          }) (ret)) ;
-        Ret (id)
-  }
-)
-"
-*)
+term "do {skip ; stop} \<triangle> skip"
+definition tids_stm0_s0 where
+" tids_stm0_s0 = 
+    (filter 
+        (\<lambda> s. s \<notin> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
+        ITIDS_stm0_list)"
 
 (* We need an interrupt operator for during actions *) 
 (* ::"integer \<Rightarrow> SIDS_stm0 \<Rightarrow> (Chan_stm0, SIDS_stm0) itree" *)
@@ -267,6 +224,8 @@ definition State_stm0_s0 where
            (\<lambda> s.
             do {
               outp entered_stm0 (snd (snd s), SID_stm0_s0);
+              (do {skip ; stop} \<triangle>
+                (
                 \<comment> \<open> T_stm0_t1 \<close>
                 do {t \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, l) . l \<leftarrow> core_int_list]) ;
                       outp set_l_stm0 (snd (snd t)) ; 
@@ -275,7 +234,7 @@ definition State_stm0_s0 where
                       l \<leftarrow> inp_in get_l_stm0 core_int_set ; 
                         outp set_x_stm0 (l);
                         outp enter_stm0 (SID_stm0_s0, SID_stm0_s0);
-                        Ret(True, fst (snd s), snd (snd s))
+                        Ret(True, fst (snd s), SID_stm0_s0)
                     } \<box>
                 \<comment> \<open> T_stm0_t2 \<close>
                 do {outp internal_stm0 TID_stm0_t2;
@@ -284,39 +243,38 @@ definition State_stm0_s0 where
                       x \<leftarrow> inp_in get_x_stm0 core_int_set ; 
                         outp e3_stm0 (dout, x);
                         outp enter_stm0 (SID_stm0_s0, SID_stm0_s0);
-                        Ret(True, fst (snd s), snd (snd s))
+                        Ret(True, fst (snd s), SID_stm0_s0)
                     } \<box>
                 do {
                     x \<leftarrow> inp_in internal_stm0 
-                      (set (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
-                          ITIDS_stm0_list));
+                      (set tids_stm0_s0);
                     y \<leftarrow> inp_in exit_stm0 (set 
                       [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
-                      Ret (False, fst (snd s), snd (snd s))
+                      Ret (False, fst (snd s), SID_stm0_s0)
                     } \<box>
                 do {
                     x \<leftarrow> inp_in e1__stm0 (set [(s, d, l) . 
-                        s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
-                          ITIDS_stm0_list), 
+                        s \<leftarrow> tids_stm0_s0, 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
                         [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
-                      Ret (False, fst (snd s), snd (snd s))
+                      Ret (False, fst (snd s), SID_stm0_s0)
                     } \<box>
                 do {
                     x \<leftarrow> inp_in e3__stm0 (set [(s, d, l) . 
-                        s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
-                          ITIDS_stm0_list), 
+                        s \<leftarrow> tids_stm0_s0, 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
                         [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
-                      Ret (False, fst (snd s), snd (snd s))
+                      Ret (False, fst (snd s), SID_stm0_s0)
                     }
+                )
+              )
             })
             \<comment> \<open> The previous state: a triple \<close> 
             (ret)
@@ -404,13 +362,27 @@ definition MemorySTM_opt_stm0 where
   )   
 "
 
+term "(MemorySTM_opt_stm0 idd)"
+
+definition rename_stm0_events :: "Chan_stm0 \<Rightarrow> Chan_stm0" where
+(*"rename_stm0_events (e1__stm0_C (tid, dir, c)) = e1_stm0_C (dir, c)" | 
+"rename_stm0_events (e3__stm0_C (tid, dir, c)) = e3_stm0_C (dir, c)" | *)
+"rename_stm0_events e = e"
+
+definition rename_MemorySTM_opt_stm0 where
+"rename_MemorySTM_opt_stm0 idd = 
+  rename rename_stm0_events (MemorySTM_opt_stm0 idd)
+"
+
+term "map_pfun"
+
 (* Exception: P [| A |> Q*)
 (* Renaming *)
 definition AUX_opt_stm0 where
 "AUX_opt_stm0 (idd::integer) = 
   (hide 
     ( 
-      (MemorySTM_opt_stm0 idd)
+      (rename_MemorySTM_opt_stm0 idd) \<lbrakk> set [terminate_stm0_C ()] \<Zrres> skip
     )
     stm0_MachineInternalEvents
   )
@@ -605,7 +577,7 @@ definition stm1_MemoryTransitions_opt_0 where
 term "do {outp internal_stm1 TID_stm1_t0 ; Ret (id)}"
 term "outp internal_stm1 TID_stm1_t0"
 term "Ret (id)"
-
+(*
 definition stm1_MemoryTransitions_opt_1 where
 "stm1_MemoryTransitions_opt_1 = 
   loop (\<lambda> id::integer.
@@ -829,10 +801,65 @@ definition D__stm1 where
 "D__stm1 (idd::integer) = 
   hide (AUX_opt_stm1 idd) internal_events_stm1
 "
+*)
 
-export_code D__stm0 in Haskell 
+subsection \<open> Export code \<close>
+export_code 
+  stm0_Memory_opt_x
+  stm0_Memory_opt_l
+  stm0_MemoryTransitions_opt_0
+  stm0_MemoryTransitions_opt_1
+  I_stm0_i0
+  State_stm0_s0
+  State_stm0_s0_R
+  STM_stm0
+  MemorySTM_opt_stm0 
+  rename_MemorySTM_opt_stm0
+  D__stm0 in Haskell 
   (* module_name RoboChart_basic *)
   file_prefix RoboChart_basic 
   (string_classes) 
+
+generate_file \<open>code/RoboChart_basic/Simulate.hs\<close> = 
+\<open>module Simulate (simulate) where
+import qualified Interaction_Trees;
+import qualified Partial_Fun;
+
+isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
+isPrefixOf [] _         =  True;
+isPrefixOf _  []        =  False;
+isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
+
+removeSubstr :: String -> String -> String;
+removeSubstr w "" = "";
+removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
+
+simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Interaction_Trees.Itree e s -> Prelude.IO ();
+simulate_cnt n (Interaction_Trees.Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
+simulate_cnt n (Interaction_Trees.Sil p) =
+  do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
+       if (n >= 20) then do { Prelude.putStr "Many steps (> 20); Continue? [Y/N]"; q <- Prelude.getLine;
+                              if (q == "Y") then simulate_cnt 0 p else Prelude.putStrLn "Ended early.";
+                            }
+                    else simulate_cnt (n + 1) p
+     };
+simulate_cnt n (Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n t@(Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist m)) =
+  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
+       e <- Prelude.getLine;
+       case (Prelude.reads e) of
+         []       -> if (Prelude.length m == 1)
+                       then simulate_cnt 0 (snd (m !! (0)))
+                       else do { Prelude.putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > Prelude.length m)
+                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       else simulate_cnt 0 (snd (m !! (v - 1)))
+     };
+
+simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interaction_Trees.Itree e s -> Prelude.IO ();
+simulate = simulate_cnt 0;
+\<close>
+
+export_generated_files \<open>code/RoboChart_basic/Simulate.hs\<close>
 
 end

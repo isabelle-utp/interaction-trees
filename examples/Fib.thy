@@ -106,7 +106,7 @@ export_code open Fib in Haskell
   file_prefix Fib
     (string_classes)
 
-generate_file \<open>code/Fib/simulate.hs\<close> = 
+generate_file \<open>code/Fib/Simulate.hs\<close> = 
 \<open>module Simulate (simulate) where
 import qualified Interaction_Trees;
 import qualified Partial_Fun;
@@ -144,6 +144,6 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interactio
 simulate = simulate_cnt 0;
 \<close>
 
-export_generated_files \<open>code/Fib/simulate.hs\<close>
+export_generated_files \<open>code/Fib/Simulate.hs\<close>
 
 end

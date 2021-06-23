@@ -38,7 +38,21 @@ datatype InOut = din | dout
 definition "InOut_list = [din, dout]"
 definition "InOut_set = set InOut_list"
 
-enumtype Din = c1 | c2
+(* enumtype Din = c1 | c2 *)
+
+subsection \<open> Memory \<close>
+definition mem_of_svar :: "('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> ('b, 'a) itree" where
+"mem_of_svar outc inlc insc iset = loop (\<lambda> s.
+  (do {outp outc s; Ret (s)} \<box> 
+   do {x \<leftarrow> inp_in inlc iset; Ret (x)} \<box>
+   do {x \<leftarrow> inp_in insc iset; Ret (x)})
+)"
+
+definition mem_of_lvar :: "('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> ('b, 'a) itree" where
+"mem_of_lvar outc inc iset = loop (\<lambda> s.
+  (do {outp outc s; Ret (s)} \<box> 
+   do {x \<leftarrow> inp_in inc iset; Ret (x)})
+)"
 
 ML \<open> 
 ($$ "h") (Symbol.explode "hello");

@@ -6,7 +6,7 @@ begin
 
 subsection \<open> Basic Constructs \<close>
 
-definition "stop = deadlock"
+definition stop where "stop = deadlock"
 
 definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
@@ -712,6 +712,7 @@ primcorec rename :: "('e\<^sub>2 \<Rightarrow> 'e\<^sub>1) \<Rightarrow> ('e\<^s
     Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p fun_pfun \<rho>)))"
 
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
-  by (simp add: deadlock_def rename.code)
+  apply (simp add: deadlock_def rename.code)
+  oops
 
 end
