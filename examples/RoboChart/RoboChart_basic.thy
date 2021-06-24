@@ -34,6 +34,7 @@ definition "ITIDS_stm0 = set ITIDS_stm0_list"
 
 chantype Chan_stm0 =
 (* flow channels *)
+  (* will be hidden *)
   internal_stm0 :: TIDS_stm0
   enteredV_stm0 :: SIDS_stm0
   enterV_stm0 :: SIDS_stm0 
@@ -43,17 +44,22 @@ chantype Chan_stm0 =
   entered_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exit_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exited_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
+  (* this won't be hidden in this process, and will be renamed to terminate_ctr0 *)
   terminate_stm0 :: unit (* Is this right? *)
-(* variable channels *)
+(* variable channels : the next 3 channels will be hidden *)
   get_l_stm0 :: core_int
   set_l_stm0 :: core_int
   get_x_stm0 :: core_int
+(* this won't be hidden, and will be renamed to set_x_ctr0 *)
   set_x_stm0 :: core_int
-(* shared variable channels *)
+(* shared variable channels, and will be renamed to set_EXT_x_ctr0_stm0 *)
   set_EXT_x_stm0 :: core_int
 (* event channels *)
+  (* will be renamed to e1_stm0 (may introduce nondeterminism) *)
   e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
+  (* will be further renamed to e1_ctr0 *)
   e1_stm0 :: "InOut \<times> core_int"
+  (* will be renamed to e3_ctr0.out *)
   e3__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e3_stm0 :: "InOut \<times> core_int"
 
@@ -200,7 +206,6 @@ definition I_stm0_i0 where
   })
 "
 
-term "do {skip ; stop} \<triangle> skip"
 definition tids_stm0_s0 where
 " tids_stm0_s0 = 
     (filter 
@@ -343,7 +348,7 @@ definition MemorySTM_opt_stm0 where
 "MemorySTM_opt_stm0 (idd::integer) = 
   (hide
     (
-      (discard_state (stm0_Memory_opt_x idd))
+      (discard_state (stm0_Memory_opt_x 0))
       \<parallel>\<^bsub> stm0_x_events \<^esub>
       (hide 
         (
@@ -474,34 +479,6 @@ definition shared_variable_events_stm1 where
           x \<leftarrow> core_int_list]
 )"
 
-definition CS_stm1_s0_sync where
-"CS_stm1_s0_sync = 
-  set ([enter_stm1_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]] @
-      [entered_stm1_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]] @
-      [exit_stm1_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]] @
-      [exited_stm1_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]] @
-      [enter_stm1_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]] @
-      [entered_stm1_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]] @
-      [exit_stm1_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]] @
-      [exited_stm1_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm1_s0], 
-          sidy \<leftarrow> [SID_stm1_s0]]
-)"
-
 definition stm1_s0_triggers where
 "stm1_s0_triggers = 
   set ([e2__stm1_C (tid, dir). 
@@ -514,20 +491,11 @@ definition stm1_s0_triggers where
 )
 "
 
-definition stm1_l_events where
-"stm1_l_events = 
-    set (
-        [get_l_stm1_C l . l \<leftarrow> core_int_list] @
-        [set_l_stm1_C l . l \<leftarrow> core_int_list]
-    )
-"
-
 definition stm1_x_events where
 "stm1_x_events = 
     set (
         [get_x_stm1_C x . x \<leftarrow> core_int_list] @
-        [set_x_stm1_C x . x \<leftarrow> core_int_list] @
-        [set_EXT_x_stm1_C x . x \<leftarrow> core_int_list]
+        [set_x_stm1_C x . x \<leftarrow> core_int_list]
     )
 "
 
@@ -542,54 +510,16 @@ text \<open> Memory cell processes \<close>
 
 definition stm1_Memory_opt_x where
 "stm1_Memory_opt_x = 
-  loop (\<lambda> s.
-  (do {outp get_x_stm1 s; Ret (s)} \<box> 
-   do {x \<leftarrow> inp_in set_x_stm1 core_int_set; Ret (x)} \<box>
-   do {x \<leftarrow> inp_in set_EXT_x_stm1 core_int_set; Ret (x)})
-)"
-(*
-term "set_x_stm1?(x):(core_int_set) \<rightarrow> (Ret (x))"
-
-definition stm1_Memory_opt_x1 where
-"stm1_Memory_opt_x1 = 
-  loop (\<lambda> s.
-  (do {get_x_stm1!(s) ; Ret (s)}  \<box> 
-   do {set_x_stm1?(x):(core_int_set) \<rightarrow> (Ret (x))} \<box>
-   do {x \<leftarrow> inp_in set_EXT_x_stm1 core_int_set; Ret (x)})
-)"
-*)
-
-(* for the local variable l *)
-definition stm1_Memory_opt_l where
-"stm1_Memory_opt_l = 
-  loop (\<lambda> s.
-  (do {outp get_l_stm1 s; Ret (s)} \<box> 
-   do {l \<leftarrow> inp_in set_l_stm1 core_int_set; Ret (l)})
-)"
+  mem_of_svar get_x_stm1 set_x_stm1 set_EXT_x_stm1 core_int_set"
 
 text \<open> Memory transition processes \<close>
 definition stm1_MemoryTransitions_opt_0 where
 "stm1_MemoryTransitions_opt_0 = 
   loop (\<lambda> id::integer. 
-    (do {outp internal_stm1 TID_stm1_t0 ; Ret (id)} \<box> deadlock)
-  )
-"
-term "do {outp internal_stm1 TID_stm1_t0 ; Ret (id)}"
-term "outp internal_stm1 TID_stm1_t0"
-term "Ret (id)"
-(*
-definition stm1_MemoryTransitions_opt_1 where
-"stm1_MemoryTransitions_opt_1 = 
-  loop (\<lambda> id::integer.
-    do {x \<leftarrow> inp_in get_x_stm1 core_int_set ; 
-      (
-        do {inp_in e1__stm1 (set [(TID_stm1_t1, din, l). l \<leftarrow> core_int_list, (x = 0)])
-              ; Ret (id)} \<box>
-        do {guard (x \<noteq> 0); outp internal_stm1 TID_stm1_t2 ; Ret (id)} \<box>
-        do {x \<leftarrow> inp_in set_x_stm1 core_int_set; Ret (id)} \<box>
-        do {x \<leftarrow> inp_in set_EXT_x_stm1 core_int_set; Ret (id)}
-      )
-    }
+    (do {outp internal_stm1 TID_stm1_t0 ; Ret (id)} \<box> 
+     do {outp e2__stm1 (TID_stm1_t2, din) ; Ret (id)} \<box> 
+     do {inp_in e3__stm1 (set [(TID_stm1_t1, din, x). x \<leftarrow> core_int_list]) ; Ret (id)}
+    )
   )
 "
 
@@ -597,42 +527,20 @@ subsubsection \<open> States \<close>
 definition I_stm1_i0 where
 "I_stm1_i0 = (\<lambda> (id::integer) . 
   do {outp internal_stm1 TID_stm1_t0 ; 
-      outp set_x_stm1 0; 
       outp enter_stm1 (SID_stm1, SID_stm1_s0);
       outp entered_stm1 (SID_stm1, SID_stm1_s0)
   })
 "
 
-term "(\<lambda> s. Ret (s)) \<Zcomp> (\<lambda> s. Ret (SID_stm1_s0))"
-term "do { Ret (SID_stm1_s0) ; Ret (SID_stm1_s0)}"
-term "do { sd \<leftarrow> inp_in enter_stm1 {(s, SID_stm1_s0) . (s \<in> (SIDS_stm1_set-{SID_stm1_s0}))} ; Ret (snd sd) }"
-term "(\<lambda> s. Ret (s)) \<Zcomp> (\<lambda> s. while (\<lambda> s. fst s) (\<lambda> s. do { Ret (s)}) (s))"
 
-term "(\<lambda> s. do {
-        sd \<leftarrow> inp_in enter_stm1 {(s, SID_stm1_s0) . (s \<in> (SIDS_stm1_set-{SID_stm1_s0}))} ; 
-          Ret (True, idd::integer, fst sd)}) \<Zcomp> 
-          (\<lambda> s. while (\<lambda> s. fst s) (\<lambda> s. 
-            do { Ret (s)}) (s))
-  "
-
-(*
-definition State_stm1_s0 where 
-"State_stm1_s0 = 
-  loop (\<lambda> (id::integer).
-    do {sd \<leftarrow> inp_in enter_stm1 {(s, SID_stm1_s0) . (s \<in> (SIDS_stm1_set-{SID_stm1_s0}))} ; 
-        ret \<leftarrow> Ret (True, id, fst sd) ; 
-        (while (\<lambda> s. fst s) 
-         (\<lambda> s.
-          do {Ret (ret)
-          }) (ret)) ;
-        Ret (id)
-  }
-)
-"
-*)
+definition tids_stm1_s0 where
+" tids_stm1_s0 = 
+    (filter 
+        (\<lambda> s. s \<notin> {NULLTRANSITION_stm1,TID_stm1_t1,TID_stm1_t2}) 
+        ITIDS_stm1_list)"
 
 (* We need an interrupt operator for during actions *) 
-(* ::"integer \<Rightarrow> SIDS_stm1 \<Rightarrow> (Chan_stm1, SIDS_stm1) itree" *)
+(* ::"integer \<Rightarrow> SIDS_stm0 \<Rightarrow> (Chan_stm0, SIDS_stm0) itree" *)
 definition State_stm1_s0 where 
 "State_stm1_s0 = 
   loop (\<lambda> (id::integer).
@@ -648,56 +556,54 @@ definition State_stm1_s0 where
            (\<lambda> s.
             do {
               outp entered_stm1 (snd (snd s), SID_stm1_s0);
+              (do {skip ; stop} \<triangle>
+                (
                 \<comment> \<open> T_stm1_t1 \<close>
-                do {t \<leftarrow> inp_in e1__stm1 (set [(TID_stm1_t1, din, l) . l \<leftarrow> core_int_list]) ;
-                      outp set_l_stm1 (snd (snd t)) ; 
+                do {t \<leftarrow> inp_in e3__stm1 (set [(TID_stm1_t1, din, l) . l \<leftarrow> core_int_list]) ;
+                      outp set_x_stm1 (snd (snd t)) ; 
                       outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                       outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
-                      l \<leftarrow> inp_in get_l_stm1 core_int_set ; 
-                        outp set_x_stm1 (l);
+                      x \<leftarrow> inp_in get_x_stm1 core_int_set ; 
+                        outp set_x_stm1 (x+1);
                         outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
-                        Ret(True, fst (snd s), snd (snd s))
+                        Ret(True, fst (snd s), SID_stm1_s0)
                     } \<box>
                 \<comment> \<open> T_stm1_t2 \<close>
-                do {outp internal_stm1 TID_stm1_t2;
+                do {outp e2__stm1 (TID_stm1_t2, din);
                     outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                     outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
-                      x \<leftarrow> inp_in get_x_stm1 core_int_set ; 
-                        outp e3_stm1 (dout, x);
-                        outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
-                        Ret(True, fst (snd s), snd (snd s))
+                    outp set_x_stm1 0;
+                    outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
+                    Ret(True, fst (snd s), SID_stm1_s0)
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in internal_stm1 
-                      (set (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm1,TID_stm1_t1,TID_stm1_t2}) 
-                          ITIDS_stm1_list));
+                    x \<leftarrow> inp_in internal_stm1(set tids_stm1_s0);
                     y \<leftarrow> inp_in exit_stm1 (set 
                       [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]);
                       outp exit_stm1 (fst y, SID_stm1_s0);
-                      Ret (False, fst (snd s), snd (snd s))
+                      Ret (False, fst (snd s), SID_stm1_s0)
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in e1__stm1 (set [(s, d, l) . 
-                        s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm1,TID_stm1_t1,TID_stm1_t2}) 
-                          ITIDS_stm1_list), 
-                        d \<leftarrow> InOut_list,
-                        l \<leftarrow> core_int_list]) ;
+                    x \<leftarrow> inp_in e2__stm1 (set [(s, d) . 
+                        s \<leftarrow> tids_stm1_s0, 
+                        d \<leftarrow> InOut_list]) ;
                     y \<leftarrow> inp_in exit_stm1 (set 
                         [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]);
                       outp exit_stm1 (fst y, SID_stm1_s0);
-                      Ret (False, fst (snd s), snd (snd s))
+                      Ret (False, fst (snd s), SID_stm1_s0)
                     } \<box>
                 do {
                     x \<leftarrow> inp_in e3__stm1 (set [(s, d, l) . 
-                        s \<leftarrow> (filter (\<lambda> s. s \<in> {NULLTRANSITION_stm1,TID_stm1_t1,TID_stm1_t2}) 
-                          ITIDS_stm1_list), 
+                        s \<leftarrow> tids_stm1_s0, 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm1 (set 
                         [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]);
                       outp exit_stm1 (fst y, SID_stm1_s0);
-                      Ret (False, fst (snd s), snd (snd s))
+                      Ret (False, fst (snd s), SID_stm1_s0)
                     }
+                )
+              )
             })
             \<comment> \<open> The previous state: a triple \<close> 
             (ret)
@@ -706,6 +612,7 @@ definition State_stm1_s0 where
   }
 )
 "
+
 
 definition State_stm1_s0_R where
 "State_stm1_s0_R (idd::integer) = 
@@ -736,53 +643,34 @@ definition STM_stm1 where
 
 definition stm1_e1_x_internal_set where
 "stm1_e1_x_internal_set = 
-  set ([e1__stm1_C (tid, dir, n). 
+  set ([e3__stm1_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm1_t1], 
           dir \<leftarrow> [din, dout], 
           n \<leftarrow> core_int_list] @ 
-       [internal_stm1_C TID_stm1_t2] @
-       [set_x_stm1_C n. n \<leftarrow> core_int_list]
+       [internal_stm1_C TID_stm1_t0] @
+       [e2__stm1_C (tid, dir). 
+          tid \<leftarrow> [TID_stm1_t2], 
+          dir \<leftarrow> [din, dout]]
 )"
-
-(*
-(Memory_opt_x(0)
- [| {|set_EXT_x,get_x,set_x|} |] 
- (
-  (	
-   (
-     ((Memory_opt_l(0) [| {|get_l,set_l|} |] STM_core(id__))\ {|get_l,set_l|})
-     [| {|internal__.TID_stm1_t0|} |]
-     MemoryTransitions_opt_0(id__)
-   ) \ {|internal__.TID_stm1_t0|}
-  )
-  [| {|e1__.TID_stm1_t1,internal__.TID_stm1_t2,set_x|} |]
-  MemoryTransitions_opt_1(id__)
- )\{|internal__.TID_stm1_t2|}
-) \ {|get_x|}
-*)
 
 subsubsection \<open> State machine \<close>
 definition MemorySTM_opt_stm1 where
 "MemorySTM_opt_stm1 (idd::integer) = 
   (hide
     (
-      (discard_state (stm1_Memory_opt_x idd))
-      \<parallel>\<^bsub> stm1_x_events \<^esub>
-      (hide 
+      (hide
         (
-          (par_hide
-            (par_hide (discard_state (stm1_Memory_opt_l idd)) stm1_l_events (STM_stm1 idd))
-            {internal_stm1_C TID_stm1_t0}
-            (discard_state (stm1_MemoryTransitions_opt_0 idd))
-          )
-          \<parallel>\<^bsub> stm1_e1_x_internal_set \<^esub> 
-          (discard_state (stm1_MemoryTransitions_opt_1 idd))
+          (discard_state (stm1_Memory_opt_x 0))
+          \<parallel>\<^bsub> stm1_x_events \<^esub>
+          (STM_stm1 idd)
         )
-        {internal_stm1_C TID_stm1_t2}
+        (set [get_x_stm1_C n. n \<leftarrow> core_int_list])
       )
+      \<parallel>\<^bsub> stm1_e1_x_internal_set \<^esub>
+      (discard_state (stm1_MemoryTransitions_opt_0 idd))
     )
-    (set [get_x_stm1_C n. n \<leftarrow> core_int_list])
-  )   
+    {internal_stm1_C TID_stm1_t0}
+  )
 "
 
 (* Exception: P [| A |> Q*)
@@ -791,7 +679,7 @@ definition AUX_opt_stm1 where
 "AUX_opt_stm1 (idd::integer) = 
   (hide 
     ( 
-      (MemorySTM_opt_stm1 idd)
+      (MemorySTM_opt_stm1 idd) \<lbrakk> set [terminate_stm1_C ()] \<Zrres> skip
     )
     stm1_MachineInternalEvents
   )
@@ -801,10 +689,131 @@ definition D__stm1 where
 "D__stm1 (idd::integer) = 
   hide (AUX_opt_stm1 idd) internal_events_stm1
 "
-*)
+
+subsection \<open> Controller \<close>
+chantype Chan_ctr0 =
+(* terminates of stm0 and stm1 are mapped to it *)
+  terminate_ctr0 :: unit 
+(* variable channels: set_x and get_x of stm0 and stm1 are mapped to these channels *)
+  set_x_ctr0 :: core_int
+  get_x_ctr0 :: core_int
+(* shared variable channels *)
+  set_EXT_x_ctr0 :: core_int
+(* set_EXT_x of stm0 is mapped to this *)
+  set_EXT_x_ctr0_stm0 :: core_int
+(* set_EXT_x of stm1 is mapped to this *)
+  set_EXT_x_ctr0_stm1 :: core_int
+(* e1 of stm0 is mapped to it *)
+  e1_ctr0 :: "InOut \<times> core_int"
+(* e2 of stm1 is mapped to it *)
+  e2_ctr0 :: "InOut"
+(* e3 of stm0 is mapped to e3_ctr0.out and e3 of stm1 is mapped to e3_ctr0.in *)
+  e3_ctr0 :: "InOut \<times> core_int"
+
+definition shared_variable_events_ctr0 where
+"shared_variable_events_ctr0 = 
+  set ([set_EXT_x_ctr0_C (x). 
+          x \<leftarrow> core_int_list]
+)"
+
+subsubsection \<open> Memory \<close>
+definition Memory_ctr0 where
+"Memory_ctr0 = loop (\<lambda> id::integer.
+  ( do {x \<leftarrow> inp_in set_EXT_x_ctr0 core_int_set; 
+        outp set_EXT_x_ctr0_stm0 x; 
+        outp set_EXT_x_ctr0_stm1 x; Ret (id)}
+  )
+)"
+
+subsubsection \<open> Controller \<close>
+definition rename_D__stm0 where
+"rename_D__stm0 idd = rename (\<lambda>x . (terminate_stm0_C ())) (D__stm0 idd)"
+
+definition rename_D__stm1 where
+"rename_D__stm1 idd = rename (\<lambda>x . (terminate_stm1_C ())) (D__stm1 idd)"
+
+definition "ctr0_stms_events = set (
+  [terminate_ctr0_C ()] @ 
+    [e3_ctr0_C (d, n). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list]
+)"
+
+definition "ctr0_mem_events = set (
+    [set_EXT_x_ctr0_stm0_C x. x \<leftarrow> core_int_list] @ 
+    [set_EXT_x_ctr0_stm1_C x. x \<leftarrow> core_int_list]
+)"
+
+definition D__ctr0 where
+"D__ctr0 (idd::integer) = 
+  (par_hide
+    (hide 
+      ((rename_D__stm0 idd) \<parallel>\<^bsub> ctr0_stms_events \<^esub> (rename_D__stm1 idd))
+      (ctr0_stms_events - set [terminate_ctr0_C ()])
+    )
+    ctr0_mem_events
+    (discard_state (Memory_ctr0 idd))
+  )  \<lbrakk> set [terminate_ctr0_C ()] \<Zrres> skip
+"
+
+subsection \<open> Module \<close>
+chantype Chan_mod0 =
+(* terminates of stm0 and stm1 are mapped to it *)
+  terminate_mod0 :: unit 
+(* variable channels: set_x and get_x of stm0 and stm1 are mapped to these channels *)
+  set_x_mod0 :: core_int
+  get_x_mod0 :: core_int
+(* shared variable channels *)
+  set_EXT_x_mod0_ctr0 :: core_int
+(* e1 of stm0 is mapped to it *)
+  e1_mod0 :: "InOut \<times> core_int"
+(* e2 of stm1 is mapped to it *)
+  e2_mod0 :: "InOut"
+
+definition Memory_mod0 where
+"Memory_mod0 = loop (\<lambda> id::integer.
+  ( do {x \<leftarrow> inp_in set_x_mod0 core_int_set; 
+        outp set_EXT_x_mod0_ctr0 x; Ret (id)}
+  )
+)"
+
+definition rename_D__ctr0 where
+"rename_D__ctr0 idd = rename (\<lambda>x . (terminate_ctr0_C ())) (D__ctr0 idd)"
+
+definition "mod0_set_x_events = set (
+  [set_x_mod0_C n. n \<leftarrow> core_int_list]
+)"
+
+definition "mod0_get_x_events = set (
+  [get_x_mod0_C n. n \<leftarrow> core_int_list]
+)"
+
+definition "mod0_set_EXT_x_events = set (
+  [set_EXT_x_mod0_ctr0_C n. n \<leftarrow> core_int_list]
+)"
+
+term " x::int set"
+
+definition D__mod0 where
+"D__mod0 (idd::integer) = 
+  (hide
+    (
+      (skip \<parallel>\<^bsub> {} \<^esub> 
+        (
+          hide 
+            (
+              (rename_D__ctr0 idd) 
+              \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
+              (discard_state (Memory_mod0 idd))
+            )
+            ((mod0_set_x_events \<union> mod0_get_x_events) \<union> mod0_set_EXT_x_events)
+        )
+      )  \<lbrakk> set [terminate_mod0_C ()] \<Zrres> skip
+    )
+    (set [terminate_mod0_C ()])
+  )
+"
 
 subsection \<open> Export code \<close>
-export_code 
+export_code
   stm0_Memory_opt_x
   stm0_Memory_opt_l
   stm0_MemoryTransitions_opt_0
@@ -815,7 +824,16 @@ export_code
   STM_stm0
   MemorySTM_opt_stm0 
   rename_MemorySTM_opt_stm0
-  D__stm0 in Haskell 
+  D__stm0 
+  stm1_Memory_opt_x
+  stm1_MemoryTransitions_opt_0
+  I_stm1_i0
+  State_stm1_s0
+  State_stm1_s0_R
+  STM_stm1
+  MemorySTM_opt_stm1
+  D__stm1
+  in Haskell 
   (* module_name RoboChart_basic *)
   file_prefix RoboChart_basic 
   (string_classes) 

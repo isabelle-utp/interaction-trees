@@ -54,6 +54,12 @@ definition mem_of_lvar :: "('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightar
    do {x \<leftarrow> inp_in inc iset; Ret (x)})
 )"
 
+definition cmem_of_var :: "('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> ('b, 'a) itree" where
+"cmem_of_var inlc insc iset = loop (\<lambda> s.
+  ( do {x \<leftarrow> inp_in inlc iset; Ret (x)} \<box>
+   do {x \<leftarrow> inp_in insc iset; Ret (x)})
+)"
+
 ML \<open> 
 ($$ "h") (Symbol.explode "hello");
 val hw = Scan.one (fn x => x = "h" orelse x = "o");
