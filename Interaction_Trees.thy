@@ -555,4 +555,24 @@ lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P \
   by (induct tr arbitrary: P, auto)
      (metis Sils_to_Ret Vis_Cons_trns trace_to_ConsE trace_to_singleE)
 
+subsection \<open> Initial Events \<close>
+
+definition initev :: "('e, 's) itree \<Rightarrow> 'e set" ("\<^bold>I") where
+"\<^bold>I(P) = {e. (\<exists> P'. P \<midarrow>[e]\<leadsto> P')}"
+
+lemma initev_Sil [simp]: "\<^bold>I(Sil P) = \<^bold>I(P)"
+  apply (auto simp add: initev_def)
+  apply (metis not_Cons_self2 trace_to_SilE trace_to_single_iff)
+  apply blast
+  done
+
+lemma initev_Sils [simp]: "\<^bold>I(Sils n P) = \<^bold>I(P)"
+  by (induct n, auto)
+
+lemma initev_Vis [simp]: "\<^bold>I(Vis F) = pdom F"
+  by (auto simp add: initev_def)
+
+lemma initev_Ret [simp]: "\<^bold>I(Ret x) = {}"
+  by (auto simp add: initev_def)
+
 end
