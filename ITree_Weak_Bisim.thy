@@ -94,7 +94,7 @@ lemma wbisim_set_rep:
   apply (auto)[1]
   apply (metis wbisim.cases)
   apply (metis wbisim.cases)
-  apply (subst HOL.nitpick_unfold(192))
+  apply (subst HOL.nitpick_unfold(196))
   apply (simp add: gfp_def)
   apply (smt (z3) BNF_Def.Collect_case_prodD basic_trans_rules(31) predicate2I prod.sel(1) prod.sel(2))
   done

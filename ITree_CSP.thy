@@ -704,12 +704,12 @@ primcorec exception :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, '
 
 subsection \<open> Renaming \<close>
 
-primcorec rename :: "('e\<^sub>2 \<Rightarrow> 'e\<^sub>1) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+primcorec rename :: "'e\<^sub>1 \<Zpinj> 'e\<^sub>2 \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
 "rename \<rho> P = 
   (case P of
     Ret x \<Rightarrow> Ret x |
     Sil P \<Rightarrow> Sil (rename \<rho> P) |
-    Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p fun_pfun \<rho>)))"
+    Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p pfun_of_pinj (pinv \<rho>))))"
 
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
   apply (simp add: deadlock_def rename.code)

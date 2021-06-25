@@ -2,7 +2,7 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Partial_Fun"
+  "Z_Toolkit.Partial_Inj"
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -82,11 +82,6 @@ theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induc
 
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
  cf. "Coinduction all the way up". Davide Sangiorgi. Replace R \<subseteq> F(R) prove R \<subseteq> C(F(R)). \<close>
-
-text \<open> Configuring the code generator; either partial functions or associative lists can be used
-  in specifying choice functions. \<close>
-
-code_datatype pfun_of_alist pfun_of_map
 
 subsection \<open> Kleisli Trees and Monads \<close>
 
