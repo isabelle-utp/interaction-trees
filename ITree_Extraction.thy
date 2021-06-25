@@ -4,6 +4,12 @@ theory ITree_Extraction
   imports ITree_Circus Record_Default_Instance Enum_Type
 begin
 
+text \<open> Configuring the code generator; either partial functions or associative lists can be used
+  in specifying choice functions. Partial injections are also supported using lists. \<close>
+
+code_datatype pfun_of_alist pfun_of_map pfun_of_pinj 
+code_datatype pinj_of_alist
+
 instantiation set :: (type) default
 begin
 definition "default_set = ({} :: 'a set)"
