@@ -367,6 +367,29 @@ definition MemorySTM_opt_stm0 where
   )   
 "
 
+definition renamed_MemorySTM_opt_stm0  :: "integer \<Rightarrow> (Chan_stm0, unit) itree" where
+"renamed_MemorySTM_opt_stm0 (idd::integer) (e1__stm0) (e3__stm0) = 
+  (hide
+    (
+      (discard_state (stm0_Memory_opt_x 0))
+      \<parallel>\<^bsub> stm0_x_events \<^esub>
+      (hide 
+        (
+          (par_hide
+            (par_hide (discard_state (stm0_Memory_opt_l idd)) stm0_l_events (STM_stm0 idd))
+            {internal_stm0_C TID_stm0_t0}
+            (discard_state (stm0_MemoryTransitions_opt_0 idd))
+          )
+          \<parallel>\<^bsub> stm0_e1_x_internal_set \<^esub> 
+          (discard_state (stm0_MemoryTransitions_opt_1 idd))
+        )
+        {internal_stm0_C TID_stm0_t2}
+      )
+    )
+    (set [get_x_stm0_C n. n \<leftarrow> core_int_list])
+  )   
+"
+
 term "(MemorySTM_opt_stm0 idd)"
 
 definition rename_stm0_events :: "Chan_stm0 \<Rightarrow> Chan_stm0" where

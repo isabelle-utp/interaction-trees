@@ -1,7 +1,7 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "ITree_CSP" "Enum_Type"
+  imports "ITree_CSP" "Enum_Type" "Z_Toolkit.Relation_Toolkit"
 begin
 
 subsection \<open> CSP operators \<close>
@@ -67,4 +67,32 @@ hw (Symbol.explode "hello");
 hw (Symbol.explode "ollo");
 \<close>
 
+term "map_pfun"
+term "fun_pfun"
+term "F \<circ>\<^sub>p Q"
+term "(F \<circ>\<^sub>p fun_pfun \<rho>)"
+term "R\<^sup>\<sim>"
+(*
+R = a \<rightarrow> P(a) [] b \<rightarrow> Q(b)    {(a, P), (b, Q)}
+
+R [[a <- c, b <- d]]
+= [(a, c), (b, d)]
+
+Case 1:
+  [(a, c), (a, d)]
+    -- introduce external choice (c \<rightarrow> P [] d \<rightarrow> P) [] b \<rightarrow> Q
+  What about if there is a (d \<rightarrow> PP) in the original process R? 
+  Partial function is not a right representation.
+Case 2: 
+    [(a, c), (b, c)]
+    -- (c \<rightarrow> R(P(a)) [] c \<rightarrow> R(Q(b)))
+*)
+(*
+primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+"rename R P = 
+  (case P of
+    Ret x \<Rightarrow> Ret x |
+    Sil P \<Rightarrow> Sil (rename \<rho> P) |
+    Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p fun_pfun (R\<sim>))))"
+*)
 end
