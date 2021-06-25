@@ -367,6 +367,7 @@ definition MemorySTM_opt_stm0 where
   )   
 "
 
+(*
 definition renamed_MemorySTM_opt_stm0  :: "integer \<Rightarrow> (Chan_stm0, unit) itree" where
 "renamed_MemorySTM_opt_stm0 (idd::integer) (e1__stm0) (e3__stm0) = 
   (hide
@@ -389,17 +390,25 @@ definition renamed_MemorySTM_opt_stm0  :: "integer \<Rightarrow> (Chan_stm0, uni
     (set [get_x_stm0_C n. n \<leftarrow> core_int_list])
   )   
 "
+*)
 
 term "(MemorySTM_opt_stm0 idd)"
 
-definition rename_stm0_events :: "Chan_stm0 \<Rightarrow> Chan_stm0" where
-(*"rename_stm0_events (e1__stm0_C (tid, dir, c)) = e1_stm0_C (dir, c)" | 
-"rename_stm0_events (e3__stm0_C (tid, dir, c)) = e3_stm0_C (dir, c)" | *)
-"rename_stm0_events e = e"
+definition rename_stm0_events where
+"rename_stm0_events = 
+  [(e1__stm0_C (tid, dir, n), e1_stm0_C (dir, n)) . 
+          tid \<leftarrow> TIDS_stm0_list, 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list] @
+  [(e3__stm0_C (tid, dir, n), e3_stm0_C (dir, n)) . 
+          tid \<leftarrow> TIDS_stm0_list, 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list]
+"
 
 definition rename_MemorySTM_opt_stm0 where
 "rename_MemorySTM_opt_stm0 idd = 
-  rename rename_stm0_events (MemorySTM_opt_stm0 idd)
+  rename (pinj_of_alist rename_stm0_events) (MemorySTM_opt_stm0 idd)
 "
 
 term "map_pfun"
@@ -696,13 +705,29 @@ definition MemorySTM_opt_stm1 where
   )
 "
 
+definition rename_stm1_events where
+"rename_stm1_events = 
+  [(e2__stm1_C (tid, dir), e2_stm1_C (dir)) . 
+          tid \<leftarrow> TIDS_stm1_list, 
+          dir \<leftarrow> InOut_list] @
+  [(e3__stm1_C (tid, dir, n), e3_stm1_C (dir, n)) . 
+          tid \<leftarrow> TIDS_stm1_list, 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list]
+"
+
+definition rename_MemorySTM_opt_stm1 where
+"rename_MemorySTM_opt_stm1 idd = 
+  rename (pinj_of_alist rename_stm1_events) (MemorySTM_opt_stm1 idd)
+"
+
 (* Exception: P [| A |> Q*)
 (* Renaming *)
 definition AUX_opt_stm1 where
 "AUX_opt_stm1 (idd::integer) = 
   (hide 
     ( 
-      (MemorySTM_opt_stm1 idd) \<lbrakk> set [terminate_stm1_C ()] \<Zrres> skip
+      (rename_MemorySTM_opt_stm1 idd) \<lbrakk> set [terminate_stm1_C ()] \<Zrres> skip
     )
     stm1_MachineInternalEvents
   )
@@ -749,11 +774,30 @@ definition Memory_ctr0 where
 )"
 
 subsubsection \<open> Controller \<close>
+definition rename_ctr0_stm0_events where
+"rename_ctr0_stm0_events = 
+  [(terminate_stm0_C (), terminate_ctr0_C ())] @
+  [(set_x_stm0_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list]
+"
+
+(*
+[(e3__stm1_C (tid, dir, n), e3_stm1_C (dir, n)) . 
+          tid \<leftarrow> TIDS_stm1_list, 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list]
+*)
+
 definition rename_D__stm0 where
-"rename_D__stm0 idd = rename (\<lambda>x . (terminate_stm0_C ())) (D__stm0 idd)"
+"rename_D__stm0 idd = rename (pinj_of_alist rename_ctr0_stm0_events) (D__stm0 idd)"
+
+definition rename_ctr0_stm1_events where
+"rename_ctr0_stm1_events = 
+  [(terminate_stm1_C (), terminate_ctr0_C ())] @
+  [(set_x_stm1_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list]
+"
 
 definition rename_D__stm1 where
-"rename_D__stm1 idd = rename (\<lambda>x . (terminate_stm1_C ())) (D__stm1 idd)"
+"rename_D__stm1 idd = rename (pinj_of_alist rename_ctr0_stm1_events) (D__stm1 idd)"
 
 definition "ctr0_stms_events = set (
   [terminate_ctr0_C ()] @ 
@@ -812,8 +856,6 @@ definition "mod0_get_x_events = set (
 definition "mod0_set_EXT_x_events = set (
   [set_EXT_x_mod0_ctr0_C n. n \<leftarrow> core_int_list]
 )"
-
-term " x::int set"
 
 definition D__mod0 where
 "D__mod0 (idd::integer) = 
