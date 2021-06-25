@@ -345,6 +345,10 @@ lemma div_free_no_min_divergence: "div_free P \<Longrightarrow> \<not> P \<midar
 lemma divergent_trace_toI: "\<lbrakk> \<And> P'. P \<midarrow>[]\<leadsto> P' \<Longrightarrow> unstable P' \<rbrakk> \<Longrightarrow> divergent P"
   by (metis stabilises_def trace_of_Sils)
 
+lemma initev_diverge [simp]: "\<^bold>I(diverge) = {}"
+  by (auto simp add: initev_def)
+     (metis Sils_diverge Sils_injective diverge_not_Vis)
+
 subsection \<open> Iteration \<close>
 
 text \<open> For now we support only basic iteration for CSP processes. \<close>

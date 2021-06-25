@@ -153,12 +153,31 @@ instance Eq ProperState where {
   a == b = equal_ProperState a b;
 };
 
-data Pfun a b = Pfun_of_alist [(a, b)] | Pfun_of_map (a -> Maybe b);
+newtype Pinj a b = Pinj_of_alist [(a, b)] deriving (Prelude.Read, Prelude.Show);
+
+data Pfun a b = Pfun_of_alist [(a, b)] | Pfun_of_map (a -> Maybe b)
+  | Pfun_of_pinj (Pinj a b);
 
 zero_pfun :: forall a b. Pfun a b;
 zero_pfun = Pfun_of_alist [];
 
 data Itree a b = Ret b | Sil (Itree a b) | Vis (Pfun a (Itree a b));
+
+genchoice ::
+  forall a b.
+    (Eq b) => (Pfun a (Itree a b) ->
+                Pfun a (Itree a b) -> Pfun a (Itree a b)) ->
+                Itree a b -> Itree a b -> Itree a b;
+genchoice m p q =
+  (case (p, q) of {
+    (Ret r, Ret y) -> (if r == y then Ret r else Vis zero_pfun);
+    (Ret _, Sil qa) -> Sil (genchoice m p qa);
+    (Ret r, Vis _) -> Ret r;
+    (Sil pa, _) -> Sil (genchoice m pa q);
+    (Vis _, Ret a) -> Ret a;
+    (Vis _, Sil qa) -> Sil (genchoice m p qa);
+    (Vis f, Vis g) -> Vis (m f g);
+  });
 
 plus_pfun :: forall a b. Pfun a b -> Pfun a b -> Pfun a b;
 plus_pfun (Pfun_of_alist f) (Pfun_of_alist g) = Pfun_of_alist (g ++ f);
@@ -183,16 +202,7 @@ map_prod f g =
 
 extchoice_itree ::
   forall a b. (Eq a, Eq b) => Itree a b -> Itree a b -> Itree a b;
-extchoice_itree p q =
-  (case (p, q) of {
-    (Ret r, Ret y) -> (if r == y then Ret r else Vis zero_pfun);
-    (Ret _, Sil qa) -> Sil (extchoice_itree p qa);
-    (Ret r, Vis _) -> Ret r;
-    (Sil pa, _) -> Sil (extchoice_itree pa q);
-    (Vis _, Ret a) -> Ret a;
-    (Vis _, Sil qa) -> Sil (extchoice_itree p qa);
-    (Vis f, Vis g) -> Vis (map_prod f g);
-  });
+extchoice_itree = genchoice map_prod;
 
 class Extchoice a where {
   extchoice :: a -> a -> a;
