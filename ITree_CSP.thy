@@ -371,11 +371,110 @@ lemma extchoice_Vis_bind:
   "(Vis F \<box> Vis G) \<bind> R = (Vis F \<bind> R) \<box> (Vis G \<bind> R)"
   by (simp add: map_prod_def)
 
+subsection \<open> Generalised Parallel Composition \<close>
+
+text \<open> This parallel composition operator follows a similar approach to the UTP "parallel-by-merge" scheme.
+  It can perhaps be generalised further. \<close>
+
+datatype (discs_sels) ('a, 'b) andor = Left 'a | Right 'b | Both "'a \<times> 'b"
+
+type_synonym ('e, 'a, 'b) pmerge = 
+  "(('e \<Zpfun> ('e, 'a) itree) \<Rightarrow> 'e set \<Rightarrow> ('e \<Zpfun> ('e, 'b) itree) \<Rightarrow> 'e \<Zpfun> (('e, 'a) itree, ('e, 'b) itree) andor)"
+
+primcorec genpar :: "('e, 'a, 'b) pmerge \<Rightarrow> ('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'b) itree \<Rightarrow> ('e, 'a \<times> 'b) itree" where
+"genpar \<M> P A Q =
+   (case (P, Q) of 
+      \<comment> \<open> Silent events happen independently and have priority \<close>
+      (Sil P', _) \<Rightarrow> Sil (genpar \<M> P' A Q) |
+      (_, Sil Q') \<Rightarrow> Sil (genpar \<M> P A Q') |
+      \<comment> \<open> Visible events are subject to synchronisation constraints \<close>
+      (Vis F, Vis G) \<Rightarrow>
+        Vis (map_pfun 
+              (\<lambda>x. case x of 
+                     Left P' \<Rightarrow> genpar \<M> P' A Q \<comment> \<open> Left side acts independently \<close>
+                   | Right Q' \<Rightarrow> genpar \<M> P A Q' \<comment> \<open> Right side acts independently \<close> 
+                   | Both (P', Q') \<Rightarrow> genpar \<M> P' A Q') \<comment> \<open> Both sides synchronise \<close>
+              (\<M> F A G)) |
+      \<comment> \<open> If both sides terminate, then they must agree on the returned value. This could be
+           generalised using a merge function. \<close>
+      (Ret x, Ret y) \<Rightarrow> Ret (x, y) |
+      \<comment> \<open> A termination occurring on one side is pushed forward. Only events not requiring
+           synchronisation can occur on the other side. \<close>
+      (Ret v, Vis G)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (genpar \<M> (Ret v) A P)) (A \<Zndres> G)) |
+      (Vis F, Ret v)   \<Rightarrow> Vis (map_pfun (\<lambda> P. (genpar \<M> P A (Ret v))) (A \<Zndres> F))
+   )" 
+
+lemma genpar_Sil_left [simp]:
+  "genpar \<M> (Sil P') E Q = Sil (genpar \<M> P' E Q)"
+  by (simp add: genpar.code)
+
+lemma genpar_Sil_stable_right:
+  "stable P \<Longrightarrow> genpar \<M> P E (Sil Q') = Sil (genpar \<M> P E Q')"
+  by (auto elim!: stableE simp add: genpar.code)
+
+lemma unstable_genpar [simp]: "unstable (genpar \<M> P E Q) = (unstable P \<or> unstable Q)"
+  by (auto elim!: stableE)
+
+lemma genpar_Ret_iff: "Ret x = genpar \<M> P E Q \<longleftrightarrow> (\<exists> a b. P = Ret a \<and> Q = Ret b \<and> x = (a, b))"
+  (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  assume a:?lhs
+  hence "is_Ret (genpar \<M> P E Q)"
+    by (metis itree.disc(1))
+  then obtain a b where "P = Ret a" "Q = Ret b"
+    by force
+  with a show ?rhs
+    by (simp add: genpar.code)
+next
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (auto simp add: genpar.code)
+qed
+
+lemma genpar_Sil_iff: "Sil R = genpar \<M> P E Q \<longleftrightarrow> ((\<exists> P'. P = Sil P' \<and> R = genpar \<M> P' E Q) \<or> (\<exists> Q'. stable P \<and> Q = Sil Q' \<and> R = genpar \<M> P E Q'))"
+  (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  assume a:?lhs
+  hence sil: "is_Sil (genpar \<M> P E Q)"
+    by (metis (no_types, hide_lams) itree.disc(5))
+  show ?rhs
+  proof (cases "unstable P")
+    case True
+    with a show ?thesis
+      by (auto elim!: unstableE simp add: genpar.code)
+  next
+    case False
+    hence "unstable Q"
+      by (metis sil unstable_genpar)
+    with a False show ?thesis by (auto simp add: genpar_Sil_stable_right elim!: unstableE)
+  qed
+next
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (auto simp add: genpar_Sil_stable_right)
+qed
+  
+lemma genpar_SilE [elim!]:
+  assumes "Sil R = genpar \<M> P E Q"
+  "\<And> P'. \<lbrakk> P = Sil P'; R = genpar \<M> P' E Q \<rbrakk> \<Longrightarrow> S"
+  "\<And> Q'. \<lbrakk> stable P; Q = Sil Q'; R = genpar \<M> P E Q' \<rbrakk> \<Longrightarrow> S"
+  shows S
+  by (metis (full_types) assms(1) assms(2) assms(3) genpar_Sil_iff)
+
+lemma genpar_Sil_shift [simp]: "genpar \<M> P E (Sil Q) = genpar \<M> (Sil P) E Q"
+  by (coinduction arbitrary: P Q rule: itree_strong_coind, auto elim!: stableE, metis)
+
+lemma genpar_Sils_left [simp]: "genpar \<M> (Sils n P) E Q = Sils n (genpar \<M> P E Q)"
+  by (induct n, simp_all)
+
+lemma genpar_Sils_right [simp]: "genpar \<M> P E (Sils n Q) = Sils n (genpar \<M> P E Q)"
+  by (induct n, simp_all)
+
+lemma genpar_Ret_Ret [simp]:
+  "genpar \<M> (Ret x) E (Ret y) = Ret (x, y)"
+  by (simp add: genpar.code)
+
 subsection \<open> Parallel Composition \<close>
 
 text \<open> The following function combines two choice functions for parallel composition. \<close>
-
-datatype (discs_sels) ('a, 'b) andor = Left 'a | Right 'b | Both "'a \<times> 'b"
 
 definition emerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
 "emerge f A g = 
@@ -503,13 +602,6 @@ definition "merge_Vis F A G \<equiv>
          | Right Q' \<Rightarrow> par (Vis F) A Q' \<comment> \<open> Right side acts independently \<close> 
          | Both (P', Q') \<Rightarrow> par P' A Q') \<comment> \<open> Both sides synchronise \<close>
     (emerge F A G)"
-
-lemma pfun_app_add' [simp]: "\<lbrakk> e \<in> pdom f; e \<notin> pdom g \<rbrakk> \<Longrightarrow> (f + g)(e)\<^sub>p = f(e)\<^sub>p"
-  by (metis (no_types, lifting) pfun_app_upd_1 pfun_upd_add_left pfun_upd_ext)
-  
-lemma pfuse_app [simp]:
-  "\<lbrakk> e \<in> pdom F; e \<in> pdom G \<rbrakk> \<Longrightarrow> (pfuse F G)(e)\<^sub>p = (F(e)\<^sub>p, G(e)\<^sub>p)"
-  by (metis (no_types, lifting) IntI pfun_entries_apply_1 pfuse_def)
 
 lemma merge_Vis_both [simp]: "\<lbrakk> e \<in> E; e \<in> pdom F; e \<in> pdom G \<rbrakk> \<Longrightarrow> merge_Vis F E G(e)\<^sub>p = par (F(e)\<^sub>p) E (G(e)\<^sub>p)"
   by (simp add: merge_Vis_def emerge_def)
