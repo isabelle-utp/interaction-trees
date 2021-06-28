@@ -81,7 +81,7 @@ abbreviation "bparl \<equiv> genpar bemerge"
 definition bgpar_csp ("_ \<^sub><\<parallel>\<^bsub>_\<^esub> _" [55, 0, 56] 56) where
 "bgpar_csp P cs Q \<equiv> bparl P cs Q \<bind> (\<lambda> (x, y). Ret ())"
 
-abbreviation inter_csp :: "('e, unit) itree \<Rightarrow> ('e, unit) itree \<Rightarrow> ('e, unit) itree" (infixl "\<^sub><\<interleave>" 55) where
-"inter_csp P Q \<equiv> gpar_csp P {} Q"
+abbreviation binter_csp :: "('e, unit) itree \<Rightarrow> ('e, unit) itree \<Rightarrow> ('e, unit) itree" (infixl "\<^sub><\<interleave>" 55) where
+"binter_csp P Q \<equiv> bgpar_csp P {} Q"
 
 end
