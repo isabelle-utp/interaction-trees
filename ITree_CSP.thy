@@ -16,6 +16,9 @@ lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
   by (auto simp add: inp_in_def)
      (metis imageI insertCI option.sel rangeI retvals_Ret wb_prism.range_build wb_prism_def)
 
+lemma div_free_inp_in: "div_free (inp_in c A)"
+  by (auto simp add: inp_in_def div_free_Vis)
+
 abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
 "inp c \<equiv> inp_in c UNIV"
 

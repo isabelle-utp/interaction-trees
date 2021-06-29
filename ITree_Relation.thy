@@ -11,10 +11,13 @@ text \<open> The relational abstraction captures the possible return values asso
 definition itree_rel :: "('e, 's) htree \<Rightarrow> 's rel" where
 "itree_rel P = {(s, s'). s' \<in> \<^bold>R (P s)}"
 
-text \<open> The precondition captures the initial states that give the possibility of divergence. \<close>
+text \<open> The precondition captures the initial states that do not give the possibility of divergence. \<close>
 
 definition itree_pre :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool)" where
 "itree_pre P = (\<lambda> s. \<not> (\<exists> es. P s \<midarrow>es\<leadsto> diverge))"
+
+lemma itree_pre_div_free: "itree_pre P = (\<lambda> s. div_free (P s))"
+  by (simp add: div_free_is_no_divergence itree_pre_def no_divergence_def)
 
 expr_ctr itree_pre
 
@@ -81,7 +84,12 @@ lemma seq_pre: "itree_pre (P \<Zcomp> Q) = (itree_pre P \<and> wlp P (itree_pre 
 lemma seq_rel: "itree_rel (P \<Zcomp> Q) = itree_rel P O itree_rel Q"
   by (auto simp add: itree_rel_def relcomp_unfold)
 
-lemma input_in_rel: "wb_prism c \<Longrightarrow> itree_rel (input_in c A P) = {(s, s'). \<exists> v \<in> A s. (s, s') \<in> itree_rel (P v)}" 
+lemma input_in_pre:
+  "wb_prism c \<Longrightarrow> itree_pre (input_in c A P) = (\<forall> v \<in> A. itree_pre (P v))\<^sub>e"
+  by (expr_simp add: itree_pre_div_free input_in_def div_free_bind div_free_inp_in retvals_inp_in)
+
+lemma input_in_rel: 
+  "wb_prism c \<Longrightarrow> itree_rel (input_in c A P) = {(s, s'). \<exists> v \<in> A s. (s, s') \<in> itree_rel (P v)}" 
   by (auto simp add: input_in_def itree_rel_def retvals_inp_in)
 
 lemma input_rel: "wb_prism c \<Longrightarrow> itree_rel (input c P) = (\<Union> v. itree_rel (P v))"
