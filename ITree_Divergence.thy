@@ -363,6 +363,23 @@ lemma div_free_no_min_divergence: "div_free P \<Longrightarrow> \<not> P \<midar
 lemma divergent_trace_toI: "\<lbrakk> \<And> P'. P \<midarrow>[]\<leadsto> P' \<Longrightarrow> unstable P' \<rbrakk> \<Longrightarrow> divergent P"
   by (metis stabilises_def trace_of_Sils)
 
+lemma div_free_bindI: "\<lbrakk> div_free P; \<forall> x \<in> \<^bold>R(P). div_free (Q x) \<rbrakk> \<Longrightarrow> div_free (P \<bind> Q)"
+  by (auto elim!: trace_to_bindE simp add: div_free_is_no_divergence no_divergence_def retvals_def)
+     (metis trace_of_Sils trace_to_Nil trace_to_trans)
+
+lemma div_free_bind: "div_free (P \<bind> Q) \<longleftrightarrow> (div_free P \<and> (\<forall> x \<in> \<^bold>R(P). div_free (Q x)))" 
+  (is "?lhs = ?rhs")
+proof
+  assume ?lhs
+  thus ?rhs
+    by (simp add: div_free_is_no_divergence no_divergence_def retvals_def)
+       (metis bind_diverge trace_to_bind trace_to_bind_left)
+next
+  assume ?rhs
+  thus ?lhs
+    by (simp add: div_free_bindI)
+qed
+
 lemma initev_diverge [simp]: "\<^bold>I(diverge) = {}"
   by (auto simp add: initev_def)
      (metis Sils_diverge Sils_injective diverge_not_Vis)
