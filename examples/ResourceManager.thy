@@ -23,8 +23,9 @@ text \<open> If we just select the minimum of free, the simulation crashes when 
 definition Allocate\<^sub>1 :: "(chan, ResourceManager) htree" where
 "Allocate\<^sub>1 = alloc?(r):(free \<inter> {Min free}) \<rightarrow> free := free - {r}"
 
-lemma Allocate\<^sub>1_refines_Allocate: "itree_rel Allocate\<^sub>1 \<subseteq> itree_rel Allocate"
-  by (auto simp add: Allocate_def Allocate\<^sub>1_def input_in_rel assigns_rel)
+lemma Allocate\<^sub>1_refines_Allocate: "Allocate \<sqsubseteq> Allocate\<^sub>1"
+  by (simp add: Allocate_def Allocate\<^sub>1_def input_in_rel assigns_rel refined_by_def input_in_pre assigns_pre)
+     (expr_auto)
 
 definition Deallocate :: "(chan, ResourceManager) htree" where
 "Deallocate = dealloc?(r):(res - free) \<rightarrow> free := free \<union> {r}"
