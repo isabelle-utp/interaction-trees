@@ -1,7 +1,7 @@
 section \<open> Circus Interaction Tree Semantics \<close>
 
 theory ITree_Circus                          
-  imports "ITree_FDSem"  "Shallow-Expressions.Shallow_Expressions"
+  imports "ITree_FDSem" "Shallow-Expressions.Shallow_Expressions"
 begin
 
 subsection \<open> Main Operators \<close>
@@ -73,6 +73,9 @@ definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> (
 
 definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input_in c A P = (\<lambda> s. inp_in c (A s) \<bind> (\<lambda> x. P x s))"
+
+lemma input_alt_def: "input c P = input_in c (UNIV)\<^sub>e P"
+  by (simp add: input_def input_in_def)
 
 syntax 
   "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)

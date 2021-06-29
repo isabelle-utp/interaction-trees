@@ -1,7 +1,7 @@
 subsection \<open> Relational Abstraction \<close>
 
 theory ITree_Relation
-  imports ITree_Circus "Shallow-Expressions.Shallow_Expressions"
+  imports ITree_Circus
 begin
 
 text \<open> The relational abstraction captures the possible return values associated with particular
@@ -37,8 +37,14 @@ lemma Stop_pre: "itree_pre Stop = (True)\<^sub>e"
 lemma seq_rel: "itree_rel (P \<Zcomp> Q) = itree_rel P O itree_rel Q"
   by (auto simp add: itree_rel_def relcomp_unfold)
 
-lemma inp_in_rel: "wb_prism c \<Longrightarrow> itree_rel (input_in c A P) = {(s, s'). \<exists> v. v \<in> A s \<and> (s, s') \<in> itree_rel (P v)}" 
+lemma input_in_rel: "wb_prism c \<Longrightarrow> itree_rel (input_in c A P) = {(s, s'). \<exists> v \<in> A s. (s, s') \<in> itree_rel (P v)}" 
   by (auto simp add: input_in_def itree_rel_def retvals_inp_in)
+
+lemma input_rel: "wb_prism c \<Longrightarrow> itree_rel (input c P) = (\<Union> v. itree_rel (P v))"
+  by (auto simp add: input_in_rel input_alt_def)
+
+lemma input_in_lit_rel: "wb_prism c \<Longrightarrow> itree_rel (input_in c (\<guillemotleft>A\<guillemotright>)\<^sub>e P) = (\<Union> v \<in> A. itree_rel (P v))"
+  by (auto simp add: input_in_rel input_alt_def)
 
 definition spec :: "'s scene \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> 's rel" where
 "spec a pre post = {(s, s'). s \<approx>\<^sub>S s' on (- a) \<and> pre s \<longrightarrow> post s'}"
