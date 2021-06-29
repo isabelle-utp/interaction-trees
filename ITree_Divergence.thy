@@ -248,6 +248,26 @@ lemma no_divergence_stabilises_to: "no_divergence P \<Longrightarrow> stabilises
 lemma stabilises_to_is_no_diverge: "stabilises_to no_divergence = no_divergence"
   by (auto simp add: fun_eq_iff stabilises_to_no_divergence no_divergence_stabilises_to)
 
+lemma divergent_bind: "divergent(P \<bind> Q) \<Longrightarrow> (divergent(P) \<or> (\<exists> n x. P = Sils n (Ret x) \<and> divergent(Q x)))"
+  by (auto simp add: stabilises_def)
+     (metis Sils_Sils bind_Ret bind_itree.disc_iff(2) itree.collapse(1))
+
+lemma bind_divergeE [elim!]:
+  assumes 
+    "P \<bind> Q = diverge"
+    "P = diverge \<Longrightarrow> R"
+    "\<And> n x. \<lbrakk> P = Sils n (Ret x); Q x = diverge \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) divergent_bind diverges_then_diverge)
+
+lemma bind_divergeE' [elim!]:
+  assumes 
+    "diverge = P \<bind> Q"
+    "P = diverge \<Longrightarrow> R"
+    "\<And> n x. \<lbrakk> P = Sils n (Ret x); Q x = diverge \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) bind_divergeE)
+
 coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
 scons: "stabilises_to div_free P \<Longrightarrow> div_free P"
 
