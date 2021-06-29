@@ -1,7 +1,7 @@
 section \<open> Dwarf Signal \<close>
 
 theory DwarfSignal
-  imports "../ITree_Extraction" "HOL-Library.Word"
+  imports "../ITree_Extraction" "../ITree_CSP_Biased" "HOL-Library.Word"
 begin lit_vars
 
 subsection \<open> State Space \<close>
