@@ -777,15 +777,11 @@ subsubsection \<open> Controller \<close>
 definition rename_ctr0_stm0_events where
 "rename_ctr0_stm0_events = 
   [(terminate_stm0_C (), terminate_ctr0_C ())] @
-  [(set_x_stm0_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list]
+  [(set_x_stm0_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list] @
+  [(get_x_stm0_C n, get_x_ctr0_C n). n \<leftarrow> core_int_list] @
+  [(e1_stm0_C (d, n), e1_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
+  [(e3_stm0_C (dout, n), e3_ctr0_C (dout, n)). n \<leftarrow> core_int_list]
 "
-
-(*
-[(e3__stm1_C (tid, dir, n), e3_stm1_C (dir, n)) . 
-          tid \<leftarrow> TIDS_stm1_list, 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list]
-*)
 
 definition rename_D__stm0 where
 "rename_D__stm0 idd = rename (pinj_of_alist rename_ctr0_stm0_events) (D__stm0 idd)"
@@ -793,7 +789,10 @@ definition rename_D__stm0 where
 definition rename_ctr0_stm1_events where
 "rename_ctr0_stm1_events = 
   [(terminate_stm1_C (), terminate_ctr0_C ())] @
-  [(set_x_stm1_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list]
+  [(set_x_stm1_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list] @
+  [(get_x_stm1_C n, get_x_ctr0_C n). n \<leftarrow> core_int_list] @
+  [(e2_stm1_C (d), e2_ctr0_C (d)). d \<leftarrow> InOut_list] @
+  [(e3_stm1_C (din, n), e3_ctr0_C (din, n)). n \<leftarrow> core_int_list]
 "
 
 definition rename_D__stm1 where
@@ -823,7 +822,7 @@ definition D__ctr0 where
 
 subsection \<open> Module \<close>
 chantype Chan_mod0 =
-(* terminates of stm0 and stm1 are mapped to it *)
+(* terminates of ctr0 are mapped to it *)
   terminate_mod0 :: unit 
 (* variable channels: set_x and get_x of stm0 and stm1 are mapped to these channels *)
   set_x_mod0 :: core_int
@@ -842,8 +841,17 @@ definition Memory_mod0 where
   )
 )"
 
+definition rename_mod0_ctr0_events where
+"rename_mod0_ctr0_events = 
+  [(terminate_ctr0_C (), terminate_mod0_C ())] @
+  [(set_x_ctr0_C n, set_x_mod0_C n). n \<leftarrow> core_int_list] @
+  [(get_x_ctr0_C n, get_x_mod0_C n). n \<leftarrow> core_int_list] @
+  [(e1_ctr0_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
+  [(e2_ctr0_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list]
+"
+
 definition rename_D__ctr0 where
-"rename_D__ctr0 idd = rename (\<lambda>x . (terminate_ctr0_C ())) (D__ctr0 idd)"
+"rename_D__ctr0 idd = rename (pinj_of_alist rename_mod0_ctr0_events) (D__ctr0 idd)"
 
 definition "mod0_set_x_events = set (
   [set_x_mod0_C n. n \<leftarrow> core_int_list]

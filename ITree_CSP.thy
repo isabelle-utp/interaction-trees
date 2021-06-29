@@ -799,8 +799,7 @@ primcorec rename :: "'e\<^sub>1 \<Zpinj> 'e\<^sub>2 \<Rightarrow> ('e\<^sub>1, '
     Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p pfun_of_pinj (pinv \<rho>))))"
 
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
-  apply (simp add: deadlock_def rename.code)
-  oops
+  by (simp add: deadlock_def rename.code)
 
 subsection \<open> Biased External Choice \<close>
 
