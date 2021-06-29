@@ -6,8 +6,6 @@ begin
 
 subsection \<open> Basic Constructs \<close>
 
-definition stop where "stop = deadlock"
-
 definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
@@ -801,68 +799,5 @@ primcorec rename :: "'e\<^sub>1 \<Zpinj> 'e\<^sub>2 \<Rightarrow> ('e\<^sub>1, '
 
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
   by (simp add: deadlock_def rename.code)
-
-subsection \<open> Biased External Choice \<close>
-
-text \<open> Almost identical to external choice, except we resolve non-determinism by biasing the left or right branch. \<close>
-
-definition bextchoicel :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<^sub><\<box>" 59) where
-"bextchoicel = genchoice (\<lambda> F G. G + F)"
-
-definition bextchoicer :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<box>\<^sub>>" 59) where
-"bextchoicer = genchoice (+)"
-
-lemma extchoice_eq_bextchoice_iff:
-  assumes "\<^bold>I(P) \<inter> \<^bold>I(Q) = {}" 
-  shows "P \<^sub><\<box> Q = P \<box> Q"
-proof (cases P rule: itree_cases)
-  case (Vis m F)
-  note Vis' = this
-  show ?thesis 
-  proof (cases Q rule: itree_cases)
-    case (Vis n G)
-    with Vis' assms show ?thesis
-      by (simp add: extchoice_itree_def bextchoicel_def genchoice_Sils genchoice_Sils')
-         (metis empty_iff map_prod_as_ovrd pfun_plus_commute_weak)
-  next
-    case (Ret n x)
-    with assms Vis' show ?thesis 
-      by (simp add: extchoice_itree_def bextchoicel_def genchoice_Sils genchoice_Sils' genchoice.ctr(1))
-  next
-    case diverge
-    then show ?thesis
-      by (metis Sil_cycle_diverge bextchoicel_def diverge.disc_iff diverge.sel extchoice_itree_def genchoice_unstable' is_Sil_genchoice itree.sel(2)) 
-  qed
-next
-  case (Ret m x)
-  note Ret' = this
-  then show ?thesis
-  proof (cases Q rule: itree_cases)
-    case (Vis n F)
-    with assms Ret' show ?thesis
-      by (simp add: extchoice_itree_def bextchoicel_def genchoice_Sils genchoice_Sils' genchoice.ctr(1))
-  next
-    case (Ret n y)
-    show ?thesis
-    proof (cases "x = y")
-      case True
-      with assms Ret Ret' show ?thesis 
-        by (simp add: extchoice_itree_def bextchoicel_def genchoice_Sils genchoice_Sils' genchoice.ctr(1))
-    next
-      case False
-      with assms Ret Ret' show ?thesis
-        by (simp add: extchoice_itree_def bextchoicel_def genchoice_Sils genchoice_Sils')
-           (metis genchoice_Vis_iff)
-    qed
-  next
-    case diverge
-    then show ?thesis
-      by (metis Sil_cycle_diverge bextchoicel_def diverge.sel extchoice_itree_def genchoice_unstable' is_Sil_genchoice itree.sel(2) unstable_diverge) 
-  qed
-next
-  case diverge
-  then show ?thesis
-    by (simp add: bextchoicel_def choice_diverge genchoice_diverge) 
-qed
 
 end
