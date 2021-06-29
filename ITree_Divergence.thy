@@ -349,6 +349,10 @@ lemma initev_diverge [simp]: "\<^bold>I(diverge) = {}"
   by (auto simp add: initev_def)
      (metis Sils_diverge Sils_injective diverge_not_Vis)
 
+lemma evalpha_diverge [simp]: "\<^bold>A(diverge) = {}"
+  by (auto simp add: evalpha_def)
+     (meson diverges_diverge stabilises_traceI)
+
 subsection \<open> Iteration \<close>
 
 text \<open> For now we support only basic iteration for CSP processes. \<close>

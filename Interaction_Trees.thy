@@ -575,4 +575,62 @@ lemma initev_Vis [simp]: "\<^bold>I(Vis F) = pdom F"
 lemma initev_Ret [simp]: "\<^bold>I(Ret x) = {}"
   by (auto simp add: initev_def)
 
+subsection \<open> Return Values \<close>
+
+definition retvals :: "('e, 's) itree \<Rightarrow> 's set" ("\<^bold>R") where
+"\<^bold>R(P) = {x. \<exists> es. P \<midarrow>es\<leadsto> Ret x}"
+
+lemma retvals_traceI: "P \<midarrow>es\<leadsto> Ret x \<Longrightarrow> x \<in> \<^bold>R(P)"
+  by (auto simp add: retvals_def)
+
+abbreviation "terminates P \<equiv> (\<^bold>R(P) \<noteq> {})"
+
+lemma retvals_Ret [simp]: "\<^bold>R(Ret x) = {x}"
+  by (auto simp add: retvals_def)
+
+lemma retvals_Sil [simp]: "\<^bold>R(Sil P) = \<^bold>R(P)"
+  by (auto simp add: retvals_def)
+
+lemma retvals_Vis [simp]: "\<^bold>R(Vis F) = \<Union> (\<^bold>R ` pran(F))"
+  apply (auto simp add: retvals_def)
+  apply (metis image_eqI itree.distinct(3) pran_pdom trace_to_VisE)
+  apply (metis (no_types, lifting) image_iff pran_pdom trace_to_Vis)
+  done
+
+lemma retvals_bind [simp]: "\<^bold>R(P \<bind> Q) = \<Union> {\<^bold>R (Q x)| x. x \<in> \<^bold>R(P)}"
+  apply (auto elim!: trace_to_bindE bind_RetE' simp add: retvals_def)
+  apply (metis mem_Collect_eq trace_to_Nil)
+  apply (meson trace_to_bind)
+  done
+
+subsection \<open> Event Alphabet \<close>
+
+definition evalpha :: "('e, 's) itree \<Rightarrow> 'e set" ("\<^bold>A") where
+"\<^bold>A(P) = \<Union> {set es | es. \<exists> P'. P \<midarrow>es\<leadsto> P'}"
+
+lemma initev_subset_evalpha: "\<^bold>I(P) \<subseteq> \<^bold>A(P)"
+  by (auto simp add: initev_def evalpha_def)
+     (metis list.set_intros(1) trace_to_single_iff)
+
+lemma evalpha_Sil [simp]: "\<^bold>A(Sil P) = \<^bold>A(P)"
+  by (auto simp add: evalpha_def, metis equals0D set_empty trace_to_SilE)
+
+lemma evalpha_Ret [simp]: "\<^bold>A(Ret x) = {}"
+  by (auto simp add: evalpha_def)
+
+lemma evalpha_Vis [simp]: "\<^bold>A(Vis F) = pdom(F) \<union> (\<Union> (\<^bold>A ` pran(F)))"
+  apply (auto simp add: evalpha_def)
+  using pran_pdom apply fastforce
+   apply (metis list.set_intros(1) trace_to_Nil trace_to_Vis)
+  apply (metis (no_types, lifting) imageE list.set_intros(2) pran_pdom trace_to_Vis)
+  done
+
+lemma evalpha_bind: "\<^bold>A(P \<bind> Q) = \<^bold>A(P) \<union> \<Union> {\<^bold>A (Q x)| x. x \<in> \<^bold>R(P)}"
+  apply (auto elim!: trace_to_bindE bind_RetE' simp add: evalpha_def retvals_def)
+     apply blast
+    apply blast
+   apply (metis trace_to_bind_left)
+  apply (metis (no_types, hide_lams) append.assoc bind_Ret in_set_conv_decomp trace_to_bind_left trace_to_trans)
+  done
+
 end
