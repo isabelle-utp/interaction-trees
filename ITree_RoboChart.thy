@@ -1,7 +1,7 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "ITree_CSP" "Enum_Type" "Z_Toolkit.Relation_Toolkit"
+  imports "ITree_Extraction" "Enum_Type" "Z_Toolkit.Relation_Toolkit"
 begin
 
 subsection \<open> CSP operators \<close>
