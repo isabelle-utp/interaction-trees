@@ -583,7 +583,12 @@ definition retvals :: "('e, 's) itree \<Rightarrow> 's set" ("\<^bold>R") where
 lemma retvals_traceI: "P \<midarrow>es\<leadsto> Ret x \<Longrightarrow> x \<in> \<^bold>R(P)"
   by (auto simp add: retvals_def)
 
+abbreviation "nonterminates P \<equiv> (\<^bold>R(P) = {})"
+
 abbreviation "terminates P \<equiv> (\<^bold>R(P) \<noteq> {})"
+
+lemma nonterminates_iff: "nonterminates P \<longleftrightarrow> (\<forall> es x. \<not> P \<midarrow>es\<leadsto> \<cmark> x)"
+  by (auto simp add: retvals_def)
 
 lemma retvals_Ret [simp]: "\<^bold>R(Ret x) = {x}"
   by (auto simp add: retvals_def)

@@ -251,8 +251,6 @@ lemma stabilises_to_is_no_diverge: "stabilises_to no_divergence = no_divergence"
 coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
 scons: "stabilises_to div_free P \<Longrightarrow> div_free P"
 
-find_theorems div_free
-
 lemma div_free_Ret [simp]: "div_free (Ret x)"
   by (simp add: div_free.intros ret_stbs)
 
@@ -348,6 +346,9 @@ lemma divergent_trace_toI: "\<lbrakk> \<And> P'. P \<midarrow>[]\<leadsto> P' \<
 lemma initev_diverge [simp]: "\<^bold>I(diverge) = {}"
   by (auto simp add: initev_def)
      (metis Sils_diverge Sils_injective diverge_not_Vis)
+
+lemma retvals_diverge [simp]: "\<^bold>R(diverge) = {}"
+  by (auto simp add: retvals_def)
 
 lemma evalpha_diverge [simp]: "\<^bold>A(diverge) = {}"
   by (auto simp add: evalpha_def)

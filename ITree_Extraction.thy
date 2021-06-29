@@ -1,7 +1,7 @@
 subsection \<open> ITree Code Generation Support \<close>
 
 theory ITree_Extraction
-  imports ITree_Circus Record_Default_Instance Enum_Type
+  imports ITree_Circus ITree_Relation Record_Default_Instance Enum_Type
 begin
 
 text \<open> Configuring the code generator; either partial functions or associative lists can be used
