@@ -4,6 +4,8 @@ theory ITree_RoboChart
   imports "ITree_Extraction" "Enum_Type" "Z_Toolkit.Relation_Toolkit"
 begin
 
+declare pinv_pinj_of_alist [code]
+
 subsection \<open> CSP operators \<close>
 definition stop where "stop = deadlock"
 
