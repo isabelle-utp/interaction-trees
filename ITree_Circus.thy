@@ -38,6 +38,17 @@ lemma test_true: "\<questiondown>True? = Skip"
 lemma test_false: "\<questiondown>False? = Stop"
   by (simp add: test_def)
 
+definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+"cond_itree P b Q = (\<lambda> s. if b s then P s else Q s)"
+
+syntax 
+  "_cond_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
+  "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
+
+translations
+  "_cond_itree b P Q" == "CONST cond_itree P (b)\<^sub>e Q"
+  "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
+
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
 

@@ -393,19 +393,19 @@ lemma evalpha_diverge [simp]: "\<^bold>A(diverge) = {}"
 
 subsection \<open> Iteration \<close>
 
-text \<open> For now we support only basic iteration for CSP processes. \<close>
+text \<open> For now we support only basic tail-recursive iteration. \<close>
 
-corec while :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
-"while b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (while b P))) else Ret s)"
+corec iterate :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+"iterate b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (iterate b P))) else Ret s)"
 
-abbreviation "loop \<equiv> while (\<lambda> s. True)"
+abbreviation "loop \<equiv> iterate (\<lambda> s. True)"
 
 abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
 
 lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
-  by (simp add: fun_eq_iff while.code)
+  by (simp add: fun_eq_iff iterate.code)
 
 lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
-  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge while.code)
+  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge iterate.code)
 
 end

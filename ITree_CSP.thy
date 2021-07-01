@@ -684,7 +684,7 @@ corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree"
     Ret x \<Rightarrow> Ret x)"
 
 lemma is_Ret_loop [simp]: "is_Ret (loop F s) = False"
-  by (metis bind_itree.disc_iff(1) comp_apply itree.disc(2) while.code)
+  by (metis bind_itree.disc_iff(1) comp_apply itree.disc(2) iterate.code)
 
 lemma is_Ret_hide [simp]: "is_Ret (P \<setminus> A) = is_Ret P"
   by (auto simp add: hide.code deadlock_def itree.case_eq_if)
@@ -703,11 +703,11 @@ lemma hide_sync: "(sync a \<bind> P) \<setminus> {build\<^bsub>a\<^esub> ()} = \
 
 lemma hide_sync_loop_diverge: "hide (iter (sync a)) {build\<^bsub>a\<^esub> ()} = diverge"
   apply (coinduction rule:itree_coind, auto)
-  apply (simp add: while.code, simp add: sync_def)
-  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) while.code)
-  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) itree.distinct_disc(6) while.code)
-  apply (smt (z3) disjoint_iff empty_iff hide_sync insert_iff is_Vis_hide itree.disc(8) while.code)
-  apply (smt (z3) Sil_Sil_drop comp_apply hide_Sil hide_sync itree.inject(2) while.code)
+  apply (simp add: iterate.code, simp add: sync_def)
+  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) iterate.code)
+  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) itree.distinct_disc(6) iterate.code)
+  apply (smt (z3) disjoint_iff empty_iff hide_sync insert_iff is_Vis_hide itree.disc(8) iterate.code)
+  apply (smt (z3) Sil_Sil_drop comp_apply hide_Sil hide_sync itree.inject(2) iterate.code)
   apply (metis diverge.code itree.inject(2))
   done
 
