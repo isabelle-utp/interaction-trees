@@ -5,6 +5,7 @@ theory ITree_RoboChart
 begin
 
 declare pinv_pinj_of_alist [code]
+declare pfun_of_pinj_of_alist [code]
 
 subsection \<open> CSP operators \<close>
 definition stop where "stop = deadlock"
