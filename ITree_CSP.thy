@@ -16,6 +16,9 @@ lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
   by (auto simp add: inp_in_def)
      (metis imageI insertCI option.sel rangeI retvals_Ret wb_prism.range_build wb_prism_def)
 
+lemma div_free_inp_in: "div_free (inp_in c A)"
+  by (auto simp add: inp_in_def div_free_Vis)
+
 abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
 "inp c \<equiv> inp_in c UNIV"
 
@@ -34,6 +37,13 @@ lemma inp_alist [code]:
   "inp_in c (set B) = inp_list c B"
   unfolding inp_in_def inp_list_def
   by (simp only: set_map[THEN sym] inter_set_filter pabs_set filter_map comp_def, simp add: comp_def)
+
+lemma inp_enum [code_unfold]:
+  "wb_prism c \<Longrightarrow> inp c = inp_list c enum_class.enum"
+  apply (simp add: inp_list_def inp_in_def wb_prism.range_build[THEN sym] enum_class.UNIV_enum)
+  apply (simp only: image_set pabs_set)
+  apply (simp add: comp_def)
+  done
 
 definition outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
 "outp c v = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> v, Ret())])"
@@ -674,7 +684,7 @@ corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree"
     Ret x \<Rightarrow> Ret x)"
 
 lemma is_Ret_loop [simp]: "is_Ret (loop F s) = False"
-  by (metis bind_itree.disc_iff(1) comp_apply itree.disc(2) while.code)
+  by (metis bind_itree.disc_iff(1) comp_apply itree.disc(2) iterate.code)
 
 lemma is_Ret_hide [simp]: "is_Ret (P \<setminus> A) = is_Ret P"
   by (auto simp add: hide.code deadlock_def itree.case_eq_if)
@@ -693,11 +703,11 @@ lemma hide_sync: "(sync a \<bind> P) \<setminus> {build\<^bsub>a\<^esub> ()} = \
 
 lemma hide_sync_loop_diverge: "hide (iter (sync a)) {build\<^bsub>a\<^esub> ()} = diverge"
   apply (coinduction rule:itree_coind, auto)
-  apply (simp add: while.code, simp add: sync_def)
-  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) while.code)
-  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) itree.distinct_disc(6) while.code)
-  apply (smt (z3) disjoint_iff empty_iff hide_sync insert_iff is_Vis_hide itree.disc(8) while.code)
-  apply (smt (z3) Sil_Sil_drop comp_apply hide_Sil hide_sync itree.inject(2) while.code)
+  apply (simp add: iterate.code, simp add: sync_def)
+  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) iterate.code)
+  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) itree.distinct_disc(6) iterate.code)
+  apply (smt (z3) disjoint_iff empty_iff hide_sync insert_iff is_Vis_hide itree.disc(8) iterate.code)
+  apply (smt (z3) Sil_Sil_drop comp_apply hide_Sil hide_sync itree.inject(2) iterate.code)
   apply (metis diverge.code itree.inject(2))
   done
 

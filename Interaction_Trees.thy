@@ -2,7 +2,7 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Partial_Inj"
+  "Z_Toolkit.Relation_Lib"
 begin
 
 subsection \<open> Preliminaries \<close>

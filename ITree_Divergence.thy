@@ -248,6 +248,26 @@ lemma no_divergence_stabilises_to: "no_divergence P \<Longrightarrow> stabilises
 lemma stabilises_to_is_no_diverge: "stabilises_to no_divergence = no_divergence"
   by (auto simp add: fun_eq_iff stabilises_to_no_divergence no_divergence_stabilises_to)
 
+lemma divergent_bind: "divergent(P \<bind> Q) \<Longrightarrow> (divergent(P) \<or> (\<exists> n x. P = Sils n (Ret x) \<and> divergent(Q x)))"
+  by (auto simp add: stabilises_def)
+     (metis Sils_Sils bind_Ret bind_itree.disc_iff(2) itree.collapse(1))
+
+lemma bind_divergeE [elim!]:
+  assumes 
+    "P \<bind> Q = diverge"
+    "P = diverge \<Longrightarrow> R"
+    "\<And> n x. \<lbrakk> P = Sils n (Ret x); Q x = diverge \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) divergent_bind diverges_then_diverge)
+
+lemma bind_divergeE' [elim!]:
+  assumes 
+    "diverge = P \<bind> Q"
+    "P = diverge \<Longrightarrow> R"
+    "\<And> n x. \<lbrakk> P = Sils n (Ret x); Q x = diverge \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) bind_divergeE)
+
 coinductive div_free :: "('e, 's) itree \<Rightarrow> bool" where
 scons: "stabilises_to div_free P \<Longrightarrow> div_free P"
 
@@ -343,6 +363,23 @@ lemma div_free_no_min_divergence: "div_free P \<Longrightarrow> \<not> P \<midar
 lemma divergent_trace_toI: "\<lbrakk> \<And> P'. P \<midarrow>[]\<leadsto> P' \<Longrightarrow> unstable P' \<rbrakk> \<Longrightarrow> divergent P"
   by (metis stabilises_def trace_of_Sils)
 
+lemma div_free_bindI: "\<lbrakk> div_free P; \<forall> x \<in> \<^bold>R(P). div_free (Q x) \<rbrakk> \<Longrightarrow> div_free (P \<bind> Q)"
+  by (auto elim!: trace_to_bindE simp add: div_free_is_no_divergence no_divergence_def retvals_def)
+     (metis trace_of_Sils trace_to_Nil trace_to_trans)
+
+lemma div_free_bind: "div_free (P \<bind> Q) \<longleftrightarrow> (div_free P \<and> (\<forall> x \<in> \<^bold>R(P). div_free (Q x)))" 
+  (is "?lhs = ?rhs")
+proof
+  assume ?lhs
+  thus ?rhs
+    by (simp add: div_free_is_no_divergence no_divergence_def retvals_def)
+       (metis bind_diverge trace_to_bind trace_to_bind_left)
+next
+  assume ?rhs
+  thus ?lhs
+    by (simp add: div_free_bindI)
+qed
+
 lemma initev_diverge [simp]: "\<^bold>I(diverge) = {}"
   by (auto simp add: initev_def)
      (metis Sils_diverge Sils_injective diverge_not_Vis)
@@ -356,19 +393,19 @@ lemma evalpha_diverge [simp]: "\<^bold>A(diverge) = {}"
 
 subsection \<open> Iteration \<close>
 
-text \<open> For now we support only basic iteration for CSP processes. \<close>
+text \<open> For now we support only basic tail-recursive iteration. \<close>
 
-corec while :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
-"while b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (while b P))) else Ret s)"
+corec iterate :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+"iterate b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (iterate b P))) else Ret s)"
 
-abbreviation "loop \<equiv> while (\<lambda> s. True)"
+abbreviation "loop \<equiv> iterate (\<lambda> s. True)"
 
 abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
 
 lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
-  by (simp add: fun_eq_iff while.code)
+  by (simp add: fun_eq_iff iterate.code)
 
 lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
-  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge while.code)
+  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge iterate.code)
 
 end
