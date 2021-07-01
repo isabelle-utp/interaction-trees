@@ -77,6 +77,9 @@ definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow
 lemma input_alt_def: "input c P = input_in c (UNIV)\<^sub>e P"
   by (simp add: input_def input_in_def)
 
+lemma input_enum [code_unfold]: "wb_prism c \<Longrightarrow> input c P = input_in c (\<lambda> _. set enum_class.enum) P"
+  by (simp add: input_in_def input_def fun_eq_iff inp_enum inp_alist)
+
 syntax 
   "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
   "_input_in" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [60, 0, 0, 61] 61)
@@ -134,7 +137,7 @@ definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow>
 "frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
 
 definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
-"promote P a = \<questiondown>\<^bold>D(a)? \<Zcomp> frame_ext a P"
+[code_unfold]: "promote P a = \<questiondown>\<^bold>D(a)? \<Zcomp> frame_ext a P"
 
 syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
 translations "_promote P a" == "CONST promote P a"

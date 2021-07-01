@@ -38,6 +38,13 @@ lemma inp_alist [code]:
   unfolding inp_in_def inp_list_def
   by (simp only: set_map[THEN sym] inter_set_filter pabs_set filter_map comp_def, simp add: comp_def)
 
+lemma inp_enum [code_unfold]:
+  "wb_prism c \<Longrightarrow> inp c = inp_list c enum_class.enum"
+  apply (simp add: inp_list_def inp_in_def wb_prism.range_build[THEN sym] enum_class.UNIV_enum)
+  apply (simp only: image_set pabs_set)
+  apply (simp add: comp_def)
+  done
+
 definition outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
 "outp c v = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> v, Ret())])"
 
