@@ -106,6 +106,14 @@ definition Pr where
 "Pr = rename (pinj_of_alist rename_map) (P)"
 
 value "pfun_of_pinj (pinv (pinj_of_alist rename_map))"
+value "pfun_of_pinj
+  (pinj_of_alist
+    [(e1_stm0_C (NULLTRANSITION_stm0, din, - 1), e1__stm0_C (NULLTRANSITION_stm0, din, - 1)),
+     (e1_stm0_C (NULLTRANSITION_stm0, din, 0), e1__stm0_C (NULLTRANSITION_stm0, din, 0))])"
+
+print_codeproc
+code_thms pfun_of_pinj
+code_deps pfun_of_pinj
 
 subsection \<open> Export code \<close>
 export_code
