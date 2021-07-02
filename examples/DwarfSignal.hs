@@ -179,9 +179,6 @@ genchoice m p q =
     (Vis f, Vis g) -> Vis (m f g);
   });
 
-plus_pfun :: forall a b. Pfun a b -> Pfun a b -> Pfun a b;
-plus_pfun (Pfun_of_alist f) (Pfun_of_alist g) = Pfun_of_alist (g ++ f);
-
 uminus_set :: forall a. Set a -> Set a;
 uminus_set (Coset xs) = Set xs;
 uminus_set (Set xs) = Coset xs;
@@ -189,16 +186,21 @@ uminus_set (Set xs) = Coset xs;
 restrict :: forall a b. (Eq a) => Set a -> [(a, b)] -> [(a, b)];
 restrict a = filter (\ (k, _) -> member k a);
 
-pdom_res :: forall a b. (Eq a) => Set a -> Pfun a b -> Pfun a b;
-pdom_res a (Pfun_of_alist m) = Pfun_of_alist (restrict a m);
-
-pdom :: forall a b. Pfun a b -> Set a;
-pdom (Pfun_of_alist xs) = Set (map fst xs);
+image :: forall a b. (a -> b) -> Set a -> Set b;
+image f (Set xs) = Set (map f xs);
 
 map_prod :: forall a b. (Eq a) => Pfun a b -> Pfun a b -> Pfun a b;
-map_prod f g =
-  plus_pfun (pdom_res (uminus_set (pdom g)) f)
-    (pdom_res (uminus_set (pdom f)) g);
+map_prod (Pfun_of_alist xs) (Pfun_of_alist ys) =
+  Pfun_of_alist
+    (restrict (uminus_set (image fst (Set xs))) ys ++
+      restrict (uminus_set (image fst (Set ys))) xs);
+map_prod (Pfun_of_map f) (Pfun_of_map g) =
+  Pfun_of_map (\ x -> (case (f x, g x) of {
+                        (Nothing, Nothing) -> Nothing;
+                        (Nothing, Just a) -> Just a;
+                        (Just xa, Nothing) -> Just xa;
+                        (Just _, Just _) -> Nothing;
+                      }));
 
 extchoice_itree ::
   forall a b. (Eq a, Eq b) => Itree a b -> Itree a b -> Itree a b;
@@ -515,24 +517,14 @@ skip = Ret;
 shine :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
 shine = output shinea (sexp (lens_get current_state)) skip;
 
-kleisli_comp :: forall a b c d. (a -> b -> c) -> (d -> a) -> b -> d -> c;
-kleisli_comp bnd f g = (\ x -> bnd (f x) g);
-
-assigns :: forall a b c. (a -> b) -> a -> Itree c b;
-assigns sigma = (\ s -> Ret (sigma s));
-
-proc :: forall a b. (Default a) => (a -> a) -> (a -> Itree b a) -> Itree b ();
-proc i a =
-  kleisli_comp bind_itree
-    (kleisli_comp bind_itree
-      (kleisli_comp bind_itree (assigns (\ _ -> defaulta)) (assigns i)) a)
-    (assigns (\ _ -> ())) ();
-
 deadlock :: forall a b. Itree a b;
 deadlock = Vis zero_pfun;
 
 test :: forall a b. (a -> Bool) -> a -> Itree b a;
 test b = (\ s -> (if b s then Ret s else deadlock));
+
+kleisli_comp :: forall a b c d. (a -> b -> c) -> (d -> a) -> b -> d -> c;
+kleisli_comp bnd f g = (\ x -> bnd (f x) g);
 
 sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
 sup_set (Coset xs) a = Coset (filter (\ x -> not (member x a)) xs);
@@ -555,6 +547,9 @@ input_in ::
   forall a b c.
     Prism_ext a b () -> (c -> Set a) -> (a -> c -> Itree b c) -> c -> Itree b c;
 input_in c a p = (\ s -> bind_itree (inp_in c (a s)) (\ x -> p x s));
+
+assigns :: forall a b c. (a -> b) -> a -> Itree c b;
+assigns sigma = (\ s -> Ret (sigma s));
 
 turnOn :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
 turnOn =
@@ -708,8 +703,13 @@ checkReq =
     (kleisli_comp bind_itree (test (sexp (\ s -> not (darkOnlyFromStop s))))
       (output violation (sexp (\ _ -> "DarkOnlyFromStop")) skip));
 
-while :: forall a b. (a -> Bool) -> (a -> Itree b a) -> a -> Itree b a;
-while b p s = (if b s then bind_itree (p s) (Sil . while b p) else Ret s);
+process ::
+  forall a b c. (Default a) => (a -> a) -> (a -> Itree b c) -> Itree b ();
+process i a =
+  kleisli_comp bind_itree
+    (kleisli_comp bind_itree
+      (kleisli_comp bind_itree (assigns (\ _ -> defaulta)) (assigns i)) a)
+    (assigns (\ _ -> ())) ();
 
 un_setNewProperState_C :: Chan -> ProperState;
 un_setNewProperState_C (SetNewProperState_C x2) = x2;
@@ -759,10 +759,13 @@ setNewProperState =
           (assigns
             (subst_upd subst_id desired_proper_state (sexp (\ _ -> st))))));
 
+iterate :: forall a b. (a -> Bool) -> (a -> Itree b a) -> a -> Itree b a;
+iterate b p s = (if b s then bind_itree (p s) (Sil . iterate b p) else Ret s);
+
 dwarfSignal :: Itree Chan ();
 dwarfSignal =
-  proc init
-    (while (\ _ -> True)
+  process init
+    (iterate (\ _ -> True)
       (extchoice_fun
         (extchoice_fun
           (extchoice_fun (extchoice_fun checkReq setNewProperState) turnOn)
@@ -799,8 +802,18 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
                        then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        else simulate_cnt 0 (snd (m !! (v - 1)))
      };
+simulate_cnt n t@(Vis (Pfun_of_map f)) = 
+  do { Prelude.putStr ("Enter an event:");
+       e <- Prelude.getLine;
+       case (Prelude.reads e) of
+         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t } 
+         [(v, _)] -> case f v of
+                       Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       Just t' -> simulate_cnt 0 t'
+     };
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
 simulate = simulate_cnt 0;
+
 
 }

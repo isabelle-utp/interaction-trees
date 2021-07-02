@@ -17,7 +17,7 @@ definition BoxOfficeInit :: "integer set \<Rightarrow> BoxOffice subst" where
 
 chantype chan =
   purchase :: "SEAT \<times> CUSTOMER"
-  return :: "SEAT \<times> CUSTOMER"
+  ret :: "SEAT \<times> CUSTOMER"
 
 definition Purchase0 :: "_ \<Rightarrow> _ \<Rightarrow> (chan, BoxOffice) action" where
 "Purchase0 SEAT CUSTOMER = 
@@ -25,10 +25,10 @@ definition Purchase0 :: "_ \<Rightarrow> _ \<Rightarrow> (chan, BoxOffice) actio
 
 definition Return0 :: "_ \<Rightarrow> _ \<Rightarrow> (chan, BoxOffice) action" where
 "Return0 SEAT CUSTOMER =
-  return?(s, c):pfun_graph(sold) \<rightarrow> sold := {s} \<Zndres> sold"
+  ret?(s, c):pfun_graph(sold) \<rightarrow> sold := {s} \<Zndres> sold"
 
 definition "BoxOfficeProc initalloc SEAT CUSTOMER
-  = proc 
+  = process 
       (BoxOfficeInit initalloc)
       (loop (Purchase0 SEAT CUSTOMER \<box> Return0 SEAT CUSTOMER))"
 

@@ -1,8 +1,8 @@
 section \<open> Distributed Ring Buffer \<close>
 
 theory RingBuffer
-  imports "../ITree_Circus" "HOL-Library.Code_Target_Nat" "HOL-Library.Code_Target_Int"
-begin
+  imports "../ITree_Extraction" "HOL-Library.Code_Target_Nat" "HOL-Library.Code_Target_Int"
+begin lit_vars
 
 no_notation conj  (infixr "&" 35) lit_vars
 
@@ -36,10 +36,10 @@ definition Read :: "nat \<Rightarrow> (chan, CellState) action" where
 "Read(i) = rd!((i,val)) \<rightarrow> Skip"
 
 definition Write :: "nat \<Rightarrow> (chan, CellState) action" where
-"Write(i) = wrt?(_,v):(map (\<lambda> v. (i, v)) [0,1,2,3]) \<rightarrow> val := v"
+"Write(i) = wrt?(_,v):(set(map (\<lambda> v. (i, v)) [0,1,2,3])) \<rightarrow> val := v"
 
 definition IRingCell :: "nat \<Rightarrow> chan process" where
-"IRingCell(i) = proc ([val \<leadsto> 0] :: CellState subst) (Write(i) \<Zcomp> loop (Read(i) \<box> Write(i)))"
+"IRingCell(i) = process ([val \<leadsto> 0] :: CellState subst) (Write(i) \<Zcomp> loop (Read(i) \<box> Write(i)))"
 
 definition Ring :: "chan process" where
 "Ring = foldl (\<interleave>) (Ret ()) (map (IRingCell \<circ> nat) [0..maxbuff])"
@@ -75,9 +75,9 @@ definition StoreInput :: "(chan, ControllerState) action" where
 "StoreInput = (sz := (sz + 1) \<Zcomp> rtop := ((rtop + 1) mod maxring))"
 
 definition InputController :: "(chan, ControllerState) action" where
-  "InputController = ((sz < maxbuff) & input?(x):[0,1,2,3] \<rightarrow> 
-                                ((sz = 0) & CacheInput x 
-                                \<box> (sz > 0) & wrt!((rtop, x)) \<rightarrow> StoreInput))"
+  "InputController = ((sz < maxbuff) & input?(x):(set [0,1,2,3]) \<rightarrow> 
+                                (((sz = 0) & CacheInput x)
+                                \<box> ((sz > 0) & wrt!((rtop, x)) \<rightarrow> StoreInput)))"
 
 definition NoNewCache :: "(chan, ControllerState) action" where
 "NoNewCache = (sz := 0)"
@@ -86,12 +86,12 @@ definition StoreNewCache :: "integer \<Rightarrow> (chan, ControllerState) actio
 "StoreNewCache x = sz := (sz - 1) \<Zcomp> cache := x \<Zcomp> rbot := ((rbot + 1) mod maxring)"
 
 definition OutputController :: "(chan, ControllerState) action" where
-  "OutputController = (sz > 0) & output!(cache) \<rightarrow> 
-                                  ((sz > 1) & rd?(_, x):(map (\<lambda> i. (rbot, i)) [0,1,2,3]) \<rightarrow> StoreNewCache x
-                                   \<box> (sz = 1) & NoNewCache)"
+  "OutputController = ((sz > 0) & output!(cache) \<rightarrow> 
+                                  (((sz > 1) & rd?(_, x):(set (map (\<lambda> i. (rbot, i)) [0,1,2,3])) \<rightarrow> StoreNewCache x)
+                                   \<box> ((sz = 1) & NoNewCache)))"
 
 definition Controller :: "chan process" where
-"Controller = proc (InitController :: ControllerState \<Rightarrow> ControllerState) (loop (InputController \<box> OutputController))"
+"Controller = process (InitController :: ControllerState \<Rightarrow> ControllerState) (loop (InputController \<box> OutputController))"
 
 definition CRing :: "chan process" where
   "CRing = hide (Controller 
