@@ -6,6 +6,65 @@ theory ITree_CSP_renaming_ex
   imports "../../ITree_RoboChart"
 begin
 
+declare [[show_types]]
+
+(*
+A-C       A-A         A-C
+(a1,c1) (a1,a1')    (a1',c1) 
+(a1,c1) undefined   (a1,c1)
+
+(a2,c2) (a2,a2')
+(a3,c3) (a3,a2')    a2' \<rightarrow> c2 [] a2' \<rightarrow> c3
+*)
+
+definition prioritised_pfun_apply1 :: "('a \<Zpfun> 'a) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> 'c)"  where 
+"prioritised_pfun_apply1 f g = pfun_of_map 
+(\<lambda>a\<^sub>2::'a. 
+  if a\<^sub>2 \<in> pran f then 
+    (if (pdom (f \<rhd>\<^sub>p {a\<^sub>2})) = {} then undefined else undefined) 
+  else 
+    (if a\<^sub>2 \<in> pdom g then Some (g (a\<^sub>2)\<^sub>p) else undefined)
+)"
+
+
+definition prioritised_pfun_apply2 :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('b \<Zpfun> 'c)"  where 
+"prioritised_pfun_apply2 f g = pfun_of_map 
+  (\<lambda>b::'b. if (pdom (f \<rhd>\<^sub>p {b})) = {} then undefined else None)"
+
+(*
+Should define a function that 
+f:: ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('b \<Zpfun> 'c)
+f pf1 pf2 = 
+
+1) for each b in pdom(f pf1 pf2), there exists a in pdom(pran_res pf1 {b}))\<^sub>p
+and pdom(pf2).
+2) For many-to-one (pf1), we choose the one a in pdom(pf2), if pf1 (a)\<^sub>p = b.
+
+A-C       A-B       B-C
+(a1,c1) (a1,b1)   (b1, c1) 
+(a1,c1) undefined (a1, c1)
+ 
+*)
+primcorec rename1 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+"rename1 \<rho> P = 
+  (case P of
+    Ret x \<Rightarrow> Ret x |
+    Sil Pa \<Rightarrow> Sil (rename1 \<rho> Pa) |
+    Vis F \<Rightarrow> Vis (pfun_of_map (\<lambda>e\<^sub>2 . case \<exists>e\<^sub>1. (\<rho> (e\<^sub>1)\<^sub>p = e\<^sub>2) \<and> (F (e\<^sub>1)\<^sub>p \<noteq> undefined) 
+              of True \<Rightarrow> Some (rename1 \<rho> (F (SOME e\<^sub>1 . e\<^sub>1 \<in> pdom(pran_res \<rho> {e\<^sub>2}))\<^sub>p)) |
+                 Flase \<Rightarrow> None))
+)"
+
+term "F (SOME e\<^sub>1 . e\<^sub>1 \<in> pdom(pran_res \<rho> {e\<^sub>2}))\<^sub>p"
+term "(pfun_of_map (\<lambda>e\<^sub>2::'e\<^sub>2 . case \<exists>e\<^sub>1::'e\<^sub>1. (\<rho> (e\<^sub>1)\<^sub>p = e\<^sub>2) \<and> ((F::'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'a) itree) (e\<^sub>1)\<^sub>p \<noteq> undefined) 
+              of True \<Rightarrow> Some (rename1 \<rho> (F (SOME e\<^sub>1 . e\<^sub>1 \<in> pdom(pran_res \<rho> {e\<^sub>2}))\<^sub>p)) |
+                 Flase \<Rightarrow> None))"
+
+term "(ren::'e\<^sub>1 \<Zpfun> 'e\<^sub>2) (\<lambda>e::'e\<^sub>1. 
+   (case (pfun_lookup (F :: 'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'r) itree)) e \<comment> \<open> partial function to map\<close>
+    of None \<Rightarrow> None | 
+       Some v \<Rightarrow> Some (v)))"
+
 subsection \<open> General definitions \<close>
 definition "int_max = (1::integer)"
 definition "int_min = (-1::integer)"
@@ -114,6 +173,31 @@ value "pfun_of_pinj
 print_codeproc
 code_thms pfun_of_pinj
 code_deps pfun_of_pinj
+
+term "map_pfun"
+term "pfun_of_map"
+term "pfun_lookup"
+term "map_of"
+term "(F \<circ>\<^sub>p pfun_of_pinj (pinv \<rho>))"
+
+(*
+We may think about rename as a different approach without inverse.
+1. Rename:  @{text "'e\<^sub>1 \<Rightarrow>\<^sub>p 'e\<^sub>2 \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree"}
+For Vis (F :: 'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'r) itree), 
+2. Overall procedure
+  (1) Drop F down to a map:: "'a \<Rightarrow> 'b option" or AList;
+  (2) Then for each event (e\<^sub>1) in the map, apply the rename map (\<rho>::'e\<^sub>1 \<Rightarrow>\<^sub>p 'e\<^sub>2), to 
+    get its corresponding event (\<rho> e\<^sub>1) in the new process;
+  (3) Form a new pair (\<rho> e\<^sub>1, rename (F e\<^sub>1)) into AList;
+  (4) Lift the AList to \<Zpfun> partial functions.
+*)
+
+term "\<lambda>e::'e\<^sub>1. 
+   (case (pfun_lookup (F :: 'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'r) itree)) e \<comment> \<open> partial function to map\<close>
+    of None \<Rightarrow> None | 
+       Some v \<Rightarrow> Some ((ren e), v))"
+
+value "(pfun_of_alist rename_map)"
 
 subsection \<open> Export code \<close>
 export_code

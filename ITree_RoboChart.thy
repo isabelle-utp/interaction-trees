@@ -1,7 +1,7 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "ITree_Extraction" "Enum_Type" "Z_Toolkit.Relation_Toolkit"
+  imports "ITree_Extraction"
 begin
 
 declare pfun_of_pinj_of_alist [code]
