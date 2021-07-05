@@ -56,10 +56,10 @@ lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
   by (simp add: assigns_def Skip_def)
 
 lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ> \<sigma>\<rangle>\<^sub>a"
-  by (simp add: assigns_def)
+  by (simp add: kleisli_comp_def assigns_def)
 
 lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: assigns_def test_def fun_eq_iff expr_defs)
+  by (simp add: kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
 
 text \<open> Hide the state of an action to produce a process \<close>
 
@@ -91,6 +91,9 @@ lemma input_alt_def: "input c P = input_in c (UNIV)\<^sub>e P"
 lemma input_enum [code_unfold]: "wb_prism c \<Longrightarrow> input c P = input_in c (\<lambda> _. set enum_class.enum) P"
   by (simp add: input_in_def input_def fun_eq_iff inp_enum inp_alist)
 
+definition input_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_where c P Q = (\<lambda>s. inp_where c (\<lambda> v. P v s) \<bind> (\<lambda>x. Q x s))"
+
 definition "input' c P = (\<lambda>s. inp' c \<bind> (\<lambda>x. P x s))"
 
 lemma input_code_unfold [code_unfold]: 
@@ -98,15 +101,17 @@ lemma input_code_unfold [code_unfold]:
   using inp_in_coset by (fastforce simp add: input_def input'_def inp_in_coset inp'_def)
 
 syntax 
-  "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
-  "_input_in" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [60, 0, 0, 61] 61)
-
+  "_input"       :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
+  "_input_in"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [60, 0, 0, 61] 61)
+  "_input_where" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_|_ \<rightarrow> _" [60, 0, 0, 61] 61)
 
 translations "c?(x) \<rightarrow> P" == "CONST input c (\<lambda> (x). P)"
 translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambda> (x). P)"
+translations "c?(x)|P \<rightarrow> Q" => "CONST input_where c (\<lambda> (x). (P)\<^sub>e) (\<lambda> (x). Q)"
+translations "c?(x)|P \<rightarrow> Q" <= "CONST input_where c (\<lambda> (x). (P)\<^sub>e) (\<lambda> y. Q)"
 
 lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P(x))"
-  by (simp add: input_def assigns_def)
+  by (simp add: input_def kleisli_comp_def assigns_def)
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "output c e P = (\<lambda> s. outp c (e s) \<then> P s)"
@@ -115,7 +120,7 @@ syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> lo
 translations "c!(e) \<rightarrow> P" == "CONST output c (e)\<^sub>e P"
 
 lemma assigns_output: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c!(e) \<rightarrow> P = c!(\<sigma> \<dagger> e) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P)"
-  by (simp add: assigns_def output_def expr_defs)
+  by (simp add: assigns_def kleisli_comp_def output_def expr_defs)
 
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
@@ -137,7 +142,7 @@ lemma extchoice_Div: "Div \<box> P = Div"
   by (simp add: choice_diverge extchoice_fun_def)
 
 lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> Q)"
-  by (simp add: extchoice_fun_def expr_defs assigns_def)
+  by (simp add: kleisli_comp_def extchoice_fun_def expr_defs assigns_def)
 
 no_notation conj  (infixr "&" 35)
 

@@ -1,7 +1,7 @@
 subsection \<open> ITree Code Generation Support \<close>
 
 theory ITree_Extraction
-  imports ITree_Circus ITree_Relation ITree_Procedure Record_Default_Instance Enum_Type
+  imports ITree_Circus ITree_Operations ITree_Procedure Record_Default_Instance Enum_Type
 begin
 
 text \<open> Configuring the code generator; either partial functions or associative lists can be used
@@ -36,5 +36,7 @@ begin
 definition "default_pfun = ({}\<^sub>p :: ('a, 'b) pfun)"
 instance ..
 end
+
+declare SEXP_apply [simp del]
 
 end

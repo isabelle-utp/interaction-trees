@@ -112,7 +112,7 @@ lemma bind_Sil [simp, code]: "Sil t \<bind> k = Sil (t \<bind> k)"
 lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind_itree x k) t)"
   by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
 
-definition [simp]: "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
+definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 
 syntax
   "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixl "\<Zcomp>" 54)

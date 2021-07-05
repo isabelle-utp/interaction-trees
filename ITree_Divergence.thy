@@ -403,7 +403,7 @@ abbreviation "loop \<equiv> iterate (\<lambda> s. True)"
 abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
 
 lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
-  by (simp add: fun_eq_iff iterate.code)
+  by (simp add: kleisli_comp_def fun_eq_iff iterate.code)
 
 lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
   by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge iterate.code)
