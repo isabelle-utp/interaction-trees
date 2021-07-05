@@ -408,10 +408,8 @@ definition rename_stm0_events where
 
 definition rename_MemorySTM_opt_stm0 where
 "rename_MemorySTM_opt_stm0 idd = 
-  rename (pinj_of_alist rename_stm0_events) (MemorySTM_opt_stm0 idd)
+  rename (pfun_of_alist (map (\<lambda> (x, y). (y, x)) rename_stm0_events)) (MemorySTM_opt_stm0 idd)
 "
-
-term "map_pfun"
 
 (* Exception: P [| A |> Q*)
 (* Renaming *)
@@ -718,7 +716,7 @@ definition rename_stm1_events where
 
 definition rename_MemorySTM_opt_stm1 where
 "rename_MemorySTM_opt_stm1 idd = 
-  rename (pinj_of_alist rename_stm1_events) (MemorySTM_opt_stm1 idd)
+  rename (pfun_of_alist (map (\<lambda> (x, y). (y, x)) rename_stm1_events)) (MemorySTM_opt_stm1 idd)
 "
 
 (* Exception: P [| A |> Q*)
@@ -784,7 +782,7 @@ definition rename_ctr0_stm0_events where
 "
 
 definition rename_D__stm0 where
-"rename_D__stm0 idd = rename (pinj_of_alist rename_ctr0_stm0_events) (D__stm0 idd)"
+"rename_D__stm0 idd = rename (pfun_of_alist (map (\<lambda> (x,y). (y,x)) rename_ctr0_stm0_events)) (D__stm0 idd)"
 
 definition rename_ctr0_stm1_events where
 "rename_ctr0_stm1_events = 
@@ -796,7 +794,7 @@ definition rename_ctr0_stm1_events where
 "
 
 definition rename_D__stm1 where
-"rename_D__stm1 idd = rename (pinj_of_alist rename_ctr0_stm1_events) (D__stm1 idd)"
+"rename_D__stm1 idd = rename (pfun_of_alist (map (\<lambda> (x,y). (y,x)) rename_ctr0_stm1_events)) (D__stm1 idd)"
 
 definition "ctr0_stms_events = set (
   [terminate_ctr0_C ()] @ 
@@ -851,7 +849,7 @@ definition rename_mod0_ctr0_events where
 "
 
 definition rename_D__ctr0 where
-"rename_D__ctr0 idd = rename (pinj_of_alist rename_mod0_ctr0_events) (D__ctr0 idd)"
+"rename_D__ctr0 idd = rename (pfun_of_alist (map (\<lambda> (x,y). (y,x)) rename_mod0_ctr0_events)) (D__ctr0 idd)"
 
 definition "mod0_set_x_events = set (
   [set_x_mod0_C n. n \<leftarrow> core_int_list]
