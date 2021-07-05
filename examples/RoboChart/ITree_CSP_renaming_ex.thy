@@ -45,6 +45,7 @@ A-C       A-B       B-C
 (a1,c1) undefined (a1, c1)
  
 *)
+(*
 primcorec rename1 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
 "rename1 \<rho> P = 
   (case P of
@@ -64,7 +65,7 @@ term "(ren::'e\<^sub>1 \<Zpfun> 'e\<^sub>2) (\<lambda>e::'e\<^sub>1.
    (case (pfun_lookup (F :: 'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'r) itree)) e \<comment> \<open> partial function to map\<close>
     of None \<Rightarrow> None | 
        Some v \<Rightarrow> Some (v)))"
-
+*)
 subsection \<open> General definitions \<close>
 definition "int_max = (1::integer)"
 definition "int_min = (-1::integer)"
@@ -162,42 +163,7 @@ definition rename_map where
 "
 
 definition Pr where
-"Pr = rename (pinj_of_alist rename_map) (P)"
-
-value "pfun_of_pinj (pinv (pinj_of_alist rename_map))"
-value "pfun_of_pinj
-  (pinj_of_alist
-    [(e1_stm0_C (NULLTRANSITION_stm0, din, - 1), e1__stm0_C (NULLTRANSITION_stm0, din, - 1)),
-     (e1_stm0_C (NULLTRANSITION_stm0, din, 0), e1__stm0_C (NULLTRANSITION_stm0, din, 0))])"
-
-print_codeproc
-code_thms pfun_of_pinj
-code_deps pfun_of_pinj
-
-term "map_pfun"
-term "pfun_of_map"
-term "pfun_lookup"
-term "map_of"
-term "(F \<circ>\<^sub>p pfun_of_pinj (pinv \<rho>))"
-
-(*
-We may think about rename as a different approach without inverse.
-1. Rename:  @{text "'e\<^sub>1 \<Rightarrow>\<^sub>p 'e\<^sub>2 \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree"}
-For Vis (F :: 'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'r) itree), 
-2. Overall procedure
-  (1) Drop F down to a map:: "'a \<Rightarrow> 'b option" or AList;
-  (2) Then for each event (e\<^sub>1) in the map, apply the rename map (\<rho>::'e\<^sub>1 \<Rightarrow>\<^sub>p 'e\<^sub>2), to 
-    get its corresponding event (\<rho> e\<^sub>1) in the new process;
-  (3) Form a new pair (\<rho> e\<^sub>1, rename (F e\<^sub>1)) into AList;
-  (4) Lift the AList to \<Zpfun> partial functions.
-*)
-
-term "\<lambda>e::'e\<^sub>1. 
-   (case (pfun_lookup (F :: 'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'r) itree)) e \<comment> \<open> partial function to map\<close>
-    of None \<Rightarrow> None | 
-       Some v \<Rightarrow> Some ((ren e), v))"
-
-value "(pfun_of_alist rename_map)"
+"Pr = rename (pfun_of_alist (map (\<lambda> (x,y). (y,x)) rename_map)) (P)"
 
 subsection \<open> Export code \<close>
 export_code

@@ -63,8 +63,8 @@ lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>
 
 text \<open> Hide the state of an action to produce a process \<close>
 
-definition proc :: "'s::default subst \<Rightarrow> ('e, 's) action \<Rightarrow> 'e process" where
-"proc I A = (\<langle>(\<lambda> _. default)\<rangle>\<^sub>a \<Zcomp> \<langle>I\<rangle>\<^sub>a \<Zcomp> A \<Zcomp> assigns (\<lambda> s. ())) ()"
+definition process :: "'s::default subst \<Rightarrow> ('e, 's, 'a) ktree \<Rightarrow> 'e process" where
+"process I A = (\<langle>(\<lambda> _. default)\<rangle>\<^sub>a \<Zcomp> \<langle>I\<rangle>\<^sub>a \<Zcomp> A \<Zcomp> assigns (\<lambda> s. ())) ()"
 
 abbreviation "abs_st P \<equiv> P \<Zcomp> assigns (\<lambda> s. ())"
 
@@ -90,6 +90,12 @@ lemma input_alt_def: "input c P = input_in c (UNIV)\<^sub>e P"
 
 lemma input_enum [code_unfold]: "wb_prism c \<Longrightarrow> input c P = input_in c (\<lambda> _. set enum_class.enum) P"
   by (simp add: input_in_def input_def fun_eq_iff inp_enum inp_alist)
+
+definition "input' c P = (\<lambda>s. inp' c \<bind> (\<lambda>x. P x s))"
+
+lemma input_code_unfold [code_unfold]: 
+  "wb_prism c \<Longrightarrow> input c P = input' c P"
+  using inp_in_coset by (fastforce simp add: input_def input'_def inp_in_coset inp'_def)
 
 syntax 
   "_input"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)

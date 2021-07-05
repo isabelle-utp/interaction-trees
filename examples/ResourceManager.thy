@@ -31,7 +31,7 @@ definition Deallocate :: "(chan, ResourceManager) htree" where
 "Deallocate = dealloc?(r):(res - free) \<rightarrow> free := free \<union> {r}"
 
 definition "ResourceManagerProc R
-  = proc [res \<leadsto> R, free \<leadsto> R] (loop (Allocate\<^sub>1 \<box> Deallocate))"
+  = process [res \<leadsto> R, free \<leadsto> R] (loop (Allocate\<^sub>1 \<box> Deallocate))"
 
 export_code ResourceManagerProc in Haskell module_name ResourceManager (string_classes)
 

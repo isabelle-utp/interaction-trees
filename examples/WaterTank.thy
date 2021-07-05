@@ -25,10 +25,11 @@ text \<open> Communications once the ODE has completed an evolution round \<clos
 definition Comms :: "(chan, TankState) htree" where
 "Comms = 
     finished := False \<Zcomp> 
-    while (\<not> finished)\<^sub>e 
+    while (\<not> finished) do
       (viewLevel!(level) \<rightarrow> Skip 
       \<box> switch!(()) \<rightarrow> (flowOn := (\<not> flowOn))
-      \<box> tock!(()) \<rightarrow> (finished := True))"
+      \<box> tock!(()) \<rightarrow> (finished := True))
+    od"
 
 text \<open> Discrete representation of a simple ODE. The level can rise and fall, but it cannot fall below 0. \<close>
 
@@ -39,7 +40,7 @@ definition Tank :: "(chan, TankState) htree" where
 "Tank = ODE \<Zcomp> Comms"
 
 definition WaterTank :: "chan process" where
-"WaterTank = proc [level \<leadsto> 0] (loop (Tank \<box> Stop))"
+"WaterTank = process [level \<leadsto> 0] (loop Tank)"
 
 export_code WaterTank in Haskell module_name WaterTank (string_classes)
 
