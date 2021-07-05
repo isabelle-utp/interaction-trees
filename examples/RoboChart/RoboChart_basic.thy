@@ -222,7 +222,7 @@ definition State_stm0_s0 where
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
         \<comment> \<open> State_stm0_s0_execute \<close>
-        (while 
+        (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
            \<comment> \<open> P \<close>
@@ -581,7 +581,7 @@ definition State_stm1_s0 where
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
         \<comment> \<open> State_stm1_s0_execute \<close>
-        (while 
+        (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
            \<comment> \<open> P \<close>
