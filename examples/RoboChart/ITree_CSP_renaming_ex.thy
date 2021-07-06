@@ -1,6 +1,4 @@
 section \<open>  \<close>
-text \<open> 
-\<close>
 
 theory ITree_CSP_renaming_ex
   imports "../../ITree_RoboChart"
@@ -8,64 +6,143 @@ begin
 
 declare [[show_types]]
 
-(*
-A-C       A-A         A-C
-(a1,c1) (a1,a1')    (a1',c1) 
-(a1,c1) undefined   (a1,c1)
-
-(a2,c2) (a2,a2')
-(a3,c3) (a3,a2')    a2' \<rightarrow> c2 [] a2' \<rightarrow> c3
+term "pfun_lookup"
+term "pfun_of_map"
+named_theorems "pfun_of_map_inverse"
+(* Only choose one for each a\<^sub>2
+(1) a\<^sub>1 \<in> dom(g).
+  (1.1) a\<^sub>1 \<in> dom(f).
+    (1.1.1) f(a\<^sub>1) \<in> dom(g). (f(a\<^sub>1), g(a\<^sub>1)) or (f(a\<^sub>1), g(f(a\<^sub>1)))
+    (1.1.2) f(a\<^sub>1) \<notin> dom(g). (f(a\<^sub>1), g(a\<^sub>1))
+  (1.2) a\<^sub>1 \<notin> dom(f). (a\<^sub>1, g(a\<^sub>1))
+(2) a\<^sub>1 \<notin> dom(g)
+  (2.1) a\<^sub>1 \<in> ran(f). 
+    (2.1.1) \<exists> x. f(x) = a\<^sub>1 \<and> x \<in> dom(g). (a\<^sub>1, g(SOME x. f(x) = a\<^sub>1 \<and> x \<in> dom(g)))
+    (2.1.2) \<not>\<exists> x. f(x) = a\<^sub>1 \<and> x \<in> dom(g). (a\<^sub>1, undefined) 
+  (2.2) a\<^sub>1 \<notin> dom(f). (a\<^sub>1, undefined)
 *)
 
-definition prioritised_pfun_apply1 :: "('a \<Zpfun> 'a) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> 'c)"  where 
-"prioritised_pfun_apply1 f g = pfun_of_map 
+(* a\<^sub>2 may lead to a nondeterministic choice of ...
+(1) a\<^sub>1 \<in> dom(g).
+  (1.1) a\<^sub>1 \<in> dom(f).
+    (1.1.1) f(a\<^sub>1) \<in> dom(g). (f(a\<^sub>1), g(a\<^sub>1) |~| g(f(a\<^sub>1)))
+        such as [(a1, a2)] [(a1, c1), (a2, c2)] = [(a2, c1 |~| c2)]
+    (1.1.2) f(a\<^sub>1) \<notin> dom(g). (f(a\<^sub>1), g(a\<^sub>1)) 
+        such as [(a1, a2)] [(a1, c1), (a3, c3)] = [(a2, c1), (a3, c3)]
+  (1.2) a\<^sub>1 \<notin> dom(f). (a\<^sub>1, g(a\<^sub>1) |~| ran ((dom (f \<rhd>\<^sub>p {a\<^sub>1})) \<lhd>\<^sub>p g))
+        such as [(a1, a3), (a2, a3)] [(a1, c1), (a3, c3)] = [(a3, c3 |~| c1)]
+(2) a\<^sub>1 \<notin> dom(g). (a\<^sub>1, if ran ((dom (f \<rhd>\<^sub>p {a\<^sub>1})) \<lhd>\<^sub>p g) = {} then undefined else Some ran ((dom (f \<rhd>\<^sub>p {a\<^sub>1})) \<lhd>\<^sub>p g))
+*)
+
+definition pfun_comp1 :: "('a \<Zpfun> 'a) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> 'c)"  where 
+"pfun_comp1 f g = pfun_of_map
 (\<lambda>a\<^sub>2::'a. 
-  if a\<^sub>2 \<in> pran f then 
-    (if (pdom (f \<rhd>\<^sub>p {a\<^sub>2})) = {} then undefined else undefined) 
-  else 
-    (if a\<^sub>2 \<in> pdom g then Some (g (a\<^sub>2)\<^sub>p) else undefined)
+  if a\<^sub>2 \<in> pran f then \<comment> \<open>a2 is in the range of the renaming map f\<close>
+    (if (\<exists> a\<^sub>1. a\<^sub>1 \<in> (pdom (f \<rhd>\<^sub>p {a\<^sub>2})) \<and> g (a\<^sub>1)\<^sub>p \<noteq> undefined)
+      then Some (g (SOME a\<^sub>1. a\<^sub>1 \<in> (pdom (f \<rhd>\<^sub>p {a\<^sub>2})) \<and> g (a\<^sub>1)\<^sub>p \<noteq> undefined))
+      else undefined)
+  else \<comment> \<open>a2 is not in the range of the renaming map f\<close>
+    (if a\<^sub>2 \<in> pdom g \<comment> \<open>, but a2 is in the domain of the original function g\<close>
+      then Some (g (a\<^sub>2)\<^sub>p) \<comment> \<open>the result is the map in g \<close>
+      else undefined  \<comment> \<open>, otherwise the result is undefined. \<close>
+    )
 )"
 
+function compose1 :: "('a \<times> 'a) list \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> ('a \<times> 'b) list"
+  where
+    "compose1 [] ys = ys"
+  | "compose1 (x # xs) ys =
+      (case map_of ys (fst x) of
+        None \<Rightarrow> compose1 xs ys
+      | Some v \<Rightarrow> AList.update (snd x) v (compose1 xs (AList.delete (fst x) ys)))"
+  using compose.cases 
+  by blast+
+termination by lexicographic_order
 
-definition prioritised_pfun_apply2 :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('b \<Zpfun> 'c)"  where 
-"prioritised_pfun_apply2 f g = pfun_of_map 
-  (\<lambda>b::'b. if (pdom (f \<rhd>\<^sub>p {b})) = {} then undefined else None)"
+thm compose1.simps
 
+(* Case 1: *)
+lemma "compose1 [(din, dout)] [(din, 1), (dout, 2)] = [(dout, 1)]"
+  by (simp)
+
+lemma "compose1 [(din, dout)] [(din, 1), (dout, 2)] = [(dout, 1)]"
+  by (simp)
+
+definition range_restrict :: "('key \<times> 'val) list \<Rightarrow> 'val set \<Rightarrow>  ('key \<times> 'val) list"
+  where range_restrict_eq: "range_restrict m A = filter (\<lambda>(_, v). v \<in> A) m"
+
+lemma range_restrict_simps [simp]:
+  "range_restrict [] A = []"
+  "range_restrict (p#ps) A = (if snd p \<in> A then p # range_restrict ps A else range_restrict ps A)"
+  by (auto simp add: range_restrict_eq)
+
+lemma "map_of [(a\<^sub>1, a\<^sub>2), (a\<^sub>1, a\<^sub>1)] = map_of [(a\<^sub>1, a\<^sub>2)]"
+  by simp
+
+
+lemma range_restr_conv': "map_of (range_restrict al A) = ((map_of (map (\<lambda>(x, y). (y, x)) al)) |` A )"
+
+
+lemma pran_res_alist [code]:
+  "(pfun_of_alist m) \<rhd>\<^sub>p A = pfun_of_alist (range_restrict m A)"
+  apply (transfer, simp add: ran_restrict_map_def)
+  sledgehammer
+
+definition intchoice_set :: "('e, 'a) itree set \<Rightarrow> ('e, 'a) itree" where
+"intchoice_set s = (if s = {} then deadlock else (SOME x. x \<in> s))"
+
+lemma intchoice_set_of_alist [code]: 
+  "intchoice_set (set s) = (if s = [] then deadlock else hd s)"
+  apply (simp add: intchoice_set_def)
+
+(* Partial renaming and other events not in the renaming map are not changed. *)
 (*
-Should define a function that 
-f:: ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('b \<Zpfun> 'c)
-f pf1 pf2 = 
-
-1) for each b in pdom(f pf1 pf2), there exists a in pdom(pran_res pf1 {b}))\<^sub>p
-and pdom(pf2).
-2) For many-to-one (pf1), we choose the one a in pdom(pf2), if pf1 (a)\<^sub>p = b.
-
-A-C       A-B       B-C
-(a1,c1) (a1,b1)   (b1, c1) 
-(a1,c1) undefined (a1, c1)
- 
+a\<^sub>2 may from (a\<^sub>2, F(a\<^sub>2)), or from (a\<^sub>1, a\<^sub>2) in \<rho> and then (\<rho>(a\<^sub>1), F(a\<^sub>1))
 *)
-(*
-primcorec rename1 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+
+definition Vis_rename1 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>1) \<Rightarrow> ('e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'a) itree) \<Rightarrow> ('e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'a) itree)"  where 
+"Vis_rename1 \<rho> F = pfun_of_map
+(\<lambda>a\<^sub>2::'e\<^sub>1. 
+    if (F a\<^sub>2) = undefined 
+    then (
+          if pran ((pdom (\<rho> \<rhd>\<^sub>p {a\<^sub>2})) \<lhd>\<^sub>p F) = {}
+          then undefined 
+          else Some (intchoice_set (pran ((pdom (\<rho> \<rhd>\<^sub>p {a\<^sub>2})) \<lhd>\<^sub>p F))))
+    else (
+          if pran ((pdom (\<rho> \<rhd>\<^sub>p {a\<^sub>2})) \<lhd>\<^sub>p F) = {} 
+          then Some (F a\<^sub>2)
+          else Some (intchoice_set ({(F a\<^sub>2)} \<union> pran ((pdom (\<rho> \<rhd>\<^sub>p {a\<^sub>2})) \<lhd>\<^sub>p F))))
+)"
+
+primcorec rename1 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>1) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>1, 'a) itree" where
 "rename1 \<rho> P = 
   (case P of
     Ret x \<Rightarrow> Ret x |
-    Sil Pa \<Rightarrow> Sil (rename1 \<rho> Pa) |
-    Vis F \<Rightarrow> Vis (pfun_of_map (\<lambda>e\<^sub>2 . case \<exists>e\<^sub>1. (\<rho> (e\<^sub>1)\<^sub>p = e\<^sub>2) \<and> (F (e\<^sub>1)\<^sub>p \<noteq> undefined) 
-              of True \<Rightarrow> Some (rename1 \<rho> (F (SOME e\<^sub>1 . e\<^sub>1 \<in> pdom(pran_res \<rho> {e\<^sub>2}))\<^sub>p)) |
-                 Flase \<Rightarrow> None))
+    Sil P \<Rightarrow> Sil (rename1 \<rho> P) |
+    Vis F \<Rightarrow> Vis (map_pfun (rename1 \<rho>) (Vis_rename1 \<rho> F)))"
+
+(* Total renaming and all events will be renamed. *)
+(*
+  a\<^sub>2 are only from (a\<^sub>1, a\<^sub>2) in \<rho> and then (\<rho>(a\<^sub>1), F(a\<^sub>1))
+*)
+definition dom_of_range_res::"('a \<Rightarrow> 'b) \<Rightarrow> 'b \<Rightarrow> 'a set" where
+"dom_of_range_res f y = {x. f x = y}"
+
+definition Vis_rename2 :: "('e\<^sub>1 \<Rightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'a) itree) \<Rightarrow> ('e\<^sub>2 \<Zpfun> ('e\<^sub>1, 'a) itree)"  where 
+"Vis_rename2 \<rho> F = pfun_of_map
+(\<lambda>a\<^sub>2::'e\<^sub>2. 
+   if pran ((dom_of_range_res \<rho> a\<^sub>2) \<lhd>\<^sub>p F) = {} 
+    then undefined 
+    else Some (intchoice_set (pran ((dom_of_range_res \<rho> a\<^sub>2) \<lhd>\<^sub>p F)))
 )"
 
-term "F (SOME e\<^sub>1 . e\<^sub>1 \<in> pdom(pran_res \<rho> {e\<^sub>2}))\<^sub>p"
-term "(pfun_of_map (\<lambda>e\<^sub>2::'e\<^sub>2 . case \<exists>e\<^sub>1::'e\<^sub>1. (\<rho> (e\<^sub>1)\<^sub>p = e\<^sub>2) \<and> ((F::'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'a) itree) (e\<^sub>1)\<^sub>p \<noteq> undefined) 
-              of True \<Rightarrow> Some (rename1 \<rho> (F (SOME e\<^sub>1 . e\<^sub>1 \<in> pdom(pran_res \<rho> {e\<^sub>2}))\<^sub>p)) |
-                 Flase \<Rightarrow> None))"
+primcorec rename2 :: "('e\<^sub>1 \<Rightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+"rename2 \<rho> P = 
+  (case P of
+    Ret x \<Rightarrow> Ret x |
+    Sil P \<Rightarrow> Sil (rename2 \<rho> P) |
+    Vis F \<Rightarrow> Vis (map_pfun (rename2 \<rho>) (Vis_rename2 \<rho> F)))"
 
-term "(ren::'e\<^sub>1 \<Zpfun> 'e\<^sub>2) (\<lambda>e::'e\<^sub>1. 
-   (case (pfun_lookup (F :: 'e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'r) itree)) e \<comment> \<open> partial function to map\<close>
-    of None \<Rightarrow> None | 
-       Some v \<Rightarrow> Some (v)))"
-*)
 subsection \<open> General definitions \<close>
 definition "int_max = (1::integer)"
 definition "int_min = (-1::integer)"
@@ -165,10 +242,24 @@ definition rename_map where
 definition Pr where
 "Pr = rename (pfun_of_alist (map (\<lambda> (x,y). (y,x)) rename_map)) (P)"
 
+definition rename_map1 where
+"rename_map1 = 
+  [(e1__stm0_C (tid, dir, n), e1__stm0_C (tid, dir, n)) . 
+          tid \<leftarrow> TIDS_stm0_list, 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list] @
+  []
+"
+
+term "map"
+definition Prr where
+"Prr = rename1 (pfun_of_alist (map (\<lambda> (x,y). (y,x)) rename_map1)) (P)"
+
 subsection \<open> Export code \<close>
 export_code
   P
   Pr
+  Prr
   in Haskell
   file_prefix renaming_ex 
   (string_classes) 
