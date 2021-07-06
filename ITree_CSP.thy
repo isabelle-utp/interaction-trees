@@ -12,6 +12,9 @@ definition skip :: "('e, unit) itree" where
 definition inp_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('e, 'a) itree" where
 "inp_in c A = (\<bbar> e \<in> (dom match\<^bsub>c\<^esub> \<inter> build\<^bsub>c\<^esub> ` A) \<rightarrow> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
 
+definition inp_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
+"inp_where c P = Vis (\<lambda> e \<in> dom match\<^bsub>c\<^esub> | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
+
 lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
   by (auto simp add: inp_in_def)
      (metis imageI insertCI option.sel rangeI retvals_Ret wb_prism.range_build wb_prism_def)
@@ -27,6 +30,11 @@ definition inp_list :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow
 
 definition inp' :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
 "inp' c = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> Some (Ret v) | None \<Rightarrow> None))"
+
+lemma inp_where_code [code]:
+  "inp_where c P = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> if (P v) then Some (Ret v) else None | None \<Rightarrow> None))"
+  by (auto simp add: inp_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
+     (metis option.collapse option.distinct(1))+
 
 lemma build_in_dom_match [simp]: "wb_prism c \<Longrightarrow> build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub>"
   by (simp add: dom_def)
@@ -826,12 +834,12 @@ primcorec exception :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, '
 
 subsection \<open> Renaming \<close>
 
-primcorec rename :: "('e\<^sub>2 \<Zpfun> 'e\<^sub>1) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
 "rename \<rho> P = 
   (case P of
     Ret x \<Rightarrow> Ret x |
     Sil P \<Rightarrow> Sil (rename \<rho> P) |
-    Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p \<rho>)))"
+    Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p graph_pfun ((pdom F \<lhd>\<^sub>r \<rho>)\<inverse>))))"
 
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
   by (simp add: deadlock_def rename.code)

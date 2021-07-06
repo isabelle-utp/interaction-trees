@@ -240,7 +240,7 @@ definition rename_map where
 "
 
 definition Pr where
-"Pr = rename (pfun_of_alist (map (\<lambda> (x,y). (y,x)) rename_map)) (P)"
+"Pr = rename (set rename_map) (P)"
 
 definition rename_map1 where
 "rename_map1 = 
@@ -259,7 +259,6 @@ subsection \<open> Export code \<close>
 export_code
   P
   Pr
-  Prr
   in Haskell
   file_prefix renaming_ex 
   (string_classes) 

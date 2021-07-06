@@ -1,6 +1,8 @@
 theory ResourceManager
   imports "../ITree_Extraction"
-begin lit_vars
+begin 
+
+lit_vars
 
 schema ResourceManager =
   res  :: "integer set"
@@ -15,6 +17,8 @@ chantype chan =
 
 definition Allocate :: "(chan, ResourceManager) htree" where
 "Allocate = alloc?(r):free \<rightarrow> free := free - {r}"
+
+term "operation alloc (\<lambda> r. (r \<in> free) & free := free - {r})"
 
 text \<open> If we just select the minimum of free, the simulation crashes when all resources are allocated. 
   Adding the intersection with @{const free} means that @{term "(Min free)\<^sub>e"} is not evaluated due

@@ -16,8 +16,10 @@ type_synonym ('e, 'inp, 'outp, 'st) procedure = "('e, ('inp, 'st) valst, ('outp,
 translations
   (type) "('e, 'inp, 'outp, 'st) procedure" <= (type) "('inp, 'st) valst \<Rightarrow> ('e, ('outp, 'st') valst) itree" 
 
+(*
 definition operation :: "('inp \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('outp \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'inp, 'outp, 'st) procedure \<Rightarrow> ('e, 'st) htree" where
 "operation ci co P = (\<lambda> s. inp ci \<bind> (\<lambda> inp. P \<lparr> vval = inp, vst = s \<rparr> \<bind> (\<lambda> v. outp co (vval v) \<bind> (\<lambda> _. Ret (vst v)))))"
+*)
 
 definition procproc :: "(_, 'inp, 'outp, 'st::default) procedure \<Rightarrow> ('inp, 'outp) methop process" where
 "procproc P = process [\<leadsto>] (\<lambda> s. inp Call \<bind> (\<lambda> inp. P \<lparr> vval = inp, vst = s \<rparr> \<bind> (\<lambda> vst. outp Return (vval vst) \<bind> Ret)))"
@@ -28,17 +30,22 @@ definition promote_proc :: "('e, 'inp, 'outp, 'ls) procedure \<Rightarrow> ('i \
 lemma Call_wb_prism [simp, code_unfold]: "wb_prism Call" by (unfold_locales, auto simp add: lens_defs)
 lemma Return_wb_prism [simp, code_unfold]: "wb_prism Return" by (unfold_locales, auto simp add: lens_defs)
 
-definition "procret e = (\<lambda> s. Ret \<lparr> vval = e s, vst = s \<rparr>)"
+definition "proc_ret e = (\<lambda> s. Ret \<lparr> vval = e s, vst = s \<rparr>)"
 
 definition procedure :: "('inp \<Rightarrow> 'st \<Rightarrow> ('e, ('outp, 'st) valst) itree) \<Rightarrow> ('e, 'inp, 'outp, 'st) procedure" where
 "procedure P = (\<lambda> vs. P (vval vs) (vst vs))"
 
+definition proc_call :: "('o \<Longrightarrow> 's) \<Rightarrow> ('e, 'i, 'o, 'ls::default) procedure \<Rightarrow> ('i, 's) expr \<Rightarrow> ('e, 's) htree" 
+  where "proc_call x P e = (\<lambda> s. P \<lparr> vval = e s, vst = default \<rparr> \<bind> (\<lambda> vs. Ret (put\<^bsub>x\<^esub> s (vval vs))))"
+
 syntax 
   "_procedure" :: "pttrn \<Rightarrow> logic \<Rightarrow> logic" ("proc _. _" [0, 20] 20)
+  "_call" :: "svid \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ := call _ _" [61, 0, 61] 61)
   "_return" :: "logic \<Rightarrow> logic" ("return")
 
 translations 
   "_procedure x P" == "CONST procedure (\<lambda> x. P)"
-  "_return e" == "CONST procret (e)\<^sub>e"
+  "_return e" == "CONST proc_ret (e)\<^sub>e"
+  "_call x P e" == "CONST proc_call x P (e)\<^sub>e"
 
 end
