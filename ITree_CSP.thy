@@ -9,6 +9,9 @@ subsection \<open> Basic Constructs \<close>
 definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
+definition inp_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
+"inp_in_where c A P = Vis (\<lambda> e \<in> dom match\<^bsub>c\<^esub> \<inter> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
+
 definition inp_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('e, 'a) itree" where
 "inp_in c A = (\<bbar> e \<in> (dom match\<^bsub>c\<^esub> \<inter> build\<^bsub>c\<^esub> ` A) \<rightarrow> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
 
@@ -28,9 +31,18 @@ abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('
 definition inp_list :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('e, 'a) itree" where
 "inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> ) B)))"
 
+definition inp_list_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
+"inp_list_where c B P = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> \<and> P (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x)))) B)))"
+
+
 definition inp' :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
 "inp' c = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> Some (Ret v) | None \<Rightarrow> None))"
 
+lemma inp_in_where_code [code]:
+  "inp_in_where c (set xs) P = inp_list_where c xs P"
+  unfolding inp_in_where_def inp_list_where_def
+  by (simp only: set_map [THEN sym] inter_set_filter pabs_set filter_map comp_def, simp add: comp_def)
+   
 lemma inp_where_code [code]:
   "inp_where c P = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> if (P v) then Some (Ret v) else None | None \<Rightarrow> None))"
   by (auto simp add: inp_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
