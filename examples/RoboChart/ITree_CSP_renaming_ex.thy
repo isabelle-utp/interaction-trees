@@ -78,12 +78,7 @@ primcorec rename1 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>1) \<Rightarrow> ('e\<^sub>1
 
 
 definition Vis_rename2 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1 \<Zpfun> ('e\<^sub>1, 'a) itree) \<Rightarrow> ('e\<^sub>2 \<Zpfun> ('e\<^sub>1, 'a) itree)"  where 
-"Vis_rename2 \<rho> F = pfun_of_map
-(\<lambda>a\<^sub>2::'e\<^sub>2. 
-   if pran ((pdom (\<rho> \<rhd>\<^sub>p {a\<^sub>2})) \<lhd>\<^sub>p F) = {} 
-    then undefined 
-    else Some (intchoice_set (pran ((pdom (\<rho> \<rhd>\<^sub>p {a\<^sub>2})) \<lhd>\<^sub>p F)))
-)"
+"Vis_rename2 \<rho> F = F \<circ>\<^sub>p pfun_of_pinj (pinv (pinj_of_pfun ((pdom F) \<lhd>\<^sub>p \<rho>)))"
 
 primcorec rename2 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
 "rename2 \<rho> P = 
@@ -188,10 +183,8 @@ definition rename_map where
   []
 "
 
-term "AList.restrict (\<^bold>I(P)) rename_map"
- 
 definition Pr where
-"Pr = rename (set rename_map) (P)"
+"Pr = rename2 (pfun_of_alist rename_map) (P)"
 
 definition rename_map1 where
 "rename_map1 = 
