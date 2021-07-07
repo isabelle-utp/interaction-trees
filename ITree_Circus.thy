@@ -91,8 +91,11 @@ lemma input_alt_def: "input c P = input_in c (UNIV)\<^sub>e P"
 lemma input_enum [code_unfold]: "wb_prism c \<Longrightarrow> input c P = input_in c (\<lambda> _. set enum_class.enum) P"
   by (simp add: input_in_def input_def fun_eq_iff inp_enum inp_alist)
 
-definition input_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"input_where c P Q = (\<lambda>s. inp_where c (\<lambda> v. P v s) \<bind> (\<lambda>x. Q x s))"
+definition input_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_in_where c A P = (\<lambda>s. inp_in_where c (A s) (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
+
+definition input_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_where c P = (\<lambda>s. inp_where c (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
 
 definition "input' c P = (\<lambda>s. inp' c \<bind> (\<lambda>x. P x s))"
 
@@ -100,12 +103,16 @@ lemma input_code_unfold [code_unfold]:
   "wb_prism c \<Longrightarrow> input c P = input' c P"
   using inp_in_coset by (fastforce simp add: input_def input'_def inp_in_coset inp'_def)
 
+no_notation disj (infixr "|" 30)
+
 syntax 
-  "_input"       :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
-  "_input_in"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [60, 0, 0, 61] 61)
-  "_input_where" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_|_ \<rightarrow> _" [60, 0, 0, 61] 61)
+  "_input"          :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
+  "_input_in_where" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_/ |/ _ \<rightarrow> _" [60, 0, 0, 0, 61] 61)
+  "_input_in"       :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_:_ \<rightarrow> _" [60, 0, 0, 61] 61)
+  "_input_where"    :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_?_/ |/ _ \<rightarrow> _" [60, 0, 0, 61] 61)
 
 translations "c?(x) \<rightarrow> P" == "CONST input c (\<lambda> (x). P)"
+translations "c?(x):A|B \<rightarrow> P" == "CONST input_in_where c (A)\<^sub>e (\<lambda> x. ((B)\<^sub>e, P))"
 translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambda> (x). P)"
 translations "c?(x)|P \<rightarrow> Q" => "CONST input_where c (\<lambda> (x). (P)\<^sub>e) (\<lambda> (x). Q)"
 translations "c?(x)|P \<rightarrow> Q" <= "CONST input_where c (\<lambda> (x). (P)\<^sub>e) (\<lambda> y. Q)"
