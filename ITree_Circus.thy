@@ -114,8 +114,7 @@ syntax
 translations "c?(x) \<rightarrow> P" == "CONST input c (\<lambda> (x). P)"
 translations "c?(x):A|B \<rightarrow> P" == "CONST input_in_where c (A)\<^sub>e (\<lambda> x. ((B)\<^sub>e, P))"
 translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambda> (x). P)"
-translations "c?(x)|P \<rightarrow> Q" => "CONST input_where c (\<lambda> (x). (P)\<^sub>e) (\<lambda> (x). Q)"
-translations "c?(x)|P \<rightarrow> Q" <= "CONST input_where c (\<lambda> (x). (P)\<^sub>e) (\<lambda> y. Q)"
+translations "c?(x)|P \<rightarrow> Q" == "CONST input_where c (\<lambda> (x). ((P)\<^sub>e, Q))"
 
 lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P(x))"
   by (simp add: input_def kleisli_comp_def assigns_def)
