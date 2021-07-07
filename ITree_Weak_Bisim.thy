@@ -85,19 +85,6 @@ lemma wbisim_to_ndiv2 [elim]: "P \<approx>\<^bsub>\<R>\<^esub> diverge \<Longrig
 coinductive wbisim :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>" 50) where
 wbisim_divI: "diverge \<approx> diverge" |
 wbisimI: "P \<approx>\<^bsub>(\<approx>)\<^esub> Q \<Longrightarrow> P \<approx> Q"
-
-lemma wbisim_set_rep: 
-  "(\<approx>) = (\<lambda> x y. (x, y) \<in> \<Union> {\<R>. \<R> \<subseteq> {(P, Q). P = diverge \<and> Q = diverge \<or> (P \<approx>\<^bsub>(\<lambda> x y. (x, y) \<in> \<R>)\<^esub> Q)}})"
-  apply (simp add: fun_eq_iff)
-  apply (safe)
-   apply (rule_tac x="{(x, y). x \<approx> y}" in exI)
-  apply (auto)[1]
-  apply (metis wbisim.cases)
-  apply (metis wbisim.cases)
-  apply (subst HOL.nitpick_unfold(209))
-  apply (simp add: gfp_def)
-  apply (smt (z3) BNF_Def.Collect_case_prodD basic_trans_rules(31) predicate2I prod.sel(1) prod.sel(2))
-  done
   
 lemma diverge_wbisim1: "diverge \<approx> Q \<Longrightarrow> Q = diverge"
   apply (coinduction rule: itree_strong_coind)
