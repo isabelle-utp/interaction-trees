@@ -393,9 +393,38 @@ definition rename_stm0_events where
           n \<leftarrow> core_int_list]
 "
 
+definition rename_stm0_events_others where
+"rename_stm0_events_others = 
+  [(terminate_stm0_C(), terminate_stm0_C () ) ] @
+  [(get_x_stm0_C (n), get_x_stm0_C (n)) . 
+          n \<leftarrow> core_int_list] @
+  [(set_x_stm0_C (n), set_x_stm0_C (n)) . 
+          n \<leftarrow> core_int_list] @
+  [(set_EXT_x_stm0_C (n), set_EXT_x_stm0_C (n)) .
+          n \<leftarrow> core_int_list] @
+  [(e1_stm0_C (dir, n), e1_stm0_C (dir, n)) . 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list] @
+  [(e3_stm0_C (dir, n), e3_stm0_C (dir, n)) . 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list] @
+  [(enter_stm0_C (sid1, sid2), enter_stm0_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm0_list, 
+          sid2 \<leftarrow> SIDS_stm0_list] @
+  [(entered_stm0_C (sid1, sid2), entered_stm0_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm0_list, 
+          sid2 \<leftarrow> SIDS_stm0_list] @
+  [(exit_stm0_C (sid1, sid2), exit_stm0_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm0_list, 
+          sid2 \<leftarrow> SIDS_stm0_list] @
+  [(exited_stm0_C (sid1, sid2), exited_stm0_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm0_list, 
+          sid2 \<leftarrow> SIDS_stm0_list] 
+"
+
 definition rename_MemorySTM_opt_stm0 where
 "rename_MemorySTM_opt_stm0 idd = 
-  rename (set rename_stm0_events) (MemorySTM_opt_stm0 idd)
+  rename (set (rename_stm0_events @ rename_stm0_events_others)) (MemorySTM_opt_stm0 idd)
 "
 
 definition AUX_opt_stm0 where
@@ -699,9 +728,38 @@ definition rename_stm1_events where
           n \<leftarrow> core_int_list]
 "
 
+definition rename_stm1_events_others where
+"rename_stm1_events_others = 
+  [(terminate_stm1_C(), terminate_stm1_C () ) ] @
+  [(get_x_stm1_C (n), get_x_stm1_C (n)) . 
+          n \<leftarrow> core_int_list] @
+  [(set_x_stm1_C (n), set_x_stm1_C (n)) . 
+          n \<leftarrow> core_int_list] @
+  [(set_EXT_x_stm1_C (n), set_EXT_x_stm1_C (n)) .
+          n \<leftarrow> core_int_list] @
+  [(e2_stm1_C (dir), e2_stm1_C (dir)) . 
+          dir \<leftarrow> InOut_list] @
+  [(e3_stm1_C (dir, n), e3_stm1_C (dir, n)) . 
+          dir \<leftarrow> InOut_list, 
+          n \<leftarrow> core_int_list] @
+  [(enter_stm1_C (sid1, sid2), enter_stm1_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm1_list, 
+          sid2 \<leftarrow> SIDS_stm1_list] @
+  [(entered_stm1_C (sid1, sid2), entered_stm1_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm1_list, 
+          sid2 \<leftarrow> SIDS_stm1_list] @
+  [(exit_stm1_C (sid1, sid2), exit_stm1_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm1_list, 
+          sid2 \<leftarrow> SIDS_stm1_list] @
+  [(exited_stm1_C (sid1, sid2), exited_stm1_C (sid1, sid2)) . 
+          sid1 \<leftarrow> SIDS_stm1_list, 
+          sid2 \<leftarrow> SIDS_stm1_list] 
+"
+
 definition rename_MemorySTM_opt_stm1 where
 "rename_MemorySTM_opt_stm1 idd = 
-  rename (set rename_stm1_events) (MemorySTM_opt_stm1 idd)
+  rename (set (rename_stm1_events @ rename_stm1_events_others)) 
+    (MemorySTM_opt_stm1 idd)
 "
 
 (* Exception: P [| A |> Q*)
@@ -763,7 +821,8 @@ definition rename_ctr0_stm0_events where
   [(set_x_stm0_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list] @
   [(get_x_stm0_C n, get_x_ctr0_C n). n \<leftarrow> core_int_list] @
   [(e1_stm0_C (d, n), e1_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
-  [(e3_stm0_C (dout, n), e3_ctr0_C (dout, n)). n \<leftarrow> core_int_list]
+  [(e3_stm0_C (d, n), e3_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
+  [(set_EXT_x_stm0_C x, set_EXT_x_ctr0_stm0_C x) . x \<leftarrow> core_int_list]
 "
 
 definition rename_D__stm0 where
@@ -775,7 +834,10 @@ definition rename_ctr0_stm1_events where
   [(set_x_stm1_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list] @
   [(get_x_stm1_C n, get_x_ctr0_C n). n \<leftarrow> core_int_list] @
   [(e2_stm1_C (d), e2_ctr0_C (d)). d \<leftarrow> InOut_list] @
-  [(e3_stm1_C (din, n), e3_ctr0_C (din, n)). n \<leftarrow> core_int_list]
+\<comment> \<open>It is important to invert directions in one side: either stm0 or stm1 \<close>
+  [(e3_stm1_C (din, n), e3_ctr0_C (dout, n)). n \<leftarrow> core_int_list] @
+  [(e3_stm1_C (dout, n), e3_ctr0_C (din, n)). n \<leftarrow> core_int_list] @
+  [(set_EXT_x_stm1_C x, set_EXT_x_ctr0_stm1_C x) . x \<leftarrow> core_int_list]
 "
 
 definition rename_D__stm1 where
@@ -830,7 +892,8 @@ definition rename_mod0_ctr0_events where
   [(set_x_ctr0_C n, set_x_mod0_C n). n \<leftarrow> core_int_list] @
   [(get_x_ctr0_C n, get_x_mod0_C n). n \<leftarrow> core_int_list] @
   [(e1_ctr0_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
-  [(e2_ctr0_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list]
+  [(e2_ctr0_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
+  [(set_EXT_x_ctr0_C n, set_EXT_x_mod0_ctr0_C n). n \<leftarrow> core_int_list]
 "
 
 definition rename_D__ctr0 where
@@ -847,6 +910,13 @@ definition "mod0_get_x_events = set (
 definition "mod0_set_EXT_x_events = set (
   [set_EXT_x_mod0_ctr0_C n. n \<leftarrow> core_int_list]
 )"
+
+definition D__ctr_mem where
+"D__ctr_mem (idd::integer) = (
+              (rename_D__ctr0 idd) 
+              \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
+              (discard_state (Memory_mod0 idd))
+            )"
 
 definition D__mod0 where
 "D__mod0 (idd::integer) = 
@@ -880,7 +950,7 @@ export_code
   STM_stm0
   MemorySTM_opt_stm0 
   rename_MemorySTM_opt_stm0
-  (*D__stm0 
+  D__stm0 
   stm1_Memory_opt_x
   stm1_MemoryTransitions_opt_0
   I_stm1_i0
@@ -889,7 +959,12 @@ export_code
   STM_stm1
   MemorySTM_opt_stm1
   D__stm1
-  D__mod0*)
+  rename_D__stm0
+  rename_D__stm1
+  D__ctr0
+  rename_D__ctr0
+  D__ctr_mem
+  D__mod0
   in Haskell 
   (* module_name RoboChart_basic *)
   file_prefix RoboChart_basic 
@@ -913,7 +988,7 @@ simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelud
 simulate_cnt n (Interaction_Trees.Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
 simulate_cnt n (Interaction_Trees.Sil p) =
   do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
-       if (n >= 20) then do { Prelude.putStr "Many steps (> 20); Continue? [Y/N]"; q <- Prelude.getLine;
+       if (n >= 2000) then do { Prelude.putStr "Many steps (> 2000); Continue? [Y/N]"; q <- Prelude.getLine;
                               if (q == "Y") then simulate_cnt 0 p else Prelude.putStrLn "Ended early.";
                             }
                     else simulate_cnt (n + 1) p

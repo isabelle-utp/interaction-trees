@@ -145,6 +145,7 @@ chantype Chan =
 
 chantype Chan1 =
   e1_stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
+  e1'_stm0 :: "InOut \<times> core_int"
 
 subsection \<open> Process \<close>
 definition P0 where
@@ -176,15 +177,27 @@ definition P where
 
 definition rename_map where
 "rename_map = 
-  [(e1__stm0_C (tid, dir, n), e1_stm0_C (tid, dir, n)) . 
+  [(e1__stm0_C (tid, dir, n), e1'_stm0_C (dir, n)) . 
           tid \<leftarrow> TIDS_stm0_list, 
           dir \<leftarrow> InOut_list, 
           n \<leftarrow> core_int_list] @
   []
 "
 
+chantype testch =
+  cin :: "InOut \<times> core_int"
+  cout :: "core_int"
+
+value "graph_pfun (set [(cout_C 1, cin_C (din, 1)), (cout_C 1, cin_C (dout, 1))])"
+
+value "graph_pfun (set [(1::integer, 2::integer), (1, 3)])"
+value "graph_pfun (set [(1::integer, 2::integer)])"
+
+value "graph_pfun ((set [cin_C (din, 1), cin_C (dout, 1)] \<lhd>\<^sub>r (set 
+  [(cin_C (din, 1), cout_C 1), (cin_C (dout, 1), cout_C 1)]))\<inverse>)"
+
 definition Pr where
-"Pr = rename2 (pfun_of_alist rename_map) (P)"
+"Pr = rename (set rename_map) (P)"
 
 definition rename_map1 where
 "rename_map1 = 
