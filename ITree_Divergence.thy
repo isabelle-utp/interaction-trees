@@ -391,9 +391,66 @@ lemma evalpha_diverge [simp]: "\<^bold>A(diverge) = {}"
   by (auto simp add: evalpha_def)
      (meson diverges_diverge stabilises_traceI)
 
+subsection \<open> Power \<close>
+
+overloading
+  itreepow \<equiv> "compow :: nat \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree"
+begin
+
+fun itreepow :: "nat \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+"itreepow 0 P = Ret" |
+"itreepow (Suc n) P = P \<Zcomp> itreepow n P"
+
+end
+
+abbreviation (input) "itreepow_term n P s s' m ss
+  \<equiv> (length ss = n + 1 
+     \<and> ss ! 0 = (0, s)
+     \<and> snd (ss ! n) = s'
+     \<and> (\<forall> i < (length ss - 1). P (snd (ss ! i)) = Sils (fst (ss ! (i + 1))) (Ret (snd (ss ! (i + 1)))))
+     \<and> m = sum_list (map fst ss))"
+
+text \<open> @{abbrev itreepow_term} is used to characterise that an ITree @{term P} started in state
+  @{term s}, and iterated @{term n} times, terminates in a particular state. This is shown through
+  a list @{term ss}, whose elements are pairs @{term "(n, x)"} giving the number of silent events
+  and return values produced in each iteration. In particular, @{term ss} characterises a minimal
+  loop invariant for the iteration. \<close>
+
+lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
+  by (metis Sils.simps(1) is_Ret_Sils itree.disc(1))
+
+lemma itreepow_Sils_Ret_dest:
+  fixes P :: "('e, 's) htree"
+  assumes "(P ^^ n) s = Sils m (Ret s')"
+  shows "\<exists> ss. itreepow_term n P s s' m ss"
+using assms proof (induct n arbitrary: m s s')
+  case 0
+  then show ?case 
+    by (rule_tac x="[(0, s)]" in exI, auto)
+next
+  case (Suc n)
+  from Suc(2) obtain m\<^sub>0 s\<^sub>0 where P: "P s = Sils m\<^sub>0 (Ret s\<^sub>0)" "m\<^sub>0 \<le> m" and Pn: "(P ^^ n) s\<^sub>0 = Sils (m - m\<^sub>0) (\<cmark> s')"
+    by (auto elim!: bind_SilsE simp add: kleisli_comp_def)
+  obtain ss\<^sub>0 
+    where ss\<^sub>0: "length ss\<^sub>0 = n + 1" "ss\<^sub>0 ! 0 = (0, s\<^sub>0)" "snd (ss\<^sub>0 ! n) = s'"
+          "\<forall>i<length ss\<^sub>0 - 1. P (snd (ss\<^sub>0 ! i)) = Sils (fst (ss\<^sub>0 ! (i + 1))) (\<cmark> (snd (ss\<^sub>0 ! (i + 1))))"
+          "(m - m\<^sub>0) = sum_list (map fst ss\<^sub>0)"
+    by (meson Pn Suc.hyps)
+    
+  let ?ss = "(0, s) # (m\<^sub>0, s\<^sub>0) # tl ss\<^sub>0"
+
+  from ss\<^sub>0 P(2) show ?case
+    apply (rule_tac x="?ss" in exI, auto)
+    apply (smt (verit, ccfv_SIG) P(1) hd_Cons_tl length_0_conv less_Suc_eq_0_disj nat.simps(3) nth_Cons' nth_Cons_Suc prod.sel(1) snd_conv)
+    apply (smt (verit, ccfv_SIG) P(1) hd_Cons_tl length_0_conv less_Suc_eq_0_disj nat.simps(3) nth_Cons' nth_Cons_Suc prod.sel(1) snd_conv)
+    apply (metis (no_types, lifting) add.left_neutral add_diff_cancel_left' eq_diff_iff fst_conv hd_Cons_tl le_add1 length_0_conv list.simps(9) nat.simps(3) nth_Cons_0 sum_list.Cons)
+    done
+qed
+  
 subsection \<open> Iteration \<close>
 
 text \<open> For now we support only basic tail-recursive iteration. \<close>
+
 
 corec iterate :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "iterate b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (iterate b P))) else Ret s)"
@@ -402,10 +459,103 @@ abbreviation "loop \<equiv> iterate (\<lambda> s. True)"
 
 abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
 
+lemma iterate_cond_false [simp]:
+  "\<not> (b s) \<Longrightarrow> iterate b P s = Ret s"
+  by (simp add: iterate.code)
+
+lemma iterate_body_nonterminates:
+  assumes "nonterminates (P s)" "b s"
+  shows "nonterminates (iterate b P s)"
+  by (simp add: assms iterate.code)
+
 lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
   by (simp add: kleisli_comp_def fun_eq_iff iterate.code)
 
 lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
   by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge iterate.code)
+
+lemma iterate_Ret_dest:
+  "Ret x = iterate b P s \<Longrightarrow> (\<not> (b s) \<and> x = s)"
+  apply (cases "P s")
+  apply (metis bind_Ret comp_apply iterate.code itree.distinct(1) itree.sel(1))
+  apply (metis bind_itree.disc_iff(1) iterate.code itree.disc(2) itree.discI(1) itree.inject(1))
+  apply (metis bind_Vis iterate.code itree.distinct(3) itree.inject(1))
+  done
+
+lemma iterate_RetE:
+  assumes "Ret x = iterate b P s" "\<lbrakk> \<not> (b s); x = s \<rbrakk> \<Longrightarrow> Q"
+  shows Q
+  by (metis assms iterate_Ret_dest)
+
+lemma iterate_Sil_dest: 
+  "\<tau> P' = iterate b P s \<Longrightarrow> (b s \<and> ((\<exists> s'. P s = Ret s' \<and> P' = iterate b P s') \<or> (\<exists> P''. P s = \<tau> P'' \<and> P' = (P'' \<bind> \<tau> \<circ> iterate b P))))"
+  apply (cases "P s")
+  apply (simp_all)
+  apply (metis bind_Ret comp_apply iterate.code itree.distinct(1) itree.sel(2))
+  apply (metis bind_Sil iterate.code itree.distinct(1) itree.inject(2))
+  apply (metis bind_Vis iterate.code itree.distinct(1) itree.distinct(5))
+  done
+
+lemma iterate_SilE:
+  assumes "\<tau> P = iterate b Q s"
+    "\<And> s'. \<lbrakk> b s; Q s = Ret s'; P = iterate b Q s' \<rbrakk> \<Longrightarrow> R"
+    "\<And> P'. \<lbrakk> b s; Q s = \<tau> P' \<and> P = (P' \<bind> \<tau> \<circ> iterate b Q) \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms iterate_Sil_dest)
+
+lemma iterate_Vis_dest:
+  "Vis F = iterate b Q s \<Longrightarrow> b s \<and> (\<exists> G. Q s = Vis G \<and> F = (map_pfun (\<lambda> x. bind_itree x (\<tau> \<circ> iterate b Q)) G))"
+  apply (cases "Q s")
+  apply (simp_all)
+  apply (metis bind_Ret comp_apply iterate.code itree.simps(7) itree.simps(9))
+  apply (metis bind_Sil iterate.code itree.distinct(3) itree.distinct(5))
+  apply (metis bind_Vis iterate.code itree.inject(3) itree.simps(7))
+  done
+
+lemma iterate_VisE:
+  assumes "Vis F = iterate b Q s"
+    "\<And> G. \<lbrakk> b s; Q s = Vis G; F = (map_pfun (\<lambda> x. bind_itree x (\<tau> \<circ> iterate b Q)) G) \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) iterate_Vis_dest)
+
+lemma 
+  assumes "itreepow_term n P s s' m ss" "\<forall> i\<in>{1..n}. fst (ss ! i) > 0" "\<not> b (snd (ss ! n))" "\<forall> i<n. b(snd (ss ! i))"
+  shows "Sils m (Ret s') = iterate b P s"
+using assms proof (clarify, coinduction arbitrary: ss n s s' rule: itree_coind)
+  case wform
+  then show ?case
+  proof (cases "n = 0")
+    case True 
+    with wform show ?thesis 
+      apply (auto simp add: iterate.code in_set_conv_nth)
+      apply (metis (no_types, hide_lams) One_nat_def Suc_pred add.right_neutral add_diff_cancel_left' fst_conv hd_Cons_tl is_Sil_Sils itree.disc(4) length_0_conv length_tl list.simps(8) list.simps(9) nat.simps(3) nth_Cons_0 sum_list.Cons sum_list.Nil)
+      done
+    oops
+
+lemma 
+  assumes 
+    "(P ^^ n) s \<midarrow>[]\<leadsto> Ret s'" "\<not> b s'"
+    "\<forall> m < n. \<forall> s''. (P ^^ m) s \<midarrow>[]\<leadsto> Ret s'' \<longrightarrow> b s''"
+  shows "iterate b P s \<midarrow>[]\<leadsto> Ret s'"
+  oops
+
+lemma 
+  assumes 
+    "(P ^^ n) s \<midarrow>es\<leadsto> Ret s'" "\<not> b s'"
+    "\<forall> m < n. \<forall> es' s''. (P ^^ m) s \<midarrow>es'\<leadsto> Ret s'' \<longrightarrow> b s''"
+  shows "iterate b P s \<midarrow>es\<leadsto> Ret s'"
+  oops
+
+lemma "iterate b P s \<midarrow>tr\<leadsto> Ret s' \<Longrightarrow> 
+       (\<exists> n>0. \<exists> es rs. 
+            length es = n \<comment> \<open> Each iteration's traces \<close>
+          \<and> length rs = (n+1) \<comment> \<open> Each iteration's return values \<close>
+          \<and> tr = concat es
+          \<and> rs ! 0 = s
+          \<and> (\<forall> i < n. b (rs ! i))
+          \<and> rs ! (n - 1) = s'
+          \<and> (\<forall> i \<in> {1..n}. P (rs ! (i - 1)) \<midarrow>es ! (i - 1)\<leadsto> Ret (rs ! i)))"
+  oops
+  
 
 end
