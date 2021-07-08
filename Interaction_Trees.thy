@@ -70,6 +70,19 @@ theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred:
   using assms
   by (coinduct rule: itree.coinduct, auto simp add: relt_pfun_iff)
 
+theorem itree_coind'[elim, consumes 1, case_names RetF SilF VisF Ret Sil Vis, induct pred: "HOL.eq"]:
+  assumes "\<phi> P Q" and
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q)"
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Sil P \<longleftrightarrow> is_Sil Q)"
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Vis P \<longleftrightarrow> is_Vis Q)"
+  "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
+  "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q" and
+  "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (pdom(F) = pdom(G) \<and> (\<forall> x\<in>pdom(F). \<phi> (F x) (G x)))"
+  shows "P = Q"
+  using assms
+  by (coinduct rule: itree.coinduct, auto simp add: relt_pfun_iff)
+
+
 theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes phi: "\<phi> P Q" and
   "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
@@ -215,8 +228,10 @@ lemma run_empty: "run {} = Vis {}\<^sub>p"
   by (metis (no_types, lifting) pdom_map_pfun pdom_pId_on pdom_res_empty pdom_res_pdom run.code)
 
 lemma run_bind: "run E \<bind> K = run E"
-  apply (coinduction rule: itree_coind)
-  apply (metis bind_itree.disc(3) itree.distinct_disc(3) itree.distinct_disc(6) run.disc_iff)
+  apply (coinduction rule: itree_coind')
+  apply (meson bind_itree.disc(3) itree.distinct_disc(3) run.disc_iff)
+  apply (meson bind_itree.disc(3) itree.distinct_disc(5) run.disc_iff)
+  apply simp
   apply (metis itree.disc(7) run.disc_iff)
    apply (metis itree.disc(8) run.disc_iff)
   apply (smt (verit, best) bind_VisE itree.disc(7) itree.sel(3) map_pfun_apply pdom_map_pfun run.disc_iff run.sel)

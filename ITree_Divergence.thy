@@ -119,10 +119,15 @@ text \<open> There is a unique divergent @{type itree}. \<close>
 lemma diverges_implies_equal: 
   assumes "P \<Up>" "Q \<Up>"
   shows "P = Q"
-using assms proof (coinduction arbitrary: P Q rule: itree_coind)
-  case (wform P Q)
-  then show ?case
-    by blast
+using assms proof (coinduction arbitrary: P Q rule: itree_coind')
+  case RetF
+  then show ?case by blast
+next
+  case SilF
+  then show ?case by blast
+next
+  case VisF
+  then show ?case by blast
 next
   case (Ret x y)
   then show ?case
@@ -403,18 +408,28 @@ fun itreepow :: "nat \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" 
 
 end
 
-abbreviation (input) "itreepow_term n P s s' m ss
-  \<equiv> (length ss = n + 1 
-     \<and> ss ! 0 = (0, s)
-     \<and> snd (ss ! n) = s'
-     \<and> (\<forall> i < (length ss - 1). P (snd (ss ! i)) = Sils (fst (ss ! (i + 1))) (Ret (snd (ss ! (i + 1)))))
-     \<and> m = sum_list (map fst ss))"
+locale itreepow_chain =
+  fixes n P s s' m ss
+  assumes length_ss: "length ss = n + 1"
+  and init_st: "ss ! 0 = (0, s)"
+  and last_st: "snd (ss ! n) = s'"
+  and ss_iter: "\<forall> i < (length ss - 1). P (snd (ss ! i)) = Sils (fst (ss ! (i + 1))) (Ret (snd (ss ! (i + 1))))"
+  and sil_count: "m = sum_list (map fst ss)"
 
-text \<open> @{abbrev itreepow_term} is used to characterise that an ITree @{term P} started in state
+text \<open> @{const itreepow_chain} is used to characterise that an ITree @{term P} started in state
   @{term s}, and iterated @{term n} times, terminates in a particular state. This is shown through
   a list @{term ss}, whose elements are pairs @{term "(n, x)"} giving the number of silent events
   and return values produced in each iteration. In particular, @{term ss} characterises a minimal
   loop invariant for the iteration. \<close>
+
+locale itree_chain =
+  fixes P :: "('e, 's) htree" \<comment> \<open> The loop body \<close>
+  and s s' :: "'s" \<comment> \<open> Initial and final state \<close>
+  and chn :: "('e list \<times> 's) list" \<comment> \<open> The chain \<close>
+  assumes length_chain: "length chn > 0" 
+  and init_st: "chn ! 0 = ([], s)"
+  and last_st: "snd (chn ! n) = s'"
+  and chain_iter: "\<forall> i < length chn - 1. P (snd (chn ! i)) \<midarrow>fst (chn ! (i + 1))\<leadsto> Ret (snd (chn ! (i + 1)))"
 
 lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
   by (metis Sils.simps(1) is_Ret_Sils itree.disc(1))
@@ -422,35 +437,33 @@ lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and>
 lemma itreepow_Sils_Ret_dest:
   fixes P :: "('e, 's) htree"
   assumes "(P ^^ n) s = Sils m (Ret s')"
-  shows "\<exists> ss. itreepow_term n P s s' m ss"
+  shows "\<exists> ss. itreepow_chain n P s s' m ss"
 using assms proof (induct n arbitrary: m s s')
   case 0
   then show ?case 
-    by (rule_tac x="[(0, s)]" in exI, auto)
+    by (rule_tac x="[(0, s)]" in exI, unfold_locales, auto)
 next
   case (Suc n)
   from Suc(2) obtain m\<^sub>0 s\<^sub>0 where P: "P s = Sils m\<^sub>0 (Ret s\<^sub>0)" "m\<^sub>0 \<le> m" and Pn: "(P ^^ n) s\<^sub>0 = Sils (m - m\<^sub>0) (\<cmark> s')"
     by (auto elim!: bind_SilsE simp add: kleisli_comp_def)
-  obtain ss\<^sub>0 
-    where ss\<^sub>0: "length ss\<^sub>0 = n + 1" "ss\<^sub>0 ! 0 = (0, s\<^sub>0)" "snd (ss\<^sub>0 ! n) = s'"
-          "\<forall>i<length ss\<^sub>0 - 1. P (snd (ss\<^sub>0 ! i)) = Sils (fst (ss\<^sub>0 ! (i + 1))) (\<cmark> (snd (ss\<^sub>0 ! (i + 1))))"
-          "(m - m\<^sub>0) = sum_list (map fst ss\<^sub>0)"
+  obtain ss\<^sub>0 where "itreepow_chain n P s\<^sub>0 s' (m - m\<^sub>0) ss\<^sub>0"
     by (meson Pn Suc.hyps)
+  then interpret ipow: itreepow_chain n P s\<^sub>0 s' "m - m\<^sub>0" ss\<^sub>0
+    by simp
     
   let ?ss = "(0, s) # (m\<^sub>0, s\<^sub>0) # tl ss\<^sub>0"
 
-  from ss\<^sub>0 P(2) show ?case
-    apply (rule_tac x="?ss" in exI, auto)
-    apply (smt (verit, ccfv_SIG) P(1) hd_Cons_tl length_0_conv less_Suc_eq_0_disj nat.simps(3) nth_Cons' nth_Cons_Suc prod.sel(1) snd_conv)
-    apply (smt (verit, ccfv_SIG) P(1) hd_Cons_tl length_0_conv less_Suc_eq_0_disj nat.simps(3) nth_Cons' nth_Cons_Suc prod.sel(1) snd_conv)
-    apply (metis (no_types, lifting) add.left_neutral add_diff_cancel_left' eq_diff_iff fst_conv hd_Cons_tl le_add1 length_0_conv list.simps(9) nat.simps(3) nth_Cons_0 sum_list.Cons)
+  from P(2) show ?case
+    apply (rule_tac x="?ss" in exI, unfold_locales, auto simp add: ipow.length_ss)
+    apply (metis add.left_neutral dual_order.antisym hd_Cons_tl ipow.init_st ipow.last_st ipow.length_ss le_add1 length_0_conv nth_Cons' snd_conv)
+    apply (smt (verit, ccfv_threshold) P(1) add.commute add_diff_cancel_left' hd_Cons_tl ipow.init_st ipow.length_ss ipow.ss_iter length_0_conv less_Suc_eq less_Suc_eq_0_disj nat.simps(3) nth_Cons_0 nth_Cons_pos plus_1_eq_Suc prod.sel(1) snd_conv)
+    apply (metis (no_types, lifting) Suc_eq_plus1 add.left_neutral add_diff_cancel_left' eq_diff_iff fst_conv hd_Cons_tl ipow.init_st ipow.length_ss ipow.sil_count le_add1 length_0_conv list.simps(9) nat.simps(3) nth_Cons_0 sum_list.Cons)
     done
 qed
   
 subsection \<open> Iteration \<close>
 
 text \<open> For now we support only basic tail-recursive iteration. \<close>
-
 
 corec iterate :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "iterate b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (iterate b P))) else Ret s)"
@@ -519,9 +532,55 @@ lemma iterate_VisE:
   by (metis assms(1) assms(2) iterate_Vis_dest)
 
 lemma 
-  assumes "itreepow_term n P s s' m ss" "\<forall> i\<in>{1..n}. fst (ss ! i) > 0" "\<not> b (snd (ss ! n))" "\<forall> i<n. b(snd (ss ! i))"
+  assumes "itreepow_chain n P s s' m ss" "\<forall> i\<in>{1..n}. fst (ss ! i) > 0" "\<not> b (snd (ss ! n))" "\<forall> i<n. b(snd (ss ! i))"
   shows "Sils m (Ret s') = iterate b P s"
-using assms proof (clarify, coinduction arbitrary: ss n s s' rule: itree_coind)
+using assms proof (coinduction arbitrary: ss n s s' m rule: itree_coind')
+  case RetF
+  then interpret ipow: itreepow_chain n P s s' m ss by simp
+  from RetF(2-) ipow.sil_count show ?case
+    apply (auto)
+    apply (metis Suc_leI add.right_neutral atLeastAtMost_iff ipow.init_st ipow.length_ss iterate.code itree.discI(1) le_add1 less_add_same_cancel1 less_numeral_extra(1) neq0_conv nth_mem snd_conv)
+    apply (metis One_nat_def RetF(4) add.commute fst_conv in_set_conv_nth ipow.init_st ipow.length_ss is_Ret_def iterate_RetE less_Suc_eq less_nat_zero_code neq0_conv plus_1_eq_Suc snd_conv)
+    done
+next
+  case SilF
+  then interpret ipow: itreepow_chain n P s s' m ss by simp
+  from SilF(2-) ipow.sil_count show ?case
+    apply (auto simp add: is_Sil_Sils)
+     apply (smt (z3) SilF(1) Suc_leI Suc_length_conv add.commute add.right_neutral add_diff_cancel_right' atLeastAtMost_iff bind_itree.disc_iff(2) fst_conv ipow.init_st ipow.length_ss is_Sil_Sils iterate.code itreepow_chain.ss_iter length_0_conv length_map list.simps(9) neq0_conv nth_Cons_0 plus_1_eq_Suc snd_conv sum_list.Cons sum_list.Nil zero_less_one)
+    apply (metis Suc_leI atLeastAtMost_iff elem_le_sum_list ipow.init_st ipow.length_ss iterate.code itree.disc(4) length_map less_add_same_cancel1 less_numeral_extra(1) not_gr0 not_less nth_map snd_conv)
+    done
+next
+  case VisF
+  then interpret ipow: itreepow_chain n P s s' m ss by simp
+  from VisF(2-) show ?case
+    by (auto, metis One_nat_def Suc_eq_plus1 Suc_le_eq atLeastAtMost_iff bind_Sil diff_Suc_Suc diff_zero ipow.init_st ipow.length_ss ipow.ss_iter is_Sil_Sils is_Sil_def iterate.code itree.collapse(3) itree.distinct(3) itree.distinct(5) le_add1 not0_implies_Suc plus_1_eq_Suc snd_conv)
+next
+  case Ret
+  then interpret ipow: itreepow_chain n P s s' m ss by simp
+  from Ret(2-) show ?case
+    by (auto, metis Ret(1) Ret_Sils_iff gr_implies_not0 ipow.init_st ipow.last_st iterate_RetE linorder_neqE_nat snd_conv)
+next
+  case (Sil P' Q)
+  then interpret ipow: itreepow_chain n P s s' m ss by simp
+  have ngz: "n > 0"
+    by (metis Sil(2) Sil(5) gr0I ipow.init_st iterate.code itree.disc(4) itree.disc(5) snd_conv)
+  from Sil(1,2,4-) ngz show ?case
+    apply (auto elim!:iterate_SilE)
+    apply (metis One_nat_def Suc_eq_plus1 Suc_leI add.right_neutral atLeastAtMost_iff diff_Suc_Suc diff_zero ipow.init_st ipow.length_ss ipow.ss_iter is_Ret_Sils itree.discI(1) le_add1 less_numeral_extra(3) snd_conv)
+    apply (rule_tac x="hd ss # (fst (ss ! 1) - 1, snd (ss ! 1)) # tl (tl ss)" in exI)
+    apply (rule_tac x="n" in exI)
+    apply (rule_tac x="s" in exI)
+    apply (rule_tac x="s'" in exI)
+    apply (rule_tac x="m-1" in exI)
+    apply (auto)
+    oops
+
+(*
+  next
+  case Vis
+then show ?case sorry
+qed
   case wform
   then show ?case
   proof (cases "n = 0")
@@ -531,6 +590,12 @@ using assms proof (clarify, coinduction arbitrary: ss n s s' rule: itree_coind)
       apply (metis (no_types, hide_lams) One_nat_def Suc_pred add.right_neutral add_diff_cancel_left' fst_conv hd_Cons_tl is_Sil_Sils itree.disc(4) length_0_conv length_tl list.simps(8) list.simps(9) nat.simps(3) nth_Cons_0 sum_list.Cons sum_list.Nil)
       done
     oops
+*)
+
+lemma iterate_chain:
+  assumes "itree_chain P s s' chn"
+  shows "iterate b P s \<midarrow>concat (map fst chn)\<leadsto> Ret s'"
+  oops
 
 lemma 
   assumes 
@@ -538,6 +603,7 @@ lemma
     "\<forall> m < n. \<forall> s''. (P ^^ m) s \<midarrow>[]\<leadsto> Ret s'' \<longrightarrow> b s''"
   shows "iterate b P s \<midarrow>[]\<leadsto> Ret s'"
   oops
+
 
 lemma 
   assumes 
