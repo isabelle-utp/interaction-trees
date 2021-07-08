@@ -90,13 +90,7 @@ primcorec rename2 :: "('e\<^sub>1 \<Zpfun> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1
     Vis F \<Rightarrow> Vis (map_pfun (rename2 \<rho>) (Vis_rename2 \<rho> F)))"
 
 subsection \<open> General definitions \<close>
-definition "int_max = (1::integer)"
-definition "int_min = (-1::integer)"
-
-abbreviation "core_int_list \<equiv> 
-  int2integer_list [(int_of_integer int_min)..(int_of_integer int_max)]"
-
-abbreviation "core_int_set \<equiv> set core_int_list"
+interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
 subsubsection \<open> stm0 \<close>
 datatype SIDS_stm0 = SID_stm0
@@ -140,6 +134,7 @@ definition "ITIDS_stm1 = set ITIDS_stm1_list"
 subsection \<open> Channel type\<close>
 chantype Chan =
   e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
+  e_b_stm0 :: "core_bool"
 (*
   e1_ctr0 :: "InOut \<times> core_int"
   e1_mod0 :: "InOut \<times> core_int"
@@ -153,16 +148,17 @@ subsection \<open> Process \<close>
 definition P0 where
 "P0 = loop (\<lambda> x::integer. 
     (
-     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t2, din, x). x \<leftarrow> core_int_list]); Ret (x)} \<box> 
-     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, x). x \<leftarrow> core_int_list]); Ret (x)}
+     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t2, din, x). x \<leftarrow> rc.core_int_list]); Ret (x)} \<box> 
+     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, x). x \<leftarrow> rc.core_int_list]); Ret (x)} \<box>
+     do {outp e_b_stm0 True ; Ret (x)} 
     )
   )"
 
 definition P1 where
 "P1 = loop (\<lambda> id::integer. 
     (
-     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t2, din, x). x \<leftarrow> core_int_list, x > 0]); Ret (x)} \<box> 
-     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, x). x \<leftarrow> core_int_list, x \<le> 0]); Ret (x)}
+     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t2, din, x). x \<leftarrow> rc.core_int_list, x > 0]); Ret (x)} \<box> 
+     do {(tid, d, x) \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, x). x \<leftarrow> rc.core_int_list, x \<le> 0]); Ret (x)}
     )
   )"
 
@@ -171,7 +167,7 @@ definition channel_set where
   set ([e1__stm0_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm0_t1, TID_stm0_t2], 
           dir \<leftarrow> [din, dout], 
-          n \<leftarrow> core_int_list]
+          n \<leftarrow> rc.core_int_list]
 )"
 
 definition P where
@@ -182,7 +178,7 @@ definition rename_map where
   [(e1__stm0_C (tid, dir, n), e1'_stm0_C (dir, n)) . 
           tid \<leftarrow> TIDS_stm0_list, 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   []
 "
 
@@ -206,7 +202,7 @@ definition rename_map1 where
   [(e1__stm0_C (tid, dir, n), e1__stm0_C (tid, dir, n)) . 
           tid \<leftarrow> TIDS_stm0_list, 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   []
 "
 
@@ -263,5 +259,7 @@ simulate = simulate_cnt 0;
 \<close>
 
 export_generated_files \<open>code/renaming_ex/Simulate.hs\<close>
+
+print_locale! Inf
 
 end

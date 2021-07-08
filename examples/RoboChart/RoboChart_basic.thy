@@ -7,13 +7,7 @@ theory RoboChart_basic
 begin
 
 subsection \<open> General definitions \<close>
-definition "int_max = (1::integer)"
-definition "int_min = (-1::integer)"
-
-abbreviation "core_int_list \<equiv> 
-  int2integer_list [(int_of_integer int_min)..(int_of_integer int_max)]"
-
-abbreviation "core_int_set \<equiv> set core_int_list"
+interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
 subsection \<open> stm0 \<close>
 datatype SIDS_stm0 = SID_stm0
@@ -71,11 +65,11 @@ definition int_int_stm0 where
   set ([e1__stm0_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm0_t1,TID_stm0_t2], 
           dir \<leftarrow> [din, dout], 
-          n \<leftarrow> core_int_list] @ 
+          n \<leftarrow> rc.core_int_list] @ 
        [e3__stm0_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm0_t1,TID_stm0_t2], 
           dir \<leftarrow> [din, dout], 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
        [internal_stm0_C (tid). 
           tid \<leftarrow> [TID_stm0_t1,TID_stm0_t2]]
 )"
@@ -99,7 +93,7 @@ definition internal_events_stm0 where
 definition shared_variable_events_stm0 where
 "shared_variable_events_stm0 = 
   set ([set_EXT_x_stm0_C (x). 
-          x \<leftarrow> core_int_list]
+          x \<leftarrow> rc.core_int_list]
 )"
 
 definition CS_stm0_s0_sync where
@@ -135,7 +129,7 @@ definition stm0_s0_triggers where
   set ([e1__stm0_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm0_t1], 
           dir \<leftarrow> [din, dout], 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [internal_stm0_C (tid). 
           tid \<leftarrow> [TID_stm0_t2]]
 )
@@ -144,17 +138,17 @@ definition stm0_s0_triggers where
 definition stm0_l_events where
 "stm0_l_events = 
     set (
-        [get_l_stm0_C l . l \<leftarrow> core_int_list] @
-        [set_l_stm0_C l . l \<leftarrow> core_int_list]
+        [get_l_stm0_C l . l \<leftarrow> rc.core_int_list] @
+        [set_l_stm0_C l . l \<leftarrow> rc.core_int_list]
     )
 "
 
 definition stm0_x_events where
 "stm0_x_events = 
     set (
-        [get_x_stm0_C x . x \<leftarrow> core_int_list] @
-        [set_x_stm0_C x . x \<leftarrow> core_int_list] @
-        [set_EXT_x_stm0_C x . x \<leftarrow> core_int_list]
+        [get_x_stm0_C x . x \<leftarrow> rc.core_int_list] @
+        [set_x_stm0_C x . x \<leftarrow> rc.core_int_list] @
+        [set_EXT_x_stm0_C x . x \<leftarrow> rc.core_int_list]
     )
 "
 
@@ -169,11 +163,11 @@ text \<open> Memory cell processes \<close>
 (* for the shared variable x *)
 definition stm0_Memory_opt_x where
 "stm0_Memory_opt_x = 
-  mem_of_svar get_x_stm0 set_x_stm0 set_EXT_x_stm0 core_int_set"
+  mem_of_svar get_x_stm0 set_x_stm0 set_EXT_x_stm0 rc.core_int_set"
 
 (* for the local variable l *)
 definition stm0_Memory_opt_l where
-"stm0_Memory_opt_l = mem_of_lvar get_l_stm0 set_l_stm0 core_int_set"
+"stm0_Memory_opt_l = mem_of_lvar get_l_stm0 set_l_stm0 rc.core_int_set"
 
 text \<open> Memory transition processes \<close>
 definition stm0_MemoryTransitions_opt_0 where
@@ -186,13 +180,13 @@ definition stm0_MemoryTransitions_opt_0 where
 definition stm0_MemoryTransitions_opt_1 where
 "stm0_MemoryTransitions_opt_1 = 
   loop (\<lambda> id::integer.
-    do {x \<leftarrow> inp_in get_x_stm0 core_int_set ; 
+    do {x \<leftarrow> inp_in get_x_stm0 rc.core_int_set ; 
       (
-        do {inp_in e1__stm0 (set [(TID_stm0_t1, din, l). l \<leftarrow> core_int_list, (x = 0)])
+        do {inp_in e1__stm0 (set [(TID_stm0_t1, din, l). l \<leftarrow> rc.core_int_list, (x = 0)])
               ; Ret (id)} \<box>
         do {guard (x \<noteq> 0); outp internal_stm0 TID_stm0_t2 ; Ret (id)} \<box>
-        do {x \<leftarrow> inp_in set_x_stm0 core_int_set; Ret (id)} \<box>
-        do {x \<leftarrow> inp_in set_EXT_x_stm0 core_int_set; Ret (id)}
+        do {x \<leftarrow> inp_in set_x_stm0 rc.core_int_set; Ret (id)} \<box>
+        do {x \<leftarrow> inp_in set_EXT_x_stm0 rc.core_int_set; Ret (id)}
       )
     }
   )
@@ -234,11 +228,11 @@ definition State_stm0_s0 where
               (do {skip ; stop} \<triangle>
                 (
                 \<comment> \<open> T_stm0_t1 \<close>
-                do {t \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, l) . l \<leftarrow> core_int_list]) ;
+                do {t \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, l) . l \<leftarrow> rc.core_int_list]) ;
                       outp set_l_stm0 (snd (snd t)) ; 
                       outp exit_stm0 (SID_stm0_s0, SID_stm0_s0);
                       outp exited_stm0 (SID_stm0_s0, SID_stm0_s0);
-                      l \<leftarrow> inp_in get_l_stm0 core_int_set ; 
+                      l \<leftarrow> inp_in get_l_stm0 rc.core_int_set ; 
                         outp set_x_stm0 (l);
                         outp enter_stm0 (SID_stm0_s0, SID_stm0_s0);
                         Ret(True, fst (snd s), SID_stm0_s0)
@@ -247,7 +241,7 @@ definition State_stm0_s0 where
                 do {outp internal_stm0 TID_stm0_t2;
                     outp exit_stm0 (SID_stm0_s0, SID_stm0_s0);
                     outp exited_stm0 (SID_stm0_s0, SID_stm0_s0);
-                      x \<leftarrow> inp_in get_x_stm0 core_int_set ; 
+                      x \<leftarrow> inp_in get_x_stm0 rc.core_int_set ; 
                         outp e3_stm0 (dout, x);
                         outp enter_stm0 (SID_stm0_s0, SID_stm0_s0);
                         Ret(True, fst (snd s), SID_stm0_s0)
@@ -264,7 +258,7 @@ definition State_stm0_s0 where
                     x \<leftarrow> inp_in e1__stm0 (set [(s, d, l) . 
                         s \<leftarrow> tids_stm0_s0, 
                         d \<leftarrow> InOut_list,
-                        l \<leftarrow> core_int_list]) ;
+                        l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
                         [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
@@ -274,7 +268,7 @@ definition State_stm0_s0 where
                     x \<leftarrow> inp_in e3__stm0 (set [(s, d, l) . 
                         s \<leftarrow> tids_stm0_s0, 
                         d \<leftarrow> InOut_list,
-                        l \<leftarrow> core_int_list]) ;
+                        l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
                         [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
                       outp exit_stm0 (fst y, SID_stm0_s0);
@@ -323,9 +317,9 @@ definition stm0_e1_x_internal_set where
   set ([e1__stm0_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm0_t1], 
           dir \<leftarrow> [din, dout], 
-          n \<leftarrow> core_int_list] @ 
+          n \<leftarrow> rc.core_int_list] @ 
        [internal_stm0_C TID_stm0_t2] @
-       [set_x_stm0_C n. n \<leftarrow> core_int_list]
+       [set_x_stm0_C n. n \<leftarrow> rc.core_int_list]
 )"
 
 (*
@@ -365,7 +359,7 @@ definition MemorySTM_opt_stm0 where
         {internal_stm0_C TID_stm0_t2}
       )
     )
-    (set [get_x_stm0_C n. n \<leftarrow> core_int_list])
+    (set [get_x_stm0_C n. n \<leftarrow> rc.core_int_list])
   )   
 "
 
@@ -386,28 +380,28 @@ definition rename_stm0_events where
   [(e1__stm0_C (tid, dir, n), e1_stm0_C (dir, n)) . 
           tid \<leftarrow> TIDS_stm0_list, 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(e3__stm0_C (tid, dir, n), e3_stm0_C (dir, n)) . 
           tid \<leftarrow> TIDS_stm0_list, 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list]
+          n \<leftarrow> rc.core_int_list]
 "
 
 definition rename_stm0_events_others where
 "rename_stm0_events_others = 
   [(terminate_stm0_C(), terminate_stm0_C () ) ] @
   [(get_x_stm0_C (n), get_x_stm0_C (n)) . 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(set_x_stm0_C (n), set_x_stm0_C (n)) . 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(set_EXT_x_stm0_C (n), set_EXT_x_stm0_C (n)) .
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(e1_stm0_C (dir, n), e1_stm0_C (dir, n)) . 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(e3_stm0_C (dir, n), e3_stm0_C (dir, n)) . 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(enter_stm0_C (sid1, sid2), enter_stm0_C (sid1, sid2)) . 
           sid1 \<leftarrow> SIDS_stm0_list, 
           sid2 \<leftarrow> SIDS_stm0_list] @
@@ -496,7 +490,7 @@ definition int_int_stm1 where
        [e3__stm1_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm1_t1,TID_stm1_t2], 
           dir \<leftarrow> [din, dout], 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
        [internal_stm1_C (tid). 
           tid \<leftarrow> [TID_stm1_t1,TID_stm1_t2]]
 )"
@@ -520,7 +514,7 @@ definition internal_events_stm1 where
 definition shared_variable_events_stm1 where
 "shared_variable_events_stm1 = 
   set ([set_EXT_x_stm1_C (x). 
-          x \<leftarrow> core_int_list]
+          x \<leftarrow> rc.core_int_list]
 )"
 
 definition stm1_s0_triggers where
@@ -531,15 +525,15 @@ definition stm1_s0_triggers where
   [e3__stm1_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm1_t1], 
           dir \<leftarrow> [din, dout],
-          n \<leftarrow> core_int_list]
+          n \<leftarrow> rc.core_int_list]
 )
 "
 
 definition stm1_x_events where
 "stm1_x_events = 
     set (
-        [get_x_stm1_C x . x \<leftarrow> core_int_list] @
-        [set_x_stm1_C x . x \<leftarrow> core_int_list]
+        [get_x_stm1_C x . x \<leftarrow> rc.core_int_list] @
+        [set_x_stm1_C x . x \<leftarrow> rc.core_int_list]
     )
 "
 
@@ -554,7 +548,7 @@ text \<open> Memory cell processes \<close>
 
 definition stm1_Memory_opt_x where
 "stm1_Memory_opt_x = 
-  mem_of_svar get_x_stm1 set_x_stm1 set_EXT_x_stm1 core_int_set"
+  mem_of_svar get_x_stm1 set_x_stm1 set_EXT_x_stm1 rc.core_int_set"
 
 text \<open> Memory transition processes \<close>
 definition stm1_MemoryTransitions_opt_0 where
@@ -562,7 +556,7 @@ definition stm1_MemoryTransitions_opt_0 where
   loop (\<lambda> id::integer. 
     (do {outp internal_stm1 TID_stm1_t0 ; Ret (id)} \<box> 
      do {outp e2__stm1 (TID_stm1_t2, din) ; Ret (id)} \<box> 
-     do {inp_in e3__stm1 (set [(TID_stm1_t1, din, x). x \<leftarrow> core_int_list]) ; Ret (id)}
+     do {inp_in e3__stm1 (set [(TID_stm1_t1, din, x). x \<leftarrow> rc.core_int_list]) ; Ret (id)}
     )
   )
 "
@@ -603,11 +597,11 @@ definition State_stm1_s0 where
               (do {skip ; stop} \<triangle>
                 (
                 \<comment> \<open> T_stm1_t1 \<close>
-                do {t \<leftarrow> inp_in e3__stm1 (set [(TID_stm1_t1, din, l) . l \<leftarrow> core_int_list]) ;
+                do {t \<leftarrow> inp_in e3__stm1 (set [(TID_stm1_t1, din, l) . l \<leftarrow> rc.core_int_list]) ;
                       outp set_x_stm1 (snd (snd t)) ; 
                       outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                       outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
-                      x \<leftarrow> inp_in get_x_stm1 core_int_set ; 
+                      x \<leftarrow> inp_in get_x_stm1 rc.core_int_set ; 
                         outp set_x_stm1 (x+1);
                         outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
                         Ret(True, fst (snd s), SID_stm1_s0)
@@ -640,7 +634,7 @@ definition State_stm1_s0 where
                     x \<leftarrow> inp_in e3__stm1 (set [(s, d, l) . 
                         s \<leftarrow> tids_stm1_s0, 
                         d \<leftarrow> InOut_list,
-                        l \<leftarrow> core_int_list]) ;
+                        l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm1 (set 
                         [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]);
                       outp exit_stm1 (fst y, SID_stm1_s0);
@@ -690,7 +684,7 @@ definition stm1_e1_x_internal_set where
   set ([e3__stm1_C (tid, dir, n). 
           tid \<leftarrow> [TID_stm1_t1], 
           dir \<leftarrow> [din, dout], 
-          n \<leftarrow> core_int_list] @ 
+          n \<leftarrow> rc.core_int_list] @ 
        [internal_stm1_C TID_stm1_t0] @
        [e2__stm1_C (tid, dir). 
           tid \<leftarrow> [TID_stm1_t2], 
@@ -708,7 +702,7 @@ definition MemorySTM_opt_stm1 where
           \<parallel>\<^bsub> stm1_x_events \<^esub>
           (STM_stm1 idd)
         )
-        (set [get_x_stm1_C n. n \<leftarrow> core_int_list])
+        (set [get_x_stm1_C n. n \<leftarrow> rc.core_int_list])
       )
       \<parallel>\<^bsub> stm1_e1_x_internal_set \<^esub>
       (discard_state (stm1_MemoryTransitions_opt_0 idd))
@@ -725,23 +719,23 @@ definition rename_stm1_events where
   [(e3__stm1_C (tid, dir, n), e3_stm1_C (dir, n)) . 
           tid \<leftarrow> TIDS_stm1_list, 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list]
+          n \<leftarrow> rc.core_int_list]
 "
 
 definition rename_stm1_events_others where
 "rename_stm1_events_others = 
   [(terminate_stm1_C(), terminate_stm1_C () ) ] @
   [(get_x_stm1_C (n), get_x_stm1_C (n)) . 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(set_x_stm1_C (n), set_x_stm1_C (n)) . 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(set_EXT_x_stm1_C (n), set_EXT_x_stm1_C (n)) .
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(e2_stm1_C (dir), e2_stm1_C (dir)) . 
           dir \<leftarrow> InOut_list] @
   [(e3_stm1_C (dir, n), e3_stm1_C (dir, n)) . 
           dir \<leftarrow> InOut_list, 
-          n \<leftarrow> core_int_list] @
+          n \<leftarrow> rc.core_int_list] @
   [(enter_stm1_C (sid1, sid2), enter_stm1_C (sid1, sid2)) . 
           sid1 \<leftarrow> SIDS_stm1_list, 
           sid2 \<leftarrow> SIDS_stm1_list] @
@@ -802,13 +796,13 @@ chantype Chan_ctr0 =
 definition shared_variable_events_ctr0 where
 "shared_variable_events_ctr0 = 
   set ([set_EXT_x_ctr0_C (x). 
-          x \<leftarrow> core_int_list]
+          x \<leftarrow> rc.core_int_list]
 )"
 
 subsubsection \<open> Memory \<close>
 definition Memory_ctr0 where
 "Memory_ctr0 = loop (\<lambda> id::integer.
-  ( do {x \<leftarrow> inp_in set_EXT_x_ctr0 core_int_set; 
+  ( do {x \<leftarrow> inp_in set_EXT_x_ctr0 rc.core_int_set; 
         outp set_EXT_x_ctr0_stm0 x; 
         outp set_EXT_x_ctr0_stm1 x; Ret (id)}
   )
@@ -818,11 +812,11 @@ subsubsection \<open> Controller \<close>
 definition rename_ctr0_stm0_events where
 "rename_ctr0_stm0_events = 
   [(terminate_stm0_C (), terminate_ctr0_C ())] @
-  [(set_x_stm0_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list] @
-  [(get_x_stm0_C n, get_x_ctr0_C n). n \<leftarrow> core_int_list] @
-  [(e1_stm0_C (d, n), e1_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
-  [(e3_stm0_C (d, n), e3_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
-  [(set_EXT_x_stm0_C x, set_EXT_x_ctr0_stm0_C x) . x \<leftarrow> core_int_list]
+  [(set_x_stm0_C n, set_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
+  [(get_x_stm0_C n, get_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
+  [(e1_stm0_C (d, n), e1_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
+  [(e3_stm0_C (d, n), e3_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
+  [(set_EXT_x_stm0_C x, set_EXT_x_ctr0_stm0_C x) . x \<leftarrow> rc.core_int_list]
 "
 
 definition rename_D__stm0 where
@@ -831,13 +825,13 @@ definition rename_D__stm0 where
 definition rename_ctr0_stm1_events where
 "rename_ctr0_stm1_events = 
   [(terminate_stm1_C (), terminate_ctr0_C ())] @
-  [(set_x_stm1_C n, set_x_ctr0_C n). n \<leftarrow> core_int_list] @
-  [(get_x_stm1_C n, get_x_ctr0_C n). n \<leftarrow> core_int_list] @
+  [(set_x_stm1_C n, set_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
+  [(get_x_stm1_C n, get_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
   [(e2_stm1_C (d), e2_ctr0_C (d)). d \<leftarrow> InOut_list] @
 \<comment> \<open>It is important to invert directions in one side: either stm0 or stm1 \<close>
-  [(e3_stm1_C (din, n), e3_ctr0_C (dout, n)). n \<leftarrow> core_int_list] @
-  [(e3_stm1_C (dout, n), e3_ctr0_C (din, n)). n \<leftarrow> core_int_list] @
-  [(set_EXT_x_stm1_C x, set_EXT_x_ctr0_stm1_C x) . x \<leftarrow> core_int_list]
+  [(e3_stm1_C (din, n), e3_ctr0_C (dout, n)). n \<leftarrow> rc.core_int_list] @
+  [(e3_stm1_C (dout, n), e3_ctr0_C (din, n)). n \<leftarrow> rc.core_int_list] @
+  [(set_EXT_x_stm1_C x, set_EXT_x_ctr0_stm1_C x) . x \<leftarrow> rc.core_int_list]
 "
 
 definition rename_D__stm1 where
@@ -845,12 +839,12 @@ definition rename_D__stm1 where
 
 definition "ctr0_stms_events = set (
   [terminate_ctr0_C ()] @ 
-    [e3_ctr0_C (d, n). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list]
+    [e3_ctr0_C (d, n). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list]
 )"
 
 definition "ctr0_mem_events = set (
-    [set_EXT_x_ctr0_stm0_C x. x \<leftarrow> core_int_list] @ 
-    [set_EXT_x_ctr0_stm1_C x. x \<leftarrow> core_int_list]
+    [set_EXT_x_ctr0_stm0_C x. x \<leftarrow> rc.core_int_list] @ 
+    [set_EXT_x_ctr0_stm1_C x. x \<leftarrow> rc.core_int_list]
 )"
 
 definition D__ctr0 where
@@ -881,7 +875,7 @@ chantype Chan_mod0 =
 
 definition Memory_mod0 where
 "Memory_mod0 = loop (\<lambda> id::integer.
-  ( do {x \<leftarrow> inp_in set_x_mod0 core_int_set; 
+  ( do {x \<leftarrow> inp_in set_x_mod0 rc.core_int_set; 
         outp set_EXT_x_mod0_ctr0 x; Ret (id)}
   )
 )"
@@ -889,26 +883,26 @@ definition Memory_mod0 where
 definition rename_mod0_ctr0_events where
 "rename_mod0_ctr0_events = 
   [(terminate_ctr0_C (), terminate_mod0_C ())] @
-  [(set_x_ctr0_C n, set_x_mod0_C n). n \<leftarrow> core_int_list] @
-  [(get_x_ctr0_C n, get_x_mod0_C n). n \<leftarrow> core_int_list] @
-  [(e1_ctr0_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> core_int_list] @
+  [(set_x_ctr0_C n, set_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
+  [(get_x_ctr0_C n, get_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
+  [(e1_ctr0_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
   [(e2_ctr0_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
-  [(set_EXT_x_ctr0_C n, set_EXT_x_mod0_ctr0_C n). n \<leftarrow> core_int_list]
+  [(set_EXT_x_ctr0_C n, set_EXT_x_mod0_ctr0_C n). n \<leftarrow> rc.core_int_list]
 "
 
 definition rename_D__ctr0 where
 "rename_D__ctr0 idd = rename (set rename_mod0_ctr0_events) (D__ctr0 idd)"
 
 definition "mod0_set_x_events = set (
-  [set_x_mod0_C n. n \<leftarrow> core_int_list]
+  [set_x_mod0_C n. n \<leftarrow> rc.core_int_list]
 )"
 
 definition "mod0_get_x_events = set (
-  [get_x_mod0_C n. n \<leftarrow> core_int_list]
+  [get_x_mod0_C n. n \<leftarrow> rc.core_int_list]
 )"
 
 definition "mod0_set_EXT_x_events = set (
-  [set_EXT_x_mod0_ctr0_C n. n \<leftarrow> core_int_list]
+  [set_EXT_x_mod0_ctr0_C n. n \<leftarrow> rc.core_int_list]
 )"
 
 definition D__ctr_mem where
