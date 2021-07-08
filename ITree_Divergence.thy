@@ -427,7 +427,7 @@ locale itree_chain =
   and s s' :: "'s" \<comment> \<open> Initial and final state \<close>
   and chn :: "('e list \<times> 's) list" \<comment> \<open> The chain \<close>
   assumes length_chain: "length chn > 0" 
-  and last_st: "snd (chn ! n) = s'"
+  and last_st: "snd (last chn) = s'"
   and chain_start: "P s \<midarrow>fst (hd chn)\<leadsto> Ret (snd (hd chn))"
   and chain_iter: "\<forall> i < length chn - 1. P (snd (chn ! i)) \<midarrow>fst (chn ! (i + 1))\<leadsto> Ret (snd (chn ! (i + 1)))"
 
@@ -599,7 +599,7 @@ proof -
   interpret chn: itree_chain P s s' "[x]"
     by (simp add: assms)
   from chn.chain_start show ?thesis
-    by (metis chn.last_st list.sel(1) nth_Cons_0)
+    using chn.last_st by auto
 qed
 
 lemma itree_chain_Cons_dest:
@@ -610,7 +610,7 @@ proof -
     by (simp add: assms)
   from assms(2) show ?thesis
     apply (unfold_locales, auto)
-    apply (metis chn.last_st nth_Cons_Suc)
+    using chn.last_st apply auto[1]
     using chn.chain_iter hd_conv_nth apply fastforce
     apply (metis (no_types, hide_lams) One_nat_def Suc_eq_plus1 Suc_less_eq Suc_pred assms(2) chn.chain_iter diff_Suc_Suc diff_zero list.size(4) nth_Cons_Suc)
     done
@@ -665,11 +665,19 @@ next
     ultimately show ?thesis
       apply (simp, rule_tac trace_to_trans)
        apply (auto)
-      apply (metis assms(4) chn.last_st nth_Cons_0)
+      apply (metis Cons.hyps Cons.prems(3) One_nat_def Suc_eq_plus1 Suc_pred assms(4) chn' diff_Suc_1 itree_chain_def list.size(4) not_less_eq nth_Cons_Suc)
       done
   qed
 qed
-  
+
+lemma 
+  assumes "iterate b P s \<midarrow>es\<leadsto> Ret s'"
+  shows "\<exists> chn. itree_chain P s s' chn \<and> concat (map fst chn) = es"
+using assms proof (induct es)
+  case Nil
+  then show ?case 
+    (* Need to induct on the number of Sils *)
+    oops
 
 lemma 
   assumes 
