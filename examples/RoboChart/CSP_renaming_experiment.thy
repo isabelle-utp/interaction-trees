@@ -1,6 +1,8 @@
-section \<open>  \<close>
+section \<open> Renaming Experiments \<close>
 
-theory ITree_CSP_renaming_ex
+text \<open> This theory aims for experiments of various renaming solutions. \<close>
+
+theory CSP_renaming_experiment
   imports "../../ITree_RoboChart"
 begin
 
