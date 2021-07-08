@@ -427,8 +427,8 @@ locale itree_chain =
   and s s' :: "'s" \<comment> \<open> Initial and final state \<close>
   and chn :: "('e list \<times> 's) list" \<comment> \<open> The chain \<close>
   assumes length_chain: "length chn > 0" 
-  and init_st: "chn ! 0 = ([], s)"
   and last_st: "snd (chn ! n) = s'"
+  and chain_start: "P s \<midarrow>fst (hd chn)\<leadsto> Ret (snd (hd chn))"
   and chain_iter: "\<forall> i < length chn - 1. P (snd (chn ! i)) \<midarrow>fst (chn ! (i + 1))\<leadsto> Ret (snd (chn ! (i + 1)))"
 
 lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
@@ -592,10 +592,84 @@ qed
     oops
 *)
 
-lemma iterate_chain:
-  assumes "itree_chain P s s' chn"
+lemma itree_chan_singleton_dest [dest!]: 
+  assumes "itree_chain P s s' [x]" 
+  shows "P s \<midarrow>fst x\<leadsto> \<cmark> s' \<and> snd x = s'"
+proof -
+  interpret chn: itree_chain P s s' "[x]"
+    by (simp add: assms)
+  from chn.chain_start show ?thesis
+    by (metis chn.last_st list.sel(1) nth_Cons_0)
+qed
+
+lemma itree_chain_Cons_dest:
+  assumes "itree_chain P s s' ((es\<^sub>1, s\<^sub>0) # chn)" "length chn > 0"
+  shows "itree_chain P s\<^sub>0 s' chn"
+proof -
+  interpret chn: itree_chain P s s' "(es\<^sub>1, s\<^sub>0) # chn"
+    by (simp add: assms)
+  from assms(2) show ?thesis
+    apply (unfold_locales, auto)
+    apply (metis chn.last_st nth_Cons_Suc)
+    using chn.chain_iter hd_conv_nth apply fastforce
+    apply (metis (no_types, hide_lams) One_nat_def Suc_eq_plus1 Suc_less_eq Suc_pred assms(2) chn.chain_iter diff_Suc_Suc diff_zero list.size(4) nth_Cons_Suc)
+    done
+qed
+
+lemma trace_to_Sil_dest [dest]: "P \<midarrow>tr\<leadsto> \<tau> P' \<Longrightarrow> P \<midarrow>tr\<leadsto> P'"
+  by (metis append.right_neutral trace_to_Nil trace_to_Sil trace_to_trans)
+
+lemma iterate_trace_to:
+  assumes "P s \<midarrow>es \<leadsto> Ret s'" "b s"
+  shows "iterate b P s \<midarrow>es\<leadsto> iterate b P s'"
+proof -
+  have "(P s \<bind> \<tau> \<circ> iterate b P) \<midarrow>es\<leadsto> (Ret s' \<bind> \<tau> \<circ> iterate b P)"
+    by (meson assms(1) trace_to_bind_left)
+  thus ?thesis
+    by (auto simp add: iterate.code assms)
+qed
+
+lemma iterate_term_once:
+  assumes "P s \<midarrow>es \<leadsto> Ret s'" "b s" "\<not> b s'"
+  shows "iterate b P s \<midarrow>es\<leadsto> Ret s'"
+  by (metis assms(1) assms(2) assms(3) iterate.code iterate_trace_to)
+
+lemma iterate_chain_terminates:
+  assumes "itree_chain P s s' chn" "b s" "\<forall> i < length chn - 1. b (snd (chn ! i))" "\<not> b s'"
   shows "iterate b P s \<midarrow>concat (map fst chn)\<leadsto> Ret s'"
-  oops
+using assms proof (induct chn arbitrary: s)
+  case Nil
+  then interpret chn: itree_chain P s s' "[]"
+    by simp
+  show ?case
+    using chn.length_chain by blast    
+next
+  case (Cons ec chn)
+  show ?case
+  proof (cases "chn = []")
+    case True
+    thus ?thesis
+      using Cons by (auto, meson iterate_term_once)
+  next
+    case False
+    then interpret chn: itree_chain P s s' "ec # chn"
+      by (simp add: Cons.prems(1))
+    have chn': "itree_chain P (snd ec) s' chn"
+      by (metis Cons.prems(1) False itree_chain_Cons_dest length_greater_0_conv prod.exhaust_sel)
+    have "P s \<midarrow>fst ec\<leadsto> Ret (snd ec)"
+      using chn.chain_start by auto
+    hence "iterate b P s \<midarrow>fst ec\<leadsto> iterate b P (snd ec)"
+      by (simp add: Cons.prems(2) iterate_trace_to)
+    moreover have "b (snd ec)"
+      by (metis Cons.prems(3) chn' itree_chain.length_chain length_tl list.sel(3) nth_Cons_0)
+    ultimately show ?thesis
+      apply (simp, rule_tac trace_to_trans)
+       apply (auto)
+      apply (metis assms(4) chn.last_st nth_Cons_0)
+      done
+  qed
+qed
+  
 
 lemma 
   assumes 
