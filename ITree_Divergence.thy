@@ -68,7 +68,7 @@ lemma stabilises_alt_def':
   by (auto simp add: stabilises_alt_def, metis itree.sel(3) rangeI, blast)
   
 lemma stabilises_to_Sils_Vis [simp]: "stabilises_to R (Sils n (Vis F)) = (pran F \<subseteq> Collect R)"
-  by (auto, auto simp add: Sils_Vis_iff stabilises_alt_def image_subset_iff, metis Sils_Vis_not_Ret)
+  by (auto, auto simp add: Sils_Vis_iff stabilises_alt_def image_subset_iff)
 
 subsection \<open> Divergence \<close>
 
@@ -396,6 +396,40 @@ lemma evalpha_diverge [simp]: "\<^bold>A(diverge) = {}"
   by (auto simp add: evalpha_def)
      (meson diverges_diverge stabilises_traceI)
 
+subsection \<open> Removing Leading Silent Steps \<close>
+
+definition "un_Sils P = (if (stabilises P) then (THE P'. \<exists> n. P = Sils n P' \<and> stable P') else P)"
+
+lemma un_Sils_Ret [simp]: "un_Sils (Ret x) = Ret x"
+  by (simp add: un_Sils_def, rule the_equality, auto)
+
+lemma un_Sils_Vis [simp]: "un_Sils (Vis F) = Vis F"
+  by (simp add: un_Sils_def, rule the_equality, auto)
+     (metis Sils.simps(1), metis Sils_0 is_Vis_Sils itree.disc(9))
+
+lemma un_Sils_Sil [simp]: "un_Sils (Sil P) = un_Sils P"
+proof (cases "P = diverge")
+  case True
+  then show ?thesis
+    by (metis diverge.code)
+next
+  case False
+  hence "stabilises P"
+    using diverges_then_diverge by auto
+  then show ?thesis
+    by (auto simp add: un_Sils_def)
+       (metis (mono_tags, hide_lams) Sils.simps(1) Sils.simps(2) itree.disc(5) itree.sel(2) un_Sil_Sils)
+qed
+
+lemma un_Sils_Sils [simp]: "un_Sils (Sils n P) = un_Sils P"
+  by (induct n, simp_all)
+
+lemma stable_un_Sils [simp]: "stable P \<Longrightarrow> un_Sils (Sils n P) = P"
+  by (auto simp add: un_Sils_def, meson stabilises_def)
+
+lemma diverge_un_Sils [simp]: "un_Sils diverge = diverge"
+  by (simp add: un_Sils_def)
+
 subsection \<open> Power \<close>
 
 overloading
@@ -430,9 +464,6 @@ locale itree_chain =
   and last_st: "snd (last chn) = s'"
   and chain_start: "P s \<midarrow>fst (hd chn)\<leadsto> Ret (snd (hd chn))"
   and chain_iter: "\<forall> i < length chn - 1. P (snd (chn ! i)) \<midarrow>fst (chn ! (i + 1))\<leadsto> Ret (snd (chn ! (i + 1)))"
-
-lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
-  by (metis Sils.simps(1) is_Ret_Sils itree.disc(1))
 
 lemma itreepow_Sils_Ret_dest:
   fixes P :: "('e, 's) htree"
@@ -496,6 +527,11 @@ lemma iterate_Ret_dest:
   done
 
 lemma iterate_RetE:
+  assumes "iterate b P s = Ret x" "\<lbrakk> \<not> (b s); x = s \<rbrakk> \<Longrightarrow> Q"
+  shows Q
+  by (metis assms iterate_Ret_dest)
+
+lemma iterate_RetE':
   assumes "Ret x = iterate b P s" "\<lbrakk> \<not> (b s); x = s \<rbrakk> \<Longrightarrow> Q"
   shows Q
   by (metis assms iterate_Ret_dest)
@@ -669,6 +705,66 @@ next
       done
   qed
 qed
+
+lemma iterate_body_Ret:
+  assumes "iterate b P s \<midarrow>[]\<leadsto> Ret s'" "b s"
+  obtains s\<^sub>0 where "P s \<midarrow>[]\<leadsto> Ret s\<^sub>0"
+  using assms
+  by (auto elim!: bind_RetE trace_to_bindE simp add: iterate.code)
+
+lemma iterate_body_countdown:
+  assumes "iterate b P s = Sils n (\<cmark> s')" "b s"
+  obtains m s\<^sub>0 where "0 < n" "m \<le> n" "P s = Sils m (Ret s\<^sub>0)" "iterate b P s\<^sub>0 = Sils (n - m - 1) (\<cmark> s')"
+proof -
+  from assms obtain m s\<^sub>0 where "m \<le> n" "P s = Sils m (\<cmark> s\<^sub>0)" "Sil (iterate b P s\<^sub>0) = Sils (n - m) (\<cmark> s')"
+    by (auto elim!: bind_SilsE simp add: iterate.code)
+  moreover have "0 < n"
+    by (metis Sils.simps(1) assms gr0I iterate_RetE)
+  moreover have "iterate b P s\<^sub>0 = Sils (n - m - 1) (\<cmark> s')"
+    by (metis Ret_Sils_iff calculation(3) itree.sel(2) itree.simps(5) un_Sil_Sils)
+  ultimately show ?thesis using that by auto
+qed
+
+lemma iterate_ncond_prop:
+  "\<not> (b s) \<Longrightarrow> ((\<lambda>s. if b s then P s \<bind> (\<lambda>s'. \<tau> (\<cmark> s')) else \<cmark> s) ^^ n) s = Ret s"
+  by (induct n, auto simp add: kleisli_comp_def)
+
+lemma iterate_as_power:
+  fixes P :: "('e, 's) htree"
+  assumes "\<exists> m\<le>n. iterate b P s = Sils m (\<cmark> s')" "b s"
+  shows "iterate b P s = ((\<lambda> s. (if (b s) then (P s \<bind> (\<lambda> s'. \<tau> (Ret s'))) else Ret s)) ^^ n) s"
+using assms proof (induct n arbitrary: s)
+  case 0
+  then show ?case by (meson iterate_body_countdown not_less)
+next
+  case (Suc n)
+  obtain n' where n': "n'\<le>Suc n" "iterate b P s = Sils n' (\<cmark> s')"
+    using Suc.prems(1) by blast
+  obtain m s\<^sub>0 where P: "0 < n'" "m \<le> n'" "P s = Sils m (\<cmark> s\<^sub>0)" "iterate b P s\<^sub>0 = Sils (n' - m - 1) (\<cmark> s')"
+    by (meson Suc.prems(2) iterate_body_countdown n'(2))
+  have "iterate b P s = \<tau> (Sils m (iterate b P s\<^sub>0))"
+    by (subst iterate.code, simp add: Suc(3) P)
+  have le_n: "n' - m - 1 \<le> n"
+    using n'(1) by auto
+  show ?case
+  proof (cases "b s\<^sub>0")
+    case True
+    hence hyp: "iterate b P s\<^sub>0 = ((\<lambda>s. (if b s then (P s \<bind> (\<lambda> s'. \<tau> (Ret s'))) else \<cmark> s)) ^^ n) s\<^sub>0"
+      using P(4) Suc.hyps le_n by blast
+    show ?thesis
+      by (simp add: iterate.code Suc kleisli_comp_def, simp add: P(3) hyp)
+  next
+    case False
+    then show ?thesis 
+      by (simp add: iterate.code Suc kleisli_comp_def P(3) iterate_ncond_prop)
+  qed
+qed
+
+lemma assumes "iterate b P s = Sils n (Ret s')"
+  shows "\<exists> m. iterate b P s = (P ^^ m) s"
+  using assms
+  oops  
+
 
 lemma 
   assumes "iterate b P s \<midarrow>es\<leadsto> Ret s'"

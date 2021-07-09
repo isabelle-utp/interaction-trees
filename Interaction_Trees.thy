@@ -315,6 +315,21 @@ lemma bind_SilsE:
   shows R
   using assms(1) assms(2) assms(3) bind_Sils_dest by blast  
 
+lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
+  by (metis Sils.simps(1) is_Ret_Sils itree.disc(1))
+
+
+lemma stabilises_eq_iff [simp]: 
+  "\<lbrakk> stable P; stable Q \<rbrakk> \<Longrightarrow> Sils m P = Sils n Q \<longleftrightarrow> (m = n \<and> P = Q)"
+  apply (induct m arbitrary: n P Q )
+  apply (case_tac P, case_tac[!] Q)
+  apply (auto dest: Vis_not_Sils_Ret simp add: Vis_Sils)
+  apply (metis Sils.elims itree.disc(2) itree.disc(4) itree.discI(1) itree.sel(2))
+  apply (metis Sils.elims itree.disc(4) itree.distinct(1) itree.sel(2))
+  apply (metis Sils.elims itree.disc(6) itree.disc(8) itree.disc(9) itree.sel(2))
+  apply (metis Sils.elims itree.disc(6) itree.distinct(5) itree.sel(2))
+  done
+
 subsection \<open> Operational Semantics and Traces \<close>
 
 inductive trace_to :: "('e, 's) itree \<Rightarrow> 'e list \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" ("_ \<midarrow>_\<leadsto> _" [55, 0, 55] 55) where
@@ -551,7 +566,6 @@ text \<open> If an event happened beyond a visible choice, then this must have r
 lemma trace_to_determinstic_choice:
   "\<lbrakk> P \<midarrow>tr\<leadsto> Vis F; P \<midarrow>tr @ [e]\<leadsto> P' \<rbrakk> \<Longrightarrow> e \<in> pdom(F)"
   apply (induct tr arbitrary: P P', auto)
-  using Sils_Vis_inj apply blast
   apply (metis Sils_Vis_trns Vis_Cons_trns trace_to_ConsE trace_to_singleE)
   done
 
