@@ -52,6 +52,8 @@ abbreviation "core_real_set \<equiv> set core_real_list"
 
 end
 
+print_locale! robochart_confs
+
 subsection \<open> RoboChart CSP datatypes \<close>
 
 datatype InOut = din | dout
@@ -59,7 +61,14 @@ datatype InOut = din | dout
 definition "InOut_list = [din, dout]"
 definition "InOut_set = set InOut_list"
 
-(* enumtype Din = c1 | c2 *)
+\<comment> \<open> The @{text "mapfc"} and @{text "mapfc"} together to enumerate events for a channel. \<close>
+definition "mapfc fs xs = concat (map (\<lambda> f. map f xs) (map curry fs))"
+
+definition "mapf fs xs = concat (map (\<lambda> f. map f xs) (fs))"
+
+definition "enumchan1 ch a = mapf ch a"
+definition "enumchan2 ch a b = mapf (mapfc ch a) b"
+definition "enumchan3 ch a b c = mapf (mapfc (mapfc ch a) b) c"
 
 subsection \<open> Memory \<close>
 text \<open> The memory cell for a shared variable. \<close>

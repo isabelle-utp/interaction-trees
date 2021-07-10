@@ -90,6 +90,47 @@ definition internal_events_stm0 where
           sid2 \<leftarrow> SIDS_stm0_list]
 )"
 
+
+value "mapf (mapfc (mapfc [e1__stm0_C] [TID_stm0_t1]) [din]) rc.core_int_list"
+
+value "mapf (mapf (mapf [curry \<circ> curry e1__stm0_C] [TID_stm0_t1]) [din]) rc.core_int_list"
+ML \<open> 
+  @{term "[e1__stm0_C]"};
+  Syntax.const @{const_name "mapf"} $ @{term "[get_l_stm0]"} $ @{term "rc.core_int_list"};
+  Syntax.const @{const_name "mapfc"} $ @{term "[e1__stm0_C]"};
+  Syntax.const @{const_name "mapf"} $ 
+    (
+      Syntax.const @{const_name "mapfc"} $ 
+      (
+        (Syntax.const @{const_name "mapfc"} $ 
+          @{term "[e1__stm0_C]"}
+        ) $ 
+        @{term "[TID_stm0_t1]"}
+      ) $
+      @{term "[din]"}
+    ) $ 
+    @{term "[]"};
+\<close>
+
+term "e1__stm0_C"
+(* enumchan e1__stm0_C [TID_stm0_t1] [din] rc.core_int_list *)
+
+(*
+value "mapf (mapf (mapf [D] A) B) C
+[D x y z | x <- A, y <- B, z <- C]"
+
+
+mapf fs xs = concat (map (\lambda f. map f xs) fs)
+
+[C x y z | x <- A, y <- B, z <- C]
+Simon Foster10:50 AM
+mapf (mapf (mapf [C] A) B) C
+mapf (mapf (mapf [D] A) B) C
+[D x y z | x <- A, y <- B, z <- C]
+
+Syntax.const @{const_name mapf) $ ...
+*)
+
 definition shared_variable_events_stm0 where
 "shared_variable_events_stm0 = 
   set ([set_EXT_x_stm0_C (x). 

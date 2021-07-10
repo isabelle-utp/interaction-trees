@@ -3,7 +3,7 @@ section \<open> Renaming Experiments \<close>
 text \<open> This theory aims for experiments of various renaming solutions. \<close>
 
 theory CSP_renaming_experiment
-  imports "../../ITree_RoboChart"
+  imports "../../ITree_RoboChart" "../../RC_Channel_Type"
 begin
 
 declare [[show_types]]
@@ -93,20 +93,35 @@ subsection \<open> General definitions \<close>
 interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
 subsubsection \<open> stm0 \<close>
-datatype SIDS_stm0 = SID_stm0
+(*datatype SIDS_stm0 = SID_stm0
+  | SID_stm0_s0*)
+
+enumtype SIDS_stm0 = SID_stm0
   | SID_stm0_s0
 
-definition "SIDS_stm0_list = [SID_stm0, SID_stm0_s0]"
-definition "SIDS_stm0_set = set SIDS_stm0_list"
-definition "SIDS_stm0_without_s0 = (removeAll SID_stm0_s0 SIDS_stm0_list)"
+value "enum_SIDS_stm0_inst.enum_SIDS_stm0"
+value "enum_SIDS_stm0_inst.enum_all_SIDS_stm0"
+value "full_exhaustive_SIDS_stm0_inst.full_exhaustive_SIDS_stm0"
+value "default_SIDS_stm0_inst.default_SIDS_stm0"
 
-datatype TIDS_stm0 = NULLTRANSITION_stm0
+ML \<open>
+  @{const_name "enum_SIDS_stm0_inst.enum_SIDS_stm0"};
+  @{term "enum_SIDS_stm0_inst.enum_SIDS_stm0"};
+\<close>
+
+(* How to access set of enum list? *)
+
+(* definition "SIDS_stm0_list = [SID_stm0, SID_stm0_s0]" *)
+definition "SIDS_stm0_set = set enum_SIDS_stm0_inst.enum_SIDS_stm0"
+definition "SIDS_stm0_without_s0 = (removeAll SID_stm0_s0 enum_SIDS_stm0_inst.enum_SIDS_stm0)"
+
+enumtype TIDS_stm0 = NULLTRANSITION_stm0
 	              | TID_stm0_t0
 	              | TID_stm0_t1
 	              | TID_stm0_t2
 
-definition "TIDS_stm0_list = [NULLTRANSITION_stm0, TID_stm0_t0, TID_stm0_t1, TID_stm0_t2]"
-definition "TIDS_stm0_set = set TIDS_stm0_list"
+(* definition "TIDS_stm0_list = [NULLTRANSITION_stm0, TID_stm0_t0, TID_stm0_t1, TID_stm0_t2]" *)
+definition "TIDS_stm0_set = set enum_TIDS_stm0_inst.enum_TIDS_stm0"
 
 definition "ITIDS_stm0_list = [TID_stm0_t1, TID_stm0_t2]"
 definition "ITIDS_stm0 = set ITIDS_stm0_list"  
@@ -132,13 +147,13 @@ definition "ITIDS_stm1_list = [TID_stm1_t1, TID_stm1_t2]"
 definition "ITIDS_stm1 = set ITIDS_stm1_list"
 
 subsection \<open> Channel type\<close>
+rcchantype Chan1 =
+  e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
+  e_b_stm0 :: "core_bool"
+
 chantype Chan =
   e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e_b_stm0 :: "core_bool"
-(*
-  e1_ctr0 :: "InOut \<times> core_int"
-  e1_mod0 :: "InOut \<times> core_int"
-*)
 
 chantype Chan1 =
   e1_stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
@@ -176,7 +191,7 @@ definition P where
 definition rename_map where
 "rename_map = 
   [(e1__stm0_C (tid, dir, n), e1'_stm0_C (dir, n)) . 
-          tid \<leftarrow> TIDS_stm0_list, 
+          tid \<leftarrow> enum_TIDS_stm0_inst.enum_TIDS_stm0, 
           dir \<leftarrow> InOut_list, 
           n \<leftarrow> rc.core_int_list] @
   []
@@ -200,7 +215,7 @@ definition Pr where
 definition rename_map1 where
 "rename_map1 = 
   [(e1__stm0_C (tid, dir, n), e1__stm0_C (tid, dir, n)) . 
-          tid \<leftarrow> TIDS_stm0_list, 
+          tid \<leftarrow> enum_TIDS_stm0_inst.enum_TIDS_stm0, 
           dir \<leftarrow> InOut_list, 
           n \<leftarrow> rc.core_int_list] @
   []
@@ -215,6 +230,7 @@ export_code
   P
   Pr
   in Haskell
+  (* module_name renaming_ex *)
   file_prefix renaming_ex 
   (string_classes) 
 
