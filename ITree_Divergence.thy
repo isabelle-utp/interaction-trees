@@ -430,6 +430,74 @@ lemma stable_un_Sils [simp]: "stable P \<Longrightarrow> un_Sils (Sils n P) = P"
 lemma diverge_un_Sils [simp]: "un_Sils diverge = diverge"
   by (simp add: un_Sils_def)
 
+subsection \<open> Strong Traces \<close>
+
+inductive strace_to :: "('a, 'b) itree \<Rightarrow> 'a option list \<Rightarrow> ('a, 'b) itree \<Rightarrow> bool" ("_ \<midarrow>_\<rightarrow> _" [55, 0, 55] 55) where
+strace_to_Nil [intro!]: "P \<midarrow>[]\<rightarrow> P" | 
+strace_to_Sil [intro!]: "P \<midarrow>tr\<rightarrow> P' \<Longrightarrow> Sil P \<midarrow>None # tr\<rightarrow> P'" |
+strace_to_Vis [intro!]: "\<lbrakk> e \<in> pdom F; F e \<midarrow>tr\<rightarrow> P' \<rbrakk> \<Longrightarrow> Vis F \<midarrow>Some e # tr\<rightarrow> P'"
+
+inductive_cases
+  strace_NilE [elim!]: "P \<midarrow>[]\<rightarrow> P'" and
+  strace_Cons_NoneE [elim!]: "P \<midarrow>None # tr\<rightarrow> P'" and
+  strace_Cons_SomeE [elim!]: "P \<midarrow>Some e # tr\<rightarrow> P'"
+
+lemma strace_to_Sils [intro!]: "P \<midarrow>tr\<rightarrow> P' \<Longrightarrow> Sils n P \<midarrow>(replicate n None) @ tr\<rightarrow> P'"
+  by (induct n, auto)
+
+lemma trace_then_strace:
+  assumes "P \<midarrow>tr\<leadsto> P'"
+  shows "(\<exists> tr'. P \<midarrow>tr'\<rightarrow> P' \<and> tr = [x. Some x \<leftarrow> tr'])"
+using assms proof (induct tr arbitrary: P)
+  case Nil
+  then obtain n where "P = Sils n P'"
+    by (meson trace_to_NilE)
+  then show ?case
+    using strace_to_Nil strace_to_Sils by fastforce
+next
+  case (Cons a tr)
+  then obtain n F where P: "P = Sils n (Vis F)" "a \<in> pdom(F)"
+    by (meson trace_to_ConsE trace_to_singleE)
+  moreover then obtain tr' where tr': "F a \<midarrow>tr'\<rightarrow> P'" "tr = [x. Some x \<leftarrow> tr']"
+    using Cons.hyps Cons.prems by auto
+  ultimately show ?case
+    by (rule_tac x="replicate n None @ Some a # tr'" in exI, auto)
+qed
+
+lemma strace_then_trace:
+  assumes "P \<midarrow>tr\<rightarrow> P'" 
+  shows "P \<midarrow>[x. Some x \<leftarrow> tr]\<leadsto> P'"
+using assms by (induct rule: strace_to.induct, auto)
+
+lemma strace_to_ConsE:
+  assumes "P \<midarrow>x # xs\<rightarrow> Q" 
+  obtains P' where "P \<midarrow>[x]\<rightarrow> P'" "P' \<midarrow>xs\<rightarrow> Q"
+  using assms 
+proof -
+  have "\<And> tr. P \<midarrow>tr\<rightarrow> Q \<Longrightarrow> tr \<noteq> [] \<longrightarrow> (\<exists>P'. P \<midarrow>[hd tr]\<rightarrow> P' \<and> P' \<midarrow>tl tr\<rightarrow> Q)"
+  proof -
+    fix tr
+    assume "P \<midarrow>tr\<rightarrow> Q"
+    thus "tr \<noteq> [] \<longrightarrow> (\<exists>P'. P \<midarrow>[hd tr]\<rightarrow> P' \<and> P' \<midarrow>tl tr\<rightarrow> Q)"
+      by (induct rule: strace_to.induct, auto)
+  qed
+  thus ?thesis
+    by (metis assms list.distinct(1) list.sel(1) list.sel(3) that)
+qed
+
+lemma strace_to_bind_cases:
+  assumes 
+    "(P \<bind> Q) \<midarrow>tr\<rightarrow> Q'"
+  shows "(\<exists> P'. P \<midarrow>tr\<rightarrow> P' \<and> Q' = (P' \<bind> Q)) 
+          \<or> (\<exists> x tr\<^sub>1 tr\<^sub>2. P \<midarrow>tr\<^sub>1\<rightarrow> Ret x \<and> Q x \<midarrow>tr\<^sub>2\<rightarrow> Q' \<and> tr = tr\<^sub>1 @ tr\<^sub>2)"
+  using assms proof (induct tr arbitrary: P Q Q')
+  case Nil
+  then show ?case by (auto elim: strace_NilE)
+next
+  case (Cons a tr)
+  then show ?case
+    oops
+
 subsection \<open> Power \<close>
 
 overloading
@@ -725,9 +793,27 @@ proof -
   ultimately show ?thesis using that by auto
 qed
 
+lemma iterate_body_consume:
+  assumes "iterate b P s \<midarrow>tr\<leadsto> \<cmark> s'" "b s"
+  obtains tr\<^sub>0 s\<^sub>0 where "tr\<^sub>0 \<le> tr" "P s \<midarrow>tr\<^sub>0\<leadsto> \<cmark> s\<^sub>0" "iterate b P s\<^sub>0 \<midarrow>tr - tr\<^sub>0\<leadsto> \<cmark> s'"
+  using assms 
+  by (auto elim!: trace_to_bindE simp add: iterate.code)
+     (metis Prefix_Order.prefixI append_minus)
+
+lemma iterate_body_strong_consume:
+  assumes "iterate b P s \<midarrow>tr\<rightarrow> \<cmark> s'" "b s"
+  obtains tr\<^sub>0 s\<^sub>0 where "tr\<^sub>0 < tr" "P s \<midarrow>tr\<^sub>0\<rightarrow> \<cmark> s\<^sub>0" "iterate b P s\<^sub>0 \<midarrow>tr - tr\<^sub>0\<rightarrow> \<cmark> s'"
+  oops
+
 lemma iterate_ncond_prop:
   "\<not> (b s) \<Longrightarrow> ((\<lambda>s. if b s then P s \<bind> (\<lambda>s'. \<tau> (\<cmark> s')) else \<cmark> s) ^^ n) s = Ret s"
   by (induct n, auto simp add: kleisli_comp_def)
+
+lemma iterate_chain:
+  fixes P :: "('e, 's) htree"
+  assumes "\<exists> m\<ge>n. iterate b P s = Sils m (\<cmark> s')" "b s"
+  shows "\<exists> chn. itree_chain P s s' chn"
+  oops
 
 lemma iterate_as_power:
   fixes P :: "('e, 's) htree"
@@ -758,6 +844,20 @@ next
     then show ?thesis 
       by (simp add: iterate.code Suc kleisli_comp_def P(3) iterate_ncond_prop)
   qed
+qed
+
+thm nat_less_induct
+
+thm nat.induct
+
+lemma 
+  assumes "iterate b P s \<midarrow>tr\<rightarrow> \<cmark> x"
+  shows "\<exists> chn. itree_chain P s s' chn \<and> concat (map fst chn) = es"
+using assms proof (induct "length tr" arbitrary: tr s rule: nat_less_induct)
+  case 1
+  
+  then show ?case
+    apply (auto)
 qed
 
 lemma assumes "iterate b P s = Sils n (Ret s')"
