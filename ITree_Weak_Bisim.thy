@@ -200,18 +200,8 @@ next
   with assms show ?thesis 
     apply (coinduction arbitrary: P Q R)
     apply (auto elim!: wbisim.cases wbisim_toE intro!: wbisim_to_Sils1 wbisim_to_Sils2 wbisim_to_Vis)
-    apply (metis (no_types, lifting) termination_determinsitic trace_of_Sils wbisim_to_Ret)
-    apply (metis (no_types, lifting) wbisim_to_Ret wbisim_to_Sils_iff2)
-    apply (metis (no_types, lifting) Sils_Vis_not_Ret)
-    apply (metis (no_types, lifting) Sils_Vis_not_Ret)
-    apply (metis (no_types, lifting) Sils_Vis_not_Ret)
-    apply (metis (no_types, lifting) Sils_Vis_not_Ret)
-    apply (metis (no_types, hide_lams) Sils_Vis_iff)
-    apply (metis (no_types, hide_lams) Sils_Vis_inj)
-    apply (metis (no_types, hide_lams) Sils_Vis_iff)
-    apply (metis (no_types, hide_lams) Sils_Vis_iff)
-    apply (metis (no_types, hide_lams) Sils_Vis_inj diverge_wbisim1 diverge_wbisim2 diverges_then_diverge)
-    apply (metis Sils_Vis_inj diverge_wbisim1 diverge_wbisim2 diverges_then_diverge)
+    apply (metis (no_types, hide_lams) diverge_wbisim1 diverge_wbisim2 diverges_then_diverge)
+    apply (metis diverge_wbisim1 diverge_wbisim2 diverges_then_diverge)
     done
 qed
 

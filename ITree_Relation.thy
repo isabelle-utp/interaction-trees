@@ -14,14 +14,6 @@ definition itree_rel :: "('e, 'a, 'b) ktree \<Rightarrow> ('a \<times> 'b) set" 
 definition spec :: "'s scene \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> 's rel" where
 "spec a pre post = {(s, s'). s \<approx>\<^sub>S s' on (- a) \<and> pre s \<longrightarrow> post s'}"
 
-definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
-"hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
-
-syntax "_hoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>} _ \<^bold>{_\<^bold>}")
-translations "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
-
-lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> Ret s' \<longrightarrow> Q s')"
-  by (auto simp add: hoare_triple_def spec_def itree_rel_def retvals_def subset_iff)
 
 lemma test_rel: "itree_rel \<questiondown>P? = {(s, s'). s' = s \<and> P s}"
   apply (auto simp add: itree_rel_def retvals_def test_def)
