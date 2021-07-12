@@ -857,8 +857,7 @@ using assms proof (induct "length tr" arbitrary: tr s rule: nat_less_induct)
   case 1
   
   then show ?case
-    apply (auto)
-qed
+    oops
 
 lemma assumes "iterate b P s = Sils n (Ret s')"
   shows "\<exists> m. iterate b P s = (P ^^ m) s"
