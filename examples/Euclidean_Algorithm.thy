@@ -1,6 +1,8 @@
 theory Euclidean_Algorithm
   imports "../ITree_Extraction"
-begin lit_vars
+begin 
+
+lit_vars
 
 alphabet gcd = 
   a :: integer
@@ -8,11 +10,12 @@ alphabet gcd =
 
 record_default gcd
 
+
 definition eucl :: "integer \<times> integer \<Rightarrow> ('e, gcd) htree" where
   "eucl \<equiv>
    (\<lambda> (A, B). 
     (a, b) := (A, B) \<Zcomp> 
-    while a \<noteq> b do 
+    while a \<noteq> b inv a > 0 \<and> b > 0 \<and> gcd a b = gcd A B do 
       if a > b 
         then a := a - b 
         else b := b - a 
@@ -22,8 +25,6 @@ definition eucl :: "integer \<times> integer \<Rightarrow> ('e, gcd) htree" wher
 definition eucl_proc :: "('e, (integer \<times> integer), integer, gcd) procedure" where
 "eucl_proc = (proc (A, B). eucl(A, B) \<Zcomp> return a)"
 
-lemma "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a = gcd X Y\<^bold>}"
-  oops
 
 definition eucl_gcd where "eucl_gcd = procproc eucl_proc"
 

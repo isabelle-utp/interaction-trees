@@ -4,19 +4,44 @@ theory ITree_Hoare
   imports ITree_Relation
 begin
 
+named_theorems hoare_safe
+
 definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
 
 syntax "_hoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>} _ \<^bold>{_\<^bold>}")
 translations "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
 
-lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> Ret s' \<longrightarrow> Q s')"
+lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<cmark> s' \<longrightarrow> Q s')"
   by (auto simp add: hoare_triple_def spec_def itree_rel_def retvals_def subset_iff)
 
-lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> Ret s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
+lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<cmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (auto simp add: hoare_alt_def)
 
-lemma hoare_while_partial:
+lemma hoare_assigns [hoare_safe]: "\<^bold>{\<sigma> \<dagger> P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}"
+  by (auto intro!: hoareI simp add: assigns_def, expr_simp)
+
+lemma hoare_fwd_assign:
+  assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} x := e \<Zcomp> S \<^bold>{Q\<^bold>}"
+  using assms
+  by (auto simp add: hoare_alt_def assigns_def kleisli_comp_def, expr_simp)
+     (metis (no_types, lifting) mwb_lens_def vwb_lens.put_eq vwb_lens_mwb weak_lens.put_get)
+
+lemma hoare_conseq:
+  assumes "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}" "`Q\<^sub>2 \<longrightarrow> Q\<^sub>1`"
+  shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
+  using assms by (auto simp add: hoare_alt_def, expr_auto)
+
+lemma hoare_cond [hoare_safe]:
+  assumes "\<^bold>{B \<and> P\<^bold>} S \<^bold>{Q\<^bold>}" "\<^bold>{\<not>B \<and> P\<^bold>} T \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>}if B then S else T fi\<^bold>{Q\<^bold>}"
+  using assms by (simp add: hoare_alt_def cond_itree_def)
+
+lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{P\<^bold>}"
+  by (auto simp add: hoare_triple_def seq_rel spec_def)
+
+lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
   shows "\<^bold>{P\<^bold>}while B do S od\<^bold>{\<not> B \<and> P\<^bold>}"
 proof (rule hoareI)
@@ -59,6 +84,23 @@ proof (rule hoareI)
     then show ?thesis
       using while(1) while(2) by force 
   qed
+qed
+
+definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+"while_inv B I P = iterate B P"
+
+syntax "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ do _ od")
+translations "_while_inv_itree B I P" == "CONST while_inv (B)\<^sub>e (I)\<^sub>e P"
+
+lemma hoare_while_inv_partial [hoare_safe]:
+  assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`I \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>}while B inv I do S od\<^bold>{\<not> B \<and> Q\<^bold>}"
+proof -
+  have 1:"\<^bold>{I\<^bold>}while B inv I do S od\<^bold>{\<not> B \<and> I\<^bold>}"
+    by (simp add: assms(1) hoare_while_partial while_inv_def)
+  from assms (3) have 2:"`(\<not> B \<and> I) \<longrightarrow> (\<not> B \<and> Q)`"
+    by (expr_auto)
+  from hoare_conseq[OF assms(2) 1 2] show ?thesis by simp
 qed
 
 end
