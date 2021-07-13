@@ -3,45 +3,46 @@ text \<open> This theory aims for simulation of a trivial RoboChart model based 
  semantics. We use the @{term "rename"} operator for renaming.
 \<close>
 theory RoboChart_basic
-  imports "../../ITree_RoboChart"
+  imports "../../ITree_RoboChart" "../../RC_Channel_Type"
 begin
 
 subsection \<open> General definitions \<close>
 interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
 subsection \<open> stm0 \<close>
-datatype SIDS_stm0 = SID_stm0
+enumtype SIDS_stm0 = SID_stm0
   | SID_stm0_s0
 
-definition "SIDS_stm0_list = [SID_stm0, SID_stm0_s0]"
+definition "SIDS_stm0_list = enum_SIDS_stm0_inst.enum_SIDS_stm0"
 definition "SIDS_stm0_set = set SIDS_stm0_list"
 definition "SIDS_stm0_without_s0 = (removeAll SID_stm0_s0 SIDS_stm0_list)"
 
-datatype TIDS_stm0 = NULLTRANSITION_stm0
+enumtype TIDS_stm0 = NULLTRANSITION_stm0
 	              | TID_stm0_t0
 	              | TID_stm0_t1
 	              | TID_stm0_t2
 
-definition "TIDS_stm0_list = [NULLTRANSITION_stm0, TID_stm0_t0, TID_stm0_t1, TID_stm0_t2]"
+definition "TIDS_stm0_list = enum_TIDS_stm0_inst.enum_TIDS_stm0"
 definition "TIDS_stm0_set = set TIDS_stm0_list"
 
 definition "ITIDS_stm0_list = [TID_stm0_t1, TID_stm0_t2]"
 definition "ITIDS_stm0 = set ITIDS_stm0_list"  
 
-chantype Chan_stm0 =
+rcchantype Chan_stm0 stm0 "SIDS_stm0 \<times> SIDS_stm0" =
 (* flow channels *)
   (* will be hidden *)
   internal_stm0 :: TIDS_stm0
-  enteredV_stm0 :: SIDS_stm0
+  (* enteredV_stm0 :: SIDS_stm0
   enterV_stm0 :: SIDS_stm0 
   exitV_stm0  :: SIDS_stm0 
-  exitedV_stm0 :: SIDS_stm0
+  exitedV_stm0 :: SIDS_stm0 *)
+  (* 
   enter_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   entered_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exit_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exited_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
-  (* this won't be hidden in this process, and will be renamed to terminate_ctr0 *)
-  terminate_stm0 :: unit (* Is this right? *)
+  *)
+  terminate_stm0 :: unit
 (* variable channels : the next 3 channels will be hidden *)
   get_l_stm0 :: core_int
   set_l_stm0 :: core_int
@@ -62,140 +63,54 @@ chantype Chan_stm0 =
 subsubsection \<open> Sets of events \<close>
 definition int_int_stm0 where
 "int_int_stm0 = 
-  set ([e1__stm0_C (tid, dir, n). 
-          tid \<leftarrow> [TID_stm0_t1,TID_stm0_t2], 
-          dir \<leftarrow> [din, dout], 
-          n \<leftarrow> rc.core_int_list] @ 
-       [e3__stm0_C (tid, dir, n). 
-          tid \<leftarrow> [TID_stm0_t1,TID_stm0_t2], 
-          dir \<leftarrow> [din, dout], 
-          n \<leftarrow> rc.core_int_list] @
-       [internal_stm0_C (tid). 
-          tid \<leftarrow> [TID_stm0_t1,TID_stm0_t2]]
+  set ((enumchans3 [e1__stm0_C, e3__stm0_C] [TID_stm0_t1,TID_stm0_t2] [din, dout] rc.core_int_list) @
+       (enumchan1 internal_stm0_C [TID_stm0_t1,TID_stm0_t2])
 )"
 
 definition internal_events_stm0 where
 "internal_events_stm0 = 
-  set ([enter_stm0_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list] @
-      [entered_stm0_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list] @
-      [exit_stm0_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list] @
-      [exited_stm0_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list]
-)"
-
-
-value "mapf (mapfc (mapfc [e1__stm0_C] [TID_stm0_t1]) [din]) rc.core_int_list"
-
-value "mapf (mapf (mapf [curry \<circ> curry e1__stm0_C] [TID_stm0_t1]) [din]) rc.core_int_list"
-ML \<open> 
-  @{term "[e1__stm0_C]"};
-  Syntax.const @{const_name "mapf"} $ @{term "[get_l_stm0]"} $ @{term "rc.core_int_list"};
-  Syntax.const @{const_name "mapfc"} $ @{term "[e1__stm0_C]"};
-  Syntax.const @{const_name "mapf"} $ 
-    (
-      Syntax.const @{const_name "mapfc"} $ 
-      (
-        (Syntax.const @{const_name "mapfc"} $ 
-          @{term "[e1__stm0_C]"}
-        ) $ 
-        @{term "[TID_stm0_t1]"}
-      ) $
-      @{term "[din]"}
-    ) $ 
-    @{term "[]"};
-\<close>
-
-term "e1__stm0_C"
-(* enumchan e1__stm0_C [TID_stm0_t1] [din] rc.core_int_list *)
+  set (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] SIDS_stm0_list SIDS_stm0_list)"
 
 (*
-value "mapf (mapf (mapf [D] A) B) C
-[D x y z | x <- A, y <- B, z <- C]"
-
-
-mapf fs xs = concat (map (\lambda f. map f xs) fs)
-
-[C x y z | x <- A, y <- B, z <- C]
-Simon Foster10:50 AM
-mapf (mapf (mapf [C] A) B) C
-mapf (mapf (mapf [D] A) B) C
-[D x y z | x <- A, y <- B, z <- C]
-
-Syntax.const @{const_name mapf) $ ...
-*)
-
 definition shared_variable_events_stm0 where
 "shared_variable_events_stm0 = 
   set ([set_EXT_x_stm0_C (x). 
           x \<leftarrow> rc.core_int_list]
 )"
+*)
 
 definition CS_stm0_s0_sync where
 "CS_stm0_s0_sync = 
-  set ([enter_stm0_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]] @
-      [entered_stm0_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]] @
-      [exit_stm0_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]] @
-      [exited_stm0_C (sidx, sidy). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]] @
-      [enter_stm0_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]] @
-      [entered_stm0_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]] @
-      [exit_stm0_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]] @
-      [exited_stm0_C (sidy, sidx). 
-          sidx \<leftarrow> [SID_stm0_s0], 
-          sidy \<leftarrow> [SID_stm0_s0]]
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] [SID_stm0_s0] [SID_stm0_s0])@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] [SID_stm0_s0] [SID_stm0_s0])
 )"
 
 definition stm0_s0_triggers where
 "stm0_s0_triggers = 
-  set ([e1__stm0_C (tid, dir, n). 
-          tid \<leftarrow> [TID_stm0_t1], 
-          dir \<leftarrow> [din, dout], 
-          n \<leftarrow> rc.core_int_list] @
-  [internal_stm0_C (tid). 
-          tid \<leftarrow> [TID_stm0_t2]]
+  set ((enumchan3 e1__stm0_C [TID_stm0_t1,TID_stm0_t2] [din, dout] rc.core_int_list) @
+  (enumchan1 internal_stm0_C [TID_stm0_t2])
 )
 "
 
 definition stm0_l_events where
 "stm0_l_events = 
-    set (
-        [get_l_stm0_C l . l \<leftarrow> rc.core_int_list] @
-        [set_l_stm0_C l . l \<leftarrow> rc.core_int_list]
-    )
+    set (enumchans1 [get_l_stm0_C, set_l_stm0_C] rc.core_int_list)
 "
 
 definition stm0_x_events where
 "stm0_x_events = 
     set (
-        [get_x_stm0_C x . x \<leftarrow> rc.core_int_list] @
-        [set_x_stm0_C x . x \<leftarrow> rc.core_int_list] @
-        [set_EXT_x_stm0_C x . x \<leftarrow> rc.core_int_list]
+        (enumchans1 [get_x_stm0_C, set_x_stm0_C] rc.core_int_list) @
+        (enumchan1 set_EXT_x_stm0_C rc.core_int_list)
     )
 "
 
 definition stm0_MachineInternalEvents where
 "stm0_MachineInternalEvents = 
-  set ([internal_stm0_C t . t \<leftarrow> TIDS_stm0_list])
+  set (enumchan1 internal_stm0_C TIDS_stm0_list)
 "
 
 subsubsection \<open> State Machine Memory \<close>
@@ -333,52 +248,25 @@ definition State_stm0_s0_R where
    skip
 "
 
+definition flow_event_stm0_not_s0 where 
+"flow_event_stm0_not_s0 = set (
+  enumchans2 [enter_stm0_C, entered_stm0_C,exit_stm0_C,exited_stm0_C] 
+             SIDS_stm0_without_s0 [SID_stm0_s0]
+)"
+
 definition STM_stm0 where
 "STM_stm0 (idd::integer) = 
    (I_stm0_i0(idd))
-    \<parallel>\<^bsub> set (
-        [enter_stm0_C (s, d). 
-          s \<leftarrow> SIDS_stm0_without_s0, 
-          d \<leftarrow> [SID_stm0_s0]] @ 
-        [entered_stm0_C (s, d). 
-          s \<leftarrow> SIDS_stm0_without_s0, 
-          d \<leftarrow> [SID_stm0_s0]] @ 
-        [exit_stm0_C (s, d). 
-          s \<leftarrow> SIDS_stm0_without_s0, 
-          d \<leftarrow> [SID_stm0_s0]] @ 
-        [exited_stm0_C (s, d). 
-          s \<leftarrow> SIDS_stm0_without_s0, 
-          d \<leftarrow> [SID_stm0_s0]] 
-        ) \<^esub> 
+    \<parallel>\<^bsub> flow_event_stm0_not_s0 \<^esub> 
    State_stm0_s0_R(idd)
 "
 
 definition stm0_e1_x_internal_set where
 "stm0_e1_x_internal_set = 
-  set ([e1__stm0_C (tid, dir, n). 
-          tid \<leftarrow> [TID_stm0_t1], 
-          dir \<leftarrow> [din, dout], 
-          n \<leftarrow> rc.core_int_list] @ 
+  set ((enumchan3 e1__stm0_C [TID_stm0_t1] [din, dout] rc.core_int_list) @ 
        [internal_stm0_C TID_stm0_t2] @
-       [set_x_stm0_C n. n \<leftarrow> rc.core_int_list]
+       (enumchan1 set_x_stm0_C rc.core_int_list)
 )"
-
-(*
-(Memory_opt_x(0)
- [| {|set_EXT_x,get_x,set_x|} |] 
- (
-  (	
-   (
-     ((Memory_opt_l(0) [| {|get_l,set_l|} |] STM_core(id__))\ {|get_l,set_l|})
-     [| {|internal__.TID_stm0_t0|} |]
-     MemoryTransitions_opt_0(id__)
-   ) \ {|internal__.TID_stm0_t0|}
-  )
-  [| {|e1__.TID_stm0_t1,internal__.TID_stm0_t2,set_x|} |]
-  MemoryTransitions_opt_1(id__)
- )\{|internal__.TID_stm0_t2|}
-) \ {|get_x|}
-*)
 
 subsubsection \<open> State machine \<close>
 definition MemorySTM_opt_stm0 where
@@ -415,7 +303,7 @@ text \<open> This definition actually defines a non-injective mapping as shown b
 here multiple @{term "e1__stm0"} events are mapped to one @{term "e1_stm0"} event.
 So we cannot rename a process with a non-injective mapping now.
 \<close>
-
+(*
 definition rename_stm0_events where
 "rename_stm0_events = 
   [(e1__stm0_C (tid, dir, n), e1_stm0_C (dir, n)) . 
@@ -426,10 +314,24 @@ definition rename_stm0_events where
           tid \<leftarrow> TIDS_stm0_list, 
           dir \<leftarrow> InOut_list, 
           n \<leftarrow> rc.core_int_list]
+"*)
+
+definition rename_stm0_events where
+"rename_stm0_events = 
+  concat ((enumchan2 (forget_first2 e1__stm0_C e1_stm0_C TIDS_stm0_list) InOut_list rc.core_int_list) @
+          (enumchan2 (forget_first2 e3__stm0_C e3_stm0_C TIDS_stm0_list) InOut_list rc.core_int_list))
 "
 
 definition rename_stm0_events_others where
 "rename_stm0_events_others = 
+  (enumchanp1 terminate_stm0_C [()]) @
+  (enumchansp1 [get_x_stm0_C, set_x_stm0_C, set_EXT_x_stm0_C] rc.core_int_list) @
+  (enumchansp2 [e1_stm0_C, e3_stm0_C] InOut_list rc.core_int_list) @
+  (enumchansp2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] SIDS_stm0_list SIDS_stm0_list)
+"
+(*
+definition rename_stm0_events_others' where
+"rename_stm0_events_others' = 
   [(terminate_stm0_C(), terminate_stm0_C () ) ] @
   [(get_x_stm0_C (n), get_x_stm0_C (n)) . 
           n \<leftarrow> rc.core_int_list] @
@@ -455,7 +357,7 @@ definition rename_stm0_events_others where
   [(exited_stm0_C (sid1, sid2), exited_stm0_C (sid1, sid2)) . 
           sid1 \<leftarrow> SIDS_stm0_list, 
           sid2 \<leftarrow> SIDS_stm0_list] 
-"
+"*)
 
 definition rename_MemorySTM_opt_stm0 where
 "rename_MemorySTM_opt_stm0 idd = 
@@ -479,27 +381,28 @@ definition D__stm0 where
 
 subsection \<open> stm1 \<close>
 
-datatype SIDS_stm1 = SID_stm1
+enumtype SIDS_stm1 = SID_stm1
   | SID_stm1_s0
 
-definition "SIDS_stm1_list = [SID_stm1, SID_stm1_s0]"
+definition "SIDS_stm1_list = enum_SIDS_stm1_inst.enum_SIDS_stm1"
 definition "SIDS_stm1_set = set SIDS_stm1_list"
 definition "SIDS_stm1_without_s0 = (removeAll SID_stm1_s0 SIDS_stm1_list)"
 
-datatype TIDS_stm1 = NULLTRANSITION_stm1
+enumtype TIDS_stm1 = NULLTRANSITION_stm1
 	              | TID_stm1_t0
 	              | TID_stm1_t1
 	              | TID_stm1_t2
 
-definition "TIDS_stm1_list = [NULLTRANSITION_stm1, TID_stm1_t0, TID_stm1_t1, TID_stm1_t2]"
+definition "TIDS_stm1_list = enum_TIDS_stm1_inst.enum_TIDS_stm1"
 definition "TIDS_stm1_set = set TIDS_stm1_list"
 
 definition "ITIDS_stm1_list = [TID_stm1_t1, TID_stm1_t2]"
 definition "ITIDS_stm1 = set ITIDS_stm1_list"
 
-chantype Chan_stm1 =
+rcchantype Chan_stm1 stm1 "SIDS_stm1 \<times> SIDS_stm1" =
 (* flow channels *)
   internal_stm1 :: TIDS_stm1
+(*
   enteredV_stm1 :: SIDS_stm1
   enterV_stm1 :: SIDS_stm1 
   exitV_stm1  :: SIDS_stm1 
@@ -508,6 +411,7 @@ chantype Chan_stm1 =
   entered_stm1 :: "SIDS_stm1 \<times> SIDS_stm1"
   exit_stm1 :: "SIDS_stm1 \<times> SIDS_stm1"
   exited_stm1 :: "SIDS_stm1 \<times> SIDS_stm1"
+*)
   terminate_stm1 :: unit (* Is this right? *)
 (* variable channels *)
   get_l_stm1 :: core_int
@@ -525,63 +429,39 @@ chantype Chan_stm1 =
 subsubsection \<open> Sets of events \<close>
 definition int_int_stm1 where
 "int_int_stm1 = 
-  set ([e2__stm1_C (tid, dir). 
-          tid \<leftarrow> [TID_stm1_t1,TID_stm1_t2], 
-          dir \<leftarrow> [din, dout]] @ 
-       [e3__stm1_C (tid, dir, n). 
-          tid \<leftarrow> [TID_stm1_t1,TID_stm1_t2], 
-          dir \<leftarrow> [din, dout], 
-          n \<leftarrow> rc.core_int_list] @
-       [internal_stm1_C (tid). 
-          tid \<leftarrow> [TID_stm1_t1,TID_stm1_t2]]
+  set ((enumchan2 e2__stm1_C [TID_stm1_t1,TID_stm1_t2] [din, dout]) @
+       (enumchan3 e3__stm1_C [TID_stm1_t1,TID_stm1_t2] [din, dout] rc.core_int_list) @
+       (enumchan1 internal_stm1_C [TID_stm1_t1,TID_stm1_t2])
 )"
 
 definition internal_events_stm1 where
 "internal_events_stm1 = 
-  set ([enter_stm1_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list] @
-      [entered_stm1_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list] @
-      [exit_stm1_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list] @
-      [exited_stm1_C (sid1, sid2). 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list]
-)"
+  set (enumchans2 [enter_stm1_C, entered_stm1_C, exit_stm1_C, exited_stm1_C] SIDS_stm1_list SIDS_stm1_list)
+"
 
+(*
 definition shared_variable_events_stm1 where
 "shared_variable_events_stm1 = 
   set ([set_EXT_x_stm1_C (x). 
           x \<leftarrow> rc.core_int_list]
 )"
+*)
 
 definition stm1_s0_triggers where
 "stm1_s0_triggers = 
-  set ([e2__stm1_C (tid, dir). 
-          tid \<leftarrow> [TID_stm1_t2], 
-          dir \<leftarrow> [din, dout]] @
-  [e3__stm1_C (tid, dir, n). 
-          tid \<leftarrow> [TID_stm1_t1], 
-          dir \<leftarrow> [din, dout],
-          n \<leftarrow> rc.core_int_list]
+  set ((enumchan2 e2__stm1_C [TID_stm1_t2] [din, dout]) @
+       (enumchan3 e3__stm1_C [TID_stm1_t1] [din, dout] rc.core_int_list)
 )
 "
 
 definition stm1_x_events where
 "stm1_x_events = 
-    set (
-        [get_x_stm1_C x . x \<leftarrow> rc.core_int_list] @
-        [set_x_stm1_C x . x \<leftarrow> rc.core_int_list]
-    )
+  set (enumchans1 [get_x_stm1_C, set_x_stm1_C] rc.core_int_list)
 "
 
 definition stm1_MachineInternalEvents where
 "stm1_MachineInternalEvents = 
-  set ([internal_stm1_C t . t \<leftarrow> TIDS_stm1_list])
-"
+  set (enumchan1 internal_stm1_C TIDS_stm1_list)"
 
 subsubsection \<open> State Machine Memory \<close>
 text \<open> Memory cell processes \<close>
@@ -700,36 +580,24 @@ definition State_stm1_s0_R where
    skip
 "
 
+definition flow_event_stm1_not_s0 where 
+"flow_event_stm1_not_s0 = set (
+  enumchans2 [enter_stm1_C, entered_stm1_C,exit_stm1_C,exited_stm1_C] 
+             SIDS_stm1_without_s0 [SID_stm1_s0]
+)"
+
 definition STM_stm1 where
 "STM_stm1 (idd::integer) = 
    (I_stm1_i0(idd))
-    \<parallel>\<^bsub> set (
-        [enter_stm1_C (s, d). 
-          s \<leftarrow> SIDS_stm1_without_s0, 
-          d \<leftarrow> [SID_stm1_s0]] @ 
-        [entered_stm1_C (s, d). 
-          s \<leftarrow> SIDS_stm1_without_s0, 
-          d \<leftarrow> [SID_stm1_s0]] @ 
-        [exit_stm1_C (s, d). 
-          s \<leftarrow> SIDS_stm1_without_s0, 
-          d \<leftarrow> [SID_stm1_s0]] @ 
-        [exited_stm1_C (s, d). 
-          s \<leftarrow> SIDS_stm1_without_s0, 
-          d \<leftarrow> [SID_stm1_s0]] 
-        ) \<^esub> 
+    \<parallel>\<^bsub> flow_event_stm1_not_s0 \<^esub> 
    State_stm1_s0_R(idd)
 "
 
 definition stm1_e1_x_internal_set where
 "stm1_e1_x_internal_set = 
-  set ([e3__stm1_C (tid, dir, n). 
-          tid \<leftarrow> [TID_stm1_t1], 
-          dir \<leftarrow> [din, dout], 
-          n \<leftarrow> rc.core_int_list] @ 
+   set ((enumchan3 e3__stm1_C [TID_stm1_t1] [din, dout] rc.core_int_list) @ 
        [internal_stm1_C TID_stm1_t0] @
-       [e2__stm1_C (tid, dir). 
-          tid \<leftarrow> [TID_stm1_t2], 
-          dir \<leftarrow> [din, dout]]
+       (enumchan2 e2__stm1_C [TID_stm1_t2] [din, dout])
 )"
 
 subsubsection \<open> State machine \<close>
@@ -751,7 +619,7 @@ definition MemorySTM_opt_stm1 where
     {internal_stm1_C TID_stm1_t0}
   )
 "
-
+(*
 definition rename_stm1_events where
 "rename_stm1_events = 
   [(e2__stm1_C (tid, dir), e2_stm1_C (dir)) . 
@@ -789,6 +657,21 @@ definition rename_stm1_events_others where
   [(exited_stm1_C (sid1, sid2), exited_stm1_C (sid1, sid2)) . 
           sid1 \<leftarrow> SIDS_stm1_list, 
           sid2 \<leftarrow> SIDS_stm1_list] 
+"
+*)
+definition rename_stm1_events where
+"rename_stm1_events = 
+  concat ((enumchan1 (forget_first e2__stm1_C e2_stm1_C TIDS_stm1_list) InOut_list) @
+  (enumchan2 (forget_first2 e3__stm1_C e3_stm1_C TIDS_stm1_list) InOut_list rc.core_int_list))
+"
+
+definition rename_stm1_events_others where
+"rename_stm1_events_others = 
+  (enumchanp1 terminate_stm1_C [()]) @
+  (enumchansp1 [get_x_stm1_C, set_x_stm1_C, set_EXT_x_stm1_C] rc.core_int_list) @
+  (enumchansp1 [e2_stm1_C] InOut_list) @
+  (enumchansp2 [e3_stm1_C] InOut_list rc.core_int_list) @
+  (enumchansp2 [enter_stm1_C, entered_stm1_C, exit_stm1_C, exited_stm1_C] SIDS_stm1_list SIDS_stm1_list)
 "
 
 definition rename_MemorySTM_opt_stm1 where
@@ -836,9 +719,7 @@ chantype Chan_ctr0 =
 
 definition shared_variable_events_ctr0 where
 "shared_variable_events_ctr0 = 
-  set ([set_EXT_x_ctr0_C (x). 
-          x \<leftarrow> rc.core_int_list]
-)"
+  set (enumchan1 set_EXT_x_ctr0_C rc.core_int_list)"
 
 subsubsection \<open> Memory \<close>
 definition Memory_ctr0 where
@@ -850,6 +731,7 @@ definition Memory_ctr0 where
 )"
 
 subsubsection \<open> Controller \<close>
+(*
 definition rename_ctr0_stm0_events where
 "rename_ctr0_stm0_events = 
   [(terminate_stm0_C (), terminate_ctr0_C ())] @
@@ -858,11 +740,17 @@ definition rename_ctr0_stm0_events where
   [(e1_stm0_C (d, n), e1_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
   [(e3_stm0_C (d, n), e3_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
   [(set_EXT_x_stm0_C x, set_EXT_x_ctr0_stm0_C x) . x \<leftarrow> rc.core_int_list]
-"
+" *)
+definition rename_ctr0_stm0_events where
+"rename_ctr0_stm0_events = 
+  (enumchanp2_1 (terminate_stm0_C,terminate_ctr0_C) [()]) @
+  (enumchansp2_1 [(set_x_stm0_C, set_x_ctr0_C), (get_x_stm0_C, get_x_ctr0_C), 
+      (set_EXT_x_stm0_C, set_EXT_x_ctr0_stm0_C)] rc.core_int_list) @
+  (enumchansp2_2 [(e1_stm0_C, e1_ctr0_C), (e3_stm0_C, e3_ctr0_C)] InOut_list rc.core_int_list)"
 
 definition rename_D__stm0 where
 "rename_D__stm0 idd = rename (set rename_ctr0_stm0_events) (D__stm0 idd)"
-
+(*
 definition rename_ctr0_stm1_events where
 "rename_ctr0_stm1_events = 
   [(terminate_stm1_C (), terminate_ctr0_C ())] @
@@ -874,18 +762,28 @@ definition rename_ctr0_stm1_events where
   [(e3_stm1_C (dout, n), e3_ctr0_C (din, n)). n \<leftarrow> rc.core_int_list] @
   [(set_EXT_x_stm1_C x, set_EXT_x_ctr0_stm1_C x) . x \<leftarrow> rc.core_int_list]
 "
+*)
+definition rename_ctr0_stm1_events where
+"rename_ctr0_stm1_events = 
+  (enumchanp2_1 (terminate_stm1_C,terminate_ctr0_C) [()]) @
+  (enumchansp2_1 [(set_x_stm1_C, set_x_ctr0_C), (get_x_stm1_C, get_x_ctr0_C), 
+      (set_EXT_x_stm1_C, set_EXT_x_ctr0_stm1_C)] rc.core_int_list) @
+  (enumchansp2_1 [(e2_stm1_C, e2_ctr0_C)] InOut_list) @
+\<comment> \<open>It is important to invert directions in one side: either stm0 or stm1 \<close>
+  (enumchansp2_1 [((curry e3_stm1_C) din, (curry e3_ctr0_C) dout), 
+      ((curry e3_stm1_C) dout, (curry e3_ctr0_C) din)] rc.core_int_list)
+"
 
 definition rename_D__stm1 where
 "rename_D__stm1 idd = rename (set rename_ctr0_stm1_events) (D__stm1 idd)"
 
 definition "ctr0_stms_events = set (
-  [terminate_ctr0_C ()] @ 
-    [e3_ctr0_C (d, n). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list]
+  enumchan1 terminate_ctr0_C [()] @
+  enumchan2 e3_ctr0_C InOut_list rc.core_int_list
 )"
 
 definition "ctr0_mem_events = set (
-    [set_EXT_x_ctr0_stm0_C x. x \<leftarrow> rc.core_int_list] @ 
-    [set_EXT_x_ctr0_stm1_C x. x \<leftarrow> rc.core_int_list]
+  enumchans1 [set_EXT_x_ctr0_stm0_C, set_EXT_x_ctr0_stm1_C] rc.core_int_list
 )"
 
 definition D__ctr0 where
@@ -921,6 +819,7 @@ definition Memory_mod0 where
   )
 )"
 
+(*
 definition rename_mod0_ctr0_events where
 "rename_mod0_ctr0_events = 
   [(terminate_ctr0_C (), terminate_mod0_C ())] @
@@ -930,20 +829,29 @@ definition rename_mod0_ctr0_events where
   [(e2_ctr0_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
   [(set_EXT_x_ctr0_C n, set_EXT_x_mod0_ctr0_C n). n \<leftarrow> rc.core_int_list]
 "
+*)
+definition rename_mod0_ctr0_events where
+"rename_mod0_ctr0_events = 
+  (enumchanp2_1 (terminate_ctr0_C,terminate_mod0_C) [()]) @
+  (enumchansp2_1 [(set_x_ctr0_C, set_x_mod0_C), (get_x_ctr0_C, get_x_mod0_C), 
+      (set_EXT_x_ctr0_C, set_EXT_x_mod0_ctr0_C)] rc.core_int_list) @
+  (enumchanp2_1 (e2_ctr0_C, e2_mod0_C) InOut_list) @
+  (enumchanp2_2 (e1_ctr0_C, e1_mod0_C) InOut_list rc.core_int_list)
+"
 
 definition rename_D__ctr0 where
 "rename_D__ctr0 idd = rename (set rename_mod0_ctr0_events) (D__ctr0 idd)"
 
 definition "mod0_set_x_events = set (
-  [set_x_mod0_C n. n \<leftarrow> rc.core_int_list]
+  enumchan1 set_x_mod0_C  rc.core_int_list
 )"
 
 definition "mod0_get_x_events = set (
-  [get_x_mod0_C n. n \<leftarrow> rc.core_int_list]
+  enumchan1 get_x_mod0_C  rc.core_int_list
 )"
 
 definition "mod0_set_EXT_x_events = set (
-  [set_EXT_x_mod0_ctr0_C n. n \<leftarrow> rc.core_int_list]
+  enumchan1 set_EXT_x_mod0_ctr0_C  rc.core_int_list
 )"
 
 definition D__ctr_mem where

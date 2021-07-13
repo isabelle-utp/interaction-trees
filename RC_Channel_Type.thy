@@ -65,13 +65,14 @@ fun defs qual inds f ctx =
         let val (thm, ctx') = def qual (i, f i) ctx 
         in (thms @ [thm], ctx') end) inds ([], ctx)
 
-fun compile_chantype (name, chans) ctx =
+fun compile_chantype (name, (stmname, (stype, chans))) ctx =
   let 
     open BNF_FP_Def_Sugar; open BNF_FP_Rec_Sugar_Util; open BNF_LFP; open Ctr_Sugar
     open Prism_Lib; open Lens_Lib; open Local_Theory; open Specification; open Syntax
-    (* val chans' = chans @ [(Binding.name ("enter"), @{type "SIDS_stm0"})] *)
-    val ctrs = map (fn (n, t) => (((Binding.empty, Binding.name (n ^ ctor_suffix)), [(Binding.empty, t)]), Mixfix.NoSyn)) chans 
-    val pnames = map fst chans
+    val chans' = chans @ [("enter_" ^ stmname, stype), ("entered_" ^ stmname, stype), 
+      ("exit_" ^ stmname, stype), ("exited_" ^ stmname, stype)]
+    val ctrs = map (fn (n, t) => (((Binding.empty, Binding.name (n ^ ctor_suffix)), [(Binding.empty, t)]), Mixfix.NoSyn)) chans' 
+    val pnames = map fst chans'
     val thypfx = 
       case (Named_Target.locale_of ctx) of
         SOME loc => loc ^ "." |
@@ -80,7 +81,7 @@ fun compile_chantype (name, chans) ctx =
     val attrs = @{attributes [simp, code_unfold]}
     val dummy_disc = absdummy dummyT @{term True}
   in
-    writeln ("chans: " ^ (@{make_string} (Syntax.const @{const_name "hd"} $ @{term "chans"})));
+    writeln ("chans: " ^ (@{make_string} chans'));
   (co_datatype_cmd Least_FP construct_lfp 
        ((K Plugin_Name.default_filter, true), 
         [((((([],Binding.name name), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])])
@@ -106,10 +107,16 @@ fun compile_chantype (name, chans) ctx =
 
 end;
 
+fun filter_input str = 
+  filter Token.is_proper (Token.explode (Thy_Header.get_keywords' @{context}) Position.none str);
+
+fun enter stm = 
+  "enter_" ^ stm ^ " :: " ^ "SIDS_" ^ stm;
+
 let open Parse; open Parse_Spec; open Scan in
   Outer_Syntax.command @{command_keyword rcchantype} "define a RoboChart channel datatype"
-    ((name --
-      (@{keyword "="} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))))
+    ((name -- (name -- (typ --
+      (@{keyword "="} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))))))
     >> (fn x => Toplevel.local_theory NONE NONE (RC_Channel_Type.compile_chantype x)))
   end;
 \<close>

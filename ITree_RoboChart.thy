@@ -61,14 +61,75 @@ datatype InOut = din | dout
 definition "InOut_list = [din, dout]"
 definition "InOut_set = set InOut_list"
 
-\<comment> \<open> The @{text "mapfc"} and @{text "mapfc"} together to enumerate events for a channel. \<close>
-definition "mapfc fs xs = concat (map (\<lambda> f. map f xs) (map curry fs))"
+subsection \<open> Channels and Events\<close>
+text \<open> The @{text "mapfc"} and @{text "mapf"} together are used to enumerate events 
+for a collection of channels. \<close>
 
-definition "mapf fs xs = concat (map (\<lambda> f. map f xs) (fs))"
+definition mapfc :: "('c \<times> 'a \<Rightarrow> 'b) list \<Rightarrow> 'c list \<Rightarrow> ('a \<Rightarrow> 'b) list" where
+"mapfc fs xs = concat (map (\<lambda> f. map f xs) (map curry fs))"
 
-definition "enumchan1 ch a = mapf ch a"
-definition "enumchan2 ch a b = mapf (mapfc ch a) b"
-definition "enumchan3 ch a b c = mapf (mapfc (mapfc ch a) b) c"
+definition mapf  :: "('b \<Rightarrow> 'a) list \<Rightarrow> 'b list \<Rightarrow> 'a list" where
+"mapf fs xs = concat (map (\<lambda> f. map f xs) (fs))"
+
+abbreviation "enumchan1 ch a \<equiv> mapf [ch] a"
+abbreviation "enumchan2 ch a b \<equiv> mapf (mapfc [ch] a) b"
+abbreviation "enumchan3 ch a b c \<equiv> mapf (mapfc (mapfc [ch] a) b) c"
+abbreviation "enumchan4 ch a b c d \<equiv> mapf (mapfc (mapfc (mapfc [ch] a) b) c) d"
+abbreviation "enumchans1 chs a \<equiv> mapf chs a"
+abbreviation "enumchans2 chs a b \<equiv> mapf (mapfc chs a) b"
+abbreviation "enumchans3 chs a b c \<equiv> mapf (mapfc (mapfc chs a) b) c"
+abbreviation "enumchans4 chs a b c d \<equiv> mapf (mapfc (mapfc (mapfc chs a) b) c) d"
+
+subsubsection \<open> Renaming \<close>
+text \<open> The @{text "mapfpc"} and @{text "mapfp"} together are used to construct pairs of 
+all enumerate events for a collection of channels. These pairs represent renaming maps like 
+[(e1.a.b.c, e1.a.b.c), ...].
+ \<close>
+definition mapfpc :: "('c \<times> 'a \<Rightarrow> 'b) list \<Rightarrow> 'c list \<Rightarrow> ('a \<Rightarrow> 'b \<times> 'b) list" where
+"mapfpc fs xs = concat (map (\<lambda> f. map f xs) (map (curry \<circ> (\<lambda>f. \<lambda>x. (f x, f x))) fs))"
+
+definition mapfp :: "('b \<Rightarrow> 'a) list \<Rightarrow> 'b list \<Rightarrow> ('a \<times> 'a) list" where
+"mapfp fs xs = concat (map (\<lambda> f. map f xs) (map (\<lambda>f. \<lambda>x. (f x, f x)) fs))"
+
+abbreviation "enumchanp1 ch a \<equiv> mapfp [ch] a"
+abbreviation "enumchanp2 ch a b \<equiv> mapf (mapfpc [ch] a) b"
+abbreviation "enumchanp3 ch a b c \<equiv> mapf (mapfc (mapfpc [ch] a) b) c"
+abbreviation "enumchanp4 ch a b c d \<equiv> mapf (mapfc (mapfc (mapfpc [ch] a) b) c) d"
+abbreviation "enumchansp1 chs a \<equiv> mapfp chs a"
+abbreviation "enumchansp2 chs a b \<equiv> mapf (mapfpc chs a) b"
+abbreviation "enumchansp3 chs a b c \<equiv> mapf (mapfc (mapfpc chs a) b) c"
+abbreviation "enumchansp4 chs a b c d \<equiv> mapf (mapfc (mapfc (mapfpc chs a) b) c) d"
+
+text \<open> @{text "forget_first"} maps an event @{text "e_"} to another @{text "e"} by forgetting 
+the first element (a transition id, tid) of @{text "e_"}. This is used for the event renaming 
+like [(e1__stm0.tid.dir.n, e1_stm0.dir.n), ...].
+\<close>
+definition forget_first where
+"forget_first e_' e xs = (\<lambda>(dir). 
+        (enumchan1 (\<lambda>tid. (e_' (tid, dir), e (dir))) xs))"
+
+definition forget_first2 where
+"forget_first2 e_' e xs = (\<lambda>(dir, n). 
+        (enumchan1 (\<lambda>tid. (e_' (tid, dir, n), e (dir, n))) xs))"
+
+text \<open> The @{text "mapfpc2"} and @{text "mapfp2"} together are used to construct pairs of 
+all enumerate events for two channels. These pairs represent renaming maps like 
+[(e1.a.b.c, e2.a.b.c), ...]. 
+\<close>
+definition mapfpc2 :: "(('d \<times> 'a \<Rightarrow> 'b) \<times> ('d \<times> 'a \<Rightarrow> 'c)) list \<Rightarrow> 'd list \<Rightarrow> ('a \<Rightarrow> 'b \<times> 'c) list" where
+"mapfpc2 fs xs = concat (map (\<lambda> f. map f xs) (map (curry \<circ> (\<lambda>f. \<lambda>x. ((fst f) x, (snd f) x))) fs))"
+
+definition mapfp2 :: "(('c \<Rightarrow> 'a) \<times> ('c \<Rightarrow> 'b)) list \<Rightarrow> 'c list \<Rightarrow> ('a \<times> 'b) list" where
+"mapfp2 fs xs = concat (map (\<lambda> f. map f xs) (map (\<lambda>f. \<lambda>x. ((fst f) x, (snd f) x)) fs))"
+
+abbreviation "enumchanp2_1 ch a \<equiv> mapfp2 [ch] a"
+abbreviation "enumchanp2_2 ch a b \<equiv> mapf (mapfpc2 [ch] a) b"
+abbreviation "enumchanp2_3 ch a b c \<equiv> mapf (mapfc (mapfpc2 [ch] a) b) c"
+abbreviation "enumchanp2_4 ch a b c d \<equiv> mapf (mapfc (mapfc (mapfpc2 [ch] a) b) c) d"
+abbreviation "enumchansp2_1 chs a \<equiv> mapfp2 chs a"
+abbreviation "enumchansp2_2 chs a b \<equiv> mapf (mapfpc2 chs a) b"
+abbreviation "enumchansp2_3 chs a b c \<equiv> mapf (mapfc (mapfpc2 chs a) b) c"
+abbreviation "enumchansp2_4 chs a b c d \<equiv> mapf (mapfc (mapfc (mapfpc2 chs a) b) c) d"
 
 subsection \<open> Memory \<close>
 text \<open> The memory cell for a shared variable. \<close>
