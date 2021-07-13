@@ -9,7 +9,7 @@ named_theorems hoare_safe
 definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
 
-syntax "_hoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>} _ \<^bold>{_\<^bold>}")
+syntax "_hoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>}/ _/ \<^bold>{_\<^bold>}")
 translations "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
 
 lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<cmark> s' \<longrightarrow> Q s')"
@@ -18,8 +18,18 @@ lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrighta
 lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<cmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (auto simp add: hoare_alt_def)
 
-lemma hoare_assigns [hoare_safe]: "\<^bold>{\<sigma> \<dagger> P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}"
+lemma hoare_conseq:
+  assumes "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}" "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "`Q\<^sub>2 \<longrightarrow> Q\<^sub>1`"
+  shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
+  using assms by (auto simp add: hoare_alt_def, expr_auto)
+
+lemma hoare_assigns: "\<^bold>{\<sigma> \<dagger> P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}"
   by (auto intro!: hoareI simp add: assigns_def, expr_simp)
+
+lemma hoare_assigns_impl [hoare_safe]:
+  assumes "`P \<longrightarrow> \<sigma> \<dagger> Q`"
+  shows "\<^bold>{P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{Q\<^bold>}"
+  using assms by (auto intro: hoare_conseq hoare_assigns)
 
 lemma hoare_fwd_assign:
   assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
@@ -27,11 +37,6 @@ lemma hoare_fwd_assign:
   using assms
   by (auto simp add: hoare_alt_def assigns_def kleisli_comp_def, expr_simp)
      (metis (no_types, lifting) mwb_lens_def vwb_lens.put_eq vwb_lens_mwb weak_lens.put_get)
-
-lemma hoare_conseq:
-  assumes "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}" "`Q\<^sub>2 \<longrightarrow> Q\<^sub>1`"
-  shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
-  using assms by (auto simp add: hoare_alt_def, expr_auto)
 
 lemma hoare_cond [hoare_safe]:
   assumes "\<^bold>{B \<and> P\<^bold>} S \<^bold>{Q\<^bold>}" "\<^bold>{\<not>B \<and> P\<^bold>} T \<^bold>{Q\<^bold>}"
@@ -93,14 +98,12 @@ syntax "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Ri
 translations "_while_inv_itree B I P" == "CONST while_inv (B)\<^sub>e (I)\<^sub>e P"
 
 lemma hoare_while_inv_partial [hoare_safe]:
-  assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`I \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>}while B inv I do S od\<^bold>{\<not> B \<and> Q\<^bold>}"
+  assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>}while B inv I do S od\<^bold>{Q\<^bold>}"
 proof -
   have 1:"\<^bold>{I\<^bold>}while B inv I do S od\<^bold>{\<not> B \<and> I\<^bold>}"
     by (simp add: assms(1) hoare_while_partial while_inv_def)
-  from assms (3) have 2:"`(\<not> B \<and> I) \<longrightarrow> (\<not> B \<and> Q)`"
-    by (expr_auto)
-  from hoare_conseq[OF assms(2) 1 2] show ?thesis by simp
+  from hoare_conseq[OF 1 assms(2) assms(3)] show ?thesis by simp
 qed
 
 end
