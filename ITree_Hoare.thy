@@ -31,7 +31,7 @@ lemma hoare_assigns_impl [hoare_safe]:
   shows "\<^bold>{P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{Q\<^bold>}"
   using assms by (auto intro: hoare_conseq hoare_assigns)
 
-lemma hoare_fwd_assign:
+lemma hoare_fwd_assign [hoare_safe]:
   assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} x := e \<Zcomp> S \<^bold>{Q\<^bold>}"
   using assms
@@ -105,5 +105,9 @@ proof -
     by (simp add: assms(1) hoare_while_partial while_inv_def)
   from hoare_conseq[OF 1 assms(2) assms(3)] show ?thesis by simp
 qed
+
+method hoare = (auto intro!: hoare_safe simp add: usubst_eval)
+
+method hoare_auto = (hoare; expr_auto)
 
 end

@@ -24,21 +24,10 @@ definition eucl_proc :: "('e, (integer \<times> integer), integer, gcd) procedur
 
 lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a = gcd A B\<^bold>}"
   unfolding eucl_def
-  apply (simp)
-  apply (rule hoare_fwd_assign)
-   apply (simp)
-  apply (simp add: usubst_eval SEXP_apply)
-  apply (rule hoare_while_inv_partial)
-    apply (rule hoare_safe)
-     apply (rule hoare_safe)
-     apply (simp add: usubst_eval, expr_auto)
-     apply (simp add: gcd_diff1 gcd_integer.rep_eq integer_eq_iff)
-    apply (rule hoare_safe)
-    apply (simp add: usubst_eval, expr_auto)
-    apply (smt (verit, ccfv_SIG) gcd_add2 gcd_integer.rep_eq integer_eq_iff minus_integer.rep_eq)
-   apply (expr_auto)
-  apply (expr_auto)
-  apply (smt (verit) gcd.commute gcd_code_int gcd_diff1 gcd_integer.rep_eq integer_eq_iff less_integer.rep_eq zero_integer.rep_eq)
+  apply (hoare_auto)
+  apply (simp add: gcd_diff1 gcd_integer.rep_eq integer_eq_iff)
+  apply (metis gcd.commute gcd_diff1 gcd_integer.rep_eq integer_eq_iff minus_integer.rep_eq)
+  apply (metis (mono_tags, hide_lams) abs_integer_code add.right_neutral gcd_add2 gcd_code_integer gcd_integer.rep_eq integer_eq_iff not_less_iff_gr_or_eq zero_integer.rep_eq)
   done
 
 definition eucl_gcd where "eucl_gcd = procproc eucl_proc"

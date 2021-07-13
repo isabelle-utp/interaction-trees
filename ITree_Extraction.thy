@@ -37,6 +37,4 @@ definition "default_pfun = ({}\<^sub>p :: ('a, 'b) pfun)"
 instance ..
 end
 
-declare SEXP_apply [simp del]
-
 end
