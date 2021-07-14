@@ -1,5 +1,5 @@
 theory TrivialPursuit
-  imports "../ITree_Extraction"
+  imports "../ITree_Extraction" "../ITree_Operations"
 begin
 
 definition [lens_defs]: "pfun_collection_lens = pfun_lens"
@@ -15,30 +15,50 @@ lemma source_pfun_collection_lens: "\<S>\<^bsub>pfun_collection_lens i\<^esub> =
 lemma defined_pfun_collection_lens [simp, code_unfold]: 
   "\<lbrakk> vwb_lens x; $x \<sharp> (e)\<^sub>e \<rbrakk> \<Longrightarrow> \<^bold>D(x[e]) = (e \<in> pdom($x))\<^sub>e"
   by (simp add: lens_defined_def src_dyn_lens unrest source_ns_alpha source_pfun_collection_lens)
-     (simp add: lens_defs wb_lens.source_UNIV)
+     (simp add: lens_defs wb_lens.source_UNIV expr_defs)
 
 lit_vars
 
-type_synonym Player = "String.literal"
+enumtype Player = one | two | three | four | five | six
 
 enumtype Colour = blue | pink | yellow | brown | green | orange
 
 alphabet LocalScore =
   s :: "Colour set"
- 
+
+record_default LocalScore
+
 alphabet GlobalScore =
   score :: "Player \<Zpfun> LocalScore"
 
+record_default GlobalScore
+
 definition AnswerLocal :: "Colour \<Rightarrow> ('e, LocalScore) htree" where
-"AnswerLocal c = s := s \<union> {c}"
+[code_unfold]: "AnswerLocal c = \<questiondown>c \<notin> s? \<Zcomp> s := s \<union> {c}"
 
-definition "AnswerGlobal c p = AnswerLocal c \<Up>\<Up> score[p]"
+chantype chan1 =
+  answer1 :: "Colour"
 
+
+chantype chan =
+  answer :: "Player \<times> Colour"
+
+definition "Answer = operation answer1 AnswerLocal"
+
+definition AnswerGlobal :: "(chan, GlobalScore) htree" where
+[code_unfold]: "AnswerGlobal = operation answer (promote_op (\<lambda> p. (score[p])\<^sub>v) AnswerLocal)"
+
+definition "TrivialPursuit = process [\<leadsto>] (loop (Answer \<box> Stop))"
+
+lemma "AnswerGlobal = undefined"
+  apply (simp add: AnswerGlobal_def operation_def)
+  oops
+
+declare operation_def [code_unfold]
+declare wp [code_unfold]
 declare unrest [code_unfold]
 
-value "AnswerGlobal c p"
-
-export_code AnswerGlobal in Haskell
+export_code TrivialPursuit in Haskell module_name TrivialPursuit (string_classes)
 
 term "AnswerLocal c \<Up>\<Up> score[p]"
 

@@ -1,7 +1,7 @@
 section \<open> Distributed Ring Buffer \<close>
 
 theory RingBuffer
-  imports "../ITree_Extraction" "HOL-Library.Code_Target_Nat" "HOL-Library.Code_Target_Int"
+  imports "../ITree_Extraction" "../ITree_Circus" "HOL-Library.Code_Target_Nat" "HOL-Library.Code_Target_Int"
 begin lit_vars
 
 no_notation conj  (infixr "&" 35) lit_vars

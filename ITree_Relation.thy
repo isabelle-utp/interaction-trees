@@ -35,12 +35,12 @@ lemma seq_rel: "itree_rel (P \<Zcomp> Q) = itree_rel P O itree_rel Q"
 
 lemma input_in_rel: 
   "wb_prism c \<Longrightarrow> itree_rel (input_in c A P) = {(s, s'). \<exists> v \<in> A s. (s, s') \<in> itree_rel (P v)}" 
-  by (auto simp add: input_in_def itree_rel_def retvals_inp_in)
+  by (auto simp add: input_in_where_def itree_rel_def retvals_inp_in)
 
 lemma input_rel: "wb_prism c \<Longrightarrow> itree_rel (input c P) = (\<Union> v. itree_rel (P v))"
-  by (auto simp add: input_in_rel input_alt_def)
+  by (auto simp add: input_in_rel)
 
 lemma input_in_lit_rel: "wb_prism c \<Longrightarrow> itree_rel (input_in c (\<guillemotleft>A\<guillemotright>)\<^sub>e P) = (\<Union> v \<in> A. itree_rel (P v))"
-  by (auto simp add: input_in_rel input_alt_def)
+  by (auto simp add: input_in_rel)
 
 end

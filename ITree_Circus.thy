@@ -76,33 +76,46 @@ translations
   "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
 
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
-  apply (simp add: inp_in_def traces_Vis traces_Ret)
-  apply (auto simp add: inp_in_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
+  apply (simp add: inp_in_where_def traces_Vis traces_Ret)
+  apply (auto simp add: inp_in_where_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
   done 
 
-definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
-
-definition input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"input_in c A P = (\<lambda> s. inp_in c (A s) \<bind> (\<lambda> x. P x s))"
-
-lemma input_alt_def: "input c P = input_in c (UNIV)\<^sub>e P"
-  by (simp add: input_def input_in_def)
-
-lemma input_enum [code_unfold]: "wb_prism c \<Longrightarrow> input c P = input_in c (\<lambda> _. set enum_class.enum) P"
-  by (simp add: input_in_def input_def fun_eq_iff inp_enum inp_alist)
-
-definition input_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+definition input_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> (('s \<Rightarrow> bool) \<times> ('e, 's) htree)) \<Rightarrow> ('e, 's) htree" where
 "input_in_where c A P = (\<lambda>s. inp_in_where c (A s) (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
 
-definition input_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"input_where c P = (\<lambda>s. inp_where c (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
+definition input_list_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a list) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_list_where c A P = (\<lambda>s. inp_list_where c (A s) (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
 
+definition input_map_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> _ \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_map_in_where c A P = (\<lambda>s. inp_map_in_where c (A s) (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
+
+abbreviation "input c P \<equiv> input_in_where c (UNIV)\<^sub>e (\<lambda> e. ((True)\<^sub>e, P e))"
+
+(*
+definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
+*)
+
+abbreviation input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_in c A P \<equiv> input_in_where c A (\<lambda> e. ((True)\<^sub>e, P e))"
+
+lemma input_in_where_enum [code_unfold]: "wb_prism c \<Longrightarrow> input_in_where c (UNIV)\<^sub>e P = input_list_where c (enum_class.enum)\<^sub>e P"
+  by (simp add: input_in_where_def input_list_where_def inp_in_where_list_code inp_where_enum)
+
+abbreviation input_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"input_where c P \<equiv> input_in_where c (UNIV)\<^sub>e P"
+
+(*
 definition "input' c P = (\<lambda>s. inp' c \<bind> (\<lambda>x. P x s))"
 
 lemma input_code_unfold [code_unfold]: 
   "wb_prism c \<Longrightarrow> input c P = input' c P"
   using inp_in_coset by (fastforce simp add: input_def input'_def inp_in_coset inp'_def)
+
+term inp_list
+
+lemma "wb_prism c \<Longrightarrow> input_where c P = (\<lambda>s. inp_list_where c enum_class.enum (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
+*)
 
 no_notation disj (infixr "|" 30)
 
@@ -118,7 +131,7 @@ translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambd
 translations "c?(x)|P \<rightarrow> Q" == "CONST input_where c (\<lambda> (x). ((P)\<^sub>e, Q))"
 
 lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P(x))"
-  by (simp add: input_def kleisli_comp_def assigns_def)
+  by (simp add: input_in_where_def kleisli_comp_def assigns_def)
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "output c e P = (\<lambda> s. outp c (e s) \<then> P s)"
