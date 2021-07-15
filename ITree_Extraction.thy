@@ -12,6 +12,12 @@ code_datatype pinj_of_alist
 
 declare pinv_pinj_of_alist [code]
 
+instantiation list :: (type) default
+begin
+definition "default_list = ([] :: 'a list)"
+instance ..
+end
+
 instantiation set :: (type) default
 begin
 definition "default_set = ({} :: 'a set)"
