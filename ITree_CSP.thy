@@ -1,8 +1,46 @@
 section \<open> CSP Operators \<close>
 
 theory ITree_CSP
-  imports ITree_Deadlock ITree_Weak_Bisim "Optics.Optics"
+  imports ITree_Deadlock ITree_Iteration ITree_Weak_Bisim "Optics.Optics"
 begin
+
+subsection \<open> Event Set Syntax\<close>
+
+definition evinsert :: "'e \<Rightarrow> 'e set \<Rightarrow> 'e set" where
+"evinsert e E = insert e E"
+
+definition evsimple :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e" where
+"evsimple c = build\<^bsub>c\<^esub> ()"
+
+definition evparam :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> 'e" where
+"evparam c v = build\<^bsub>c\<^esub> v"
+
+definition evcollect :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'e set" where
+"evcollect c A P = {build\<^bsub>c\<^esub> v | v. v \<in> A \<and> P v}"
+
+definition empty_evset ("\<lbrace>\<rbrace>") where "\<lbrace>\<rbrace> = {}"
+
+nonterminal evt and evts
+
+syntax 
+  "_evt"       :: "evt \<Rightarrow> evts" ("_")
+  "_evts"      :: "evt \<Rightarrow> evts \<Rightarrow> evts" ("_,/ _")
+  "_evt_id"    :: "id \<Rightarrow> evt" ("_")
+  "_evt_param" :: "id \<Rightarrow> logic \<Rightarrow> evt" ("_/ _")
+  "_evt_set"   :: "evts \<Rightarrow> logic" ("\<lbrace>_\<rbrace>")
+  "_evt_collect" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_/ _ \<in> _./ _\<rbrace>")
+  "_evt_collect_ns" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_/ _./ _\<rbrace>")
+
+translations 
+  "_evt e" => "CONST evinsert e \<lbrace>\<rbrace>"
+  "_evts e es" => "CONST evinsert e es"
+  "_evt_id x" == "CONST evsimple x"
+  "_evt_param x v" == "CONST evparam x v"
+  "_evt_set A" => "A"
+  "_evt_collect e x A P" == "CONST evcollect e A (\<lambda> x. P)"
+  "_evt_collect_ns e x P" == "_evt_collect e x (CONST UNIV) P"
+  "\<lbrace>e\<rbrace>" <= "CONST evinsert e \<lbrace>\<rbrace>"
+  "\<lbrace>e, es\<rbrace>" <= "CONST evinsert e (_evt_set es)"
 
 subsection \<open> Basic Constructs \<close>
 
@@ -10,20 +48,18 @@ definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
 definition inp_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_in_where c A P = Vis (\<lambda> e \<in> dom match\<^bsub>c\<^esub> \<inter> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
+"inp_in_where c A P = Vis (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
 
-definition inp_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('e, 'a) itree" where
-"inp_in c A = (\<bbar> e \<in> (dom match\<^bsub>c\<^esub> \<inter> build\<^bsub>c\<^esub> ` A) \<rightarrow> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
+abbreviation "inp_in c A \<equiv> inp_in_where c A (\<lambda> s. True)"
 
-definition inp_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_where c P = Vis (\<lambda> e \<in> dom match\<^bsub>c\<^esub> | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
+abbreviation "inp_where c P \<equiv> inp_in_where c UNIV P"
 
 lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
-  by (auto simp add: inp_in_def)
+  by (auto simp add: inp_in_where_def)
      (metis imageI insertCI option.sel rangeI retvals_Ret wb_prism.range_build wb_prism_def)
 
 lemma div_free_inp_in: "div_free (inp_in c A)"
-  by (auto simp add: inp_in_def div_free_Vis)
+  by (auto simp add: inp_in_where_def div_free_Vis)
 
 abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
 "inp c \<equiv> inp_in c UNIV"
@@ -32,21 +68,39 @@ definition inp_list :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow
 "inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> ) B)))"
 
 definition inp_list_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_list_where c B P = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> \<and> P (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x)))) B)))"
+"inp_list_where c B P = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> x)) (filter P B)))"
 
+definition inp_map_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
+"inp_map_in_where c B P = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of 
+                                                  Some v \<Rightarrow> if (v \<in> B \<and> P v) then Some (Ret v) else None | 
+                                                  None \<Rightarrow> None))"
 
-definition inp' :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
-"inp' c = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> Some (Ret v) | None \<Rightarrow> None))"
+definition inp_map :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
+"inp_map c = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> Some (Ret v) | None \<Rightarrow> None))"
 
-lemma inp_in_where_code [code]:
-  "inp_in_where c (set xs) P = inp_list_where c xs P"
+lemma inp_in_where_map_code [code_unfold]:
+  "wb_prism c \<Longrightarrow> inp_in_where c A P = inp_map_in_where c A P"
+  apply (auto simp add: inp_in_where_def inp_map_in_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
+  apply (metis (no_types, hide_lams) imageI option.distinct(1) option.exhaust_sel wb_prism_def)
+  apply (meson option.distinct(1))
+  done
+
+lemma inp_in_where_list_code [code_unfold]:
+  "wb_prism c \<Longrightarrow> inp_in_where c (set xs) P = inp_list_where c xs P"
   unfolding inp_in_where_def inp_list_where_def
   by (simp only: set_map [THEN sym] inter_set_filter pabs_set filter_map comp_def, simp add: comp_def)
-   
-lemma inp_where_code [code]:
-  "inp_where c P = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> if (P v) then Some (Ret v) else None | None \<Rightarrow> None))"
-  by (auto simp add: inp_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
-     (metis option.collapse option.distinct(1))+
+
+lemma inp_map_in_where_list_code [code_unfold]:
+  "wb_prism c \<Longrightarrow> inp_map_in_where c (set xs) P = inp_list_where c xs P"
+  by (metis inp_in_where_list_code inp_in_where_map_code)
+
+(*
+lemma inp_where_code [code_unfold]:
+  "wb_prism c \<Longrightarrow>inp_where c P = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> if (P v) then Some (Ret v) else None | None \<Rightarrow> None))"
+  apply (auto simp add: inp_in_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
+  apply (metis domIff option.simps(3) wb_prism.range_build)
+  apply (meson option.distinct(1) option.exhaust_sel)
+*)
 
 lemma build_in_dom_match [simp]: "wb_prism c \<Longrightarrow> build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub>"
   by (simp add: dom_def)
@@ -56,14 +110,31 @@ text \<open> Is there a way to use this optimise the above definition when appli
 lemma inp_list_wb_prism: "wb_prism c \<Longrightarrow> inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> x)) B))"
   by (simp add: inp_list_def)
 
+lemma inp_where_enum [code_unfold]:
+  assumes "wb_prism c"
+  shows "inp_where c P = inp_list_where c enum_class.enum P"
+proof -
+  have "inp_where c P = inp_in_where c (set enum_class.enum) P"
+    by (simp add:  enum_class.UNIV_enum)
+  also have "... = inp_list_where c enum_class.enum P"
+    by (simp add: assms inp_in_where_list_code)
+  finally show ?thesis .
+qed
+
+lemma inp_map_where_enum [code_unfold]:
+  assumes "wb_prism c"
+  shows "inp_map_in_where c UNIV P = inp_list_where c enum_class.enum P"
+  using inp_where_enum[of c P] by (simp add: inp_in_where_map_code assms)
+
+(*
 lemma inp_alist [code]:
   "inp_in c (set B) = inp_list c B"
-  unfolding inp_in_def inp_list_def
+  unfolding inp_in_where_def inp_list_def
   by (simp only: set_map[THEN sym] inter_set_filter pabs_set filter_map comp_def, simp add: comp_def)
 
 lemma inp_enum [code_unfold]:
   "wb_prism c \<Longrightarrow> inp c = inp_list c enum_class.enum"
-  apply (simp add: inp_list_def inp_in_def wb_prism.range_build[THEN sym] enum_class.UNIV_enum)
+  apply (simp add: inp_list_def inp_in_where_def wb_prism.range_build[THEN sym] enum_class.UNIV_enum)
   apply (simp only: image_set pabs_set)
   apply (simp add: comp_def)
   done
@@ -71,6 +142,7 @@ lemma inp_enum [code_unfold]:
 lemma inp_in_coset [code_unfold]: 
   "wb_prism c \<Longrightarrow> inp_in c (List.coset []) = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of Some v \<Rightarrow> Some (Ret v) | None \<Rightarrow> None))"
   by (auto simp add: inp_in_def pabs_def pfun_entries_def pdom_res_def pfun_of_map_inject restrict_map_def fun_eq_iff domIff wb_prism.range_build)
+*)
 
 definition outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
 "outp c v = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> v, Ret())])"
@@ -292,6 +364,11 @@ lemma map_prod_commute: "x \<odot> y = y \<odot> x"
 
 lemma map_prod_empty [simp]: "x \<odot> {}\<^sub>p = x" "{}\<^sub>p \<odot> x = x"
   by (simp_all add: map_prod_def)
+
+lemma map_prod_Nil_alist [code]: 
+  "(pfun_of_alist []) \<odot> P = P"
+  "P \<odot> (pfun_of_alist []) = P"
+  by simp_all
 
 lemma map_prod_merge: 
   "f(x \<mapsto> v)\<^sub>p \<odot> g = 
@@ -845,6 +922,23 @@ primcorec exception :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, '
                 (pfun_entries (A \<inter> pdom(F)) (fun_pfun (\<lambda> _. Q))))))"
 
 subsection \<open> Renaming \<close>
+
+text \<open> We define notation for writing renaming relations \<close>
+
+definition rncollect :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e\<^sub>1) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e\<^sub>2) \<Rightarrow> 'c set \<Rightarrow> ('c \<Rightarrow> ('a \<times> 'b) \<times> bool) \<Rightarrow> 'e\<^sub>1 \<leftrightarrow> 'e\<^sub>2" where
+"rncollect c\<^sub>1 c\<^sub>2 A f = {(build\<^bsub>c\<^sub>1\<^esub> (fst (fst (f x))), build\<^bsub>c\<^sub>2\<^esub> (snd (fst (f x)))) | x. x \<in> A \<and> snd (f x)}"
+ 
+syntax 
+  "_rncollect"    :: "evt \<Rightarrow> evt \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_ \<mapsto> _ | _ \<in> _./ _\<rbrace>")
+  "_rncollect_ns" :: "evt \<Rightarrow> evt \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_ \<mapsto> _ | _./ _\<rbrace>")
+
+translations 
+  "_rncollect (_evt_param c\<^sub>1 v\<^sub>1) (_evt_param c\<^sub>2 v\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. ((v\<^sub>1, v\<^sub>2), P))"
+  "_rncollect (_evt_id c\<^sub>1) (_evt_param c\<^sub>2 v\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. (((), v\<^sub>2), P))"
+  "_rncollect (_evt_param c\<^sub>1 v\<^sub>1) (_evt_id c\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. ((v\<^sub>1, ()), P))"
+  "_rncollect (_evt_id c\<^sub>1) (_evt_id c\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. (((), ()), P))"
+  "_rncollect_ns e\<^sub>1 e\<^sub>2 x P" == "_rncollect e\<^sub>1 e\<^sub>2 x (CONST UNIV) P"
+
 
 primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
 "rename \<rho> P = 

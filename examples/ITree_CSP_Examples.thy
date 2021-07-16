@@ -1,7 +1,7 @@
 section \<open> CSP ITree Examples \<close>
 
 theory ITree_CSP_Examples
-  imports "../ITree_CSP"
+  imports "../ITree_CSP" "../ITree_Extraction"
 begin
 
 subsection \<open> Simple Recursion \<close>

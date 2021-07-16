@@ -1,7 +1,7 @@
 subsection \<open> ITree Code Generation Support \<close>
 
 theory ITree_Extraction
-  imports ITree_Circus ITree_Procedure Record_Default_Instance Enum_Type
+  imports ITree_Circus ITree_Operations ITree_Procedure ITree_Hoare Record_Default_Instance Enum_Type
 begin
 
 text \<open> Configuring the code generator; either partial functions or associative lists can be used
@@ -11,6 +11,12 @@ code_datatype pfun_of_alist pfun_of_map pfun_of_pinj
 code_datatype pinj_of_alist
 
 declare pinv_pinj_of_alist [code]
+
+instantiation list :: (type) default
+begin
+definition "default_list = ([] :: 'a list)"
+instance ..
+end
 
 instantiation set :: (type) default
 begin
@@ -36,7 +42,5 @@ begin
 definition "default_pfun = ({}\<^sub>p :: ('a, 'b) pfun)"
 instance ..
 end
-
-declare SEXP_apply [simp del]
 
 end

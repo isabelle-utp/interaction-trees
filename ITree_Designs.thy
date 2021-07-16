@@ -36,6 +36,6 @@ lemma seq_pre: "itree_pre (P \<Zcomp> Q) = (itree_pre P \<and> wlp P (itree_pre 
 
 lemma input_in_pre:
   "wb_prism c \<Longrightarrow> itree_pre (input_in c A P) = (\<forall> v \<in> A. itree_pre (P v))\<^sub>e"
-  by (expr_simp add: itree_pre_div_free input_in_def div_free_bind div_free_inp_in retvals_inp_in)
+  by (expr_simp add: itree_pre_div_free input_in_where_def div_free_bind div_free_inp_in retvals_inp_in)
 
 end

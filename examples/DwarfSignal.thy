@@ -1,7 +1,7 @@
 section \<open> Dwarf Signal \<close>
 
 theory DwarfSignal
-  imports "../ITree_Extraction" "../ITree_CSP_Biased" "HOL-Library.Word"
+  imports "../ITree_Extraction" "../ITree_Circus"
 begin lit_vars
 
 subsection \<open> State Space \<close>
@@ -114,7 +114,7 @@ definition
 definition "Shine = shine!(current_state) \<rightarrow> Skip"
 
 definition "DwarfSignal
-  = proc Init (loop (CheckReq \<box> SetNewProperState \<box> TurnOn \<box> TurnOff \<box> Shine))"
+  = process Init (loop (CheckReq \<box> SetNewProperState \<box> TurnOn \<box> TurnOff \<box> Shine))"
 
 export_code DwarfSignal in Haskell module_name DwarfSignal (string_classes)
 

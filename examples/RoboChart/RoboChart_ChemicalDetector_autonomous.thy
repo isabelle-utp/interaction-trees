@@ -3,7 +3,7 @@ text \<open> This theory aims for simulation of a trivial RoboChart model based 
  semantics. We use the @{term "rename"} operator for renaming.
 \<close>
 theory RoboChart_ChemicalDetector_autonomous
-  imports "../../ITree_RoboChart" "../../RC_Channel_Type"
+  imports "../../ITree_RoboChart" "../../RC_Channel_Type" "../../Bounded_List"
 begin
 
 subsection \<open> General definitions \<close>
@@ -36,6 +36,7 @@ using @{text "typedef"} with the parameter n. The only parameters allowed for @{
 is type variables like @{text "'a"}. For this reason, we, therefore, use an abbreviation 
 @{text "N"} below.
 \<close>
+(*
 abbreviation "N \<equiv> 2"
 typedef ('a) LSeq = "{s :: 'a list. length s \<le> N}"
   morphisms list_of_lseq lseq_of_list 
@@ -59,6 +60,7 @@ value "lseqn [1::integer, 3, 4] 2"
 typedef ('a) ILSeq = "{s :: 'a list. length s \<le> N \<and> distinct s}"
   morphisms list_of_ilseq ilseq_of_list 
   by (metis card.empty card_distinct list.set(1) list.size(3) mem_Collect_eq zero_le)
+*)
 
 abbreviation "const_GasAnalysis_thr \<equiv> 0"
 

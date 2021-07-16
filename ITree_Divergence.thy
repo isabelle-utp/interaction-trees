@@ -68,7 +68,7 @@ lemma stabilises_alt_def':
   by (auto simp add: stabilises_alt_def, metis itree.sel(3) rangeI, blast)
   
 lemma stabilises_to_Sils_Vis [simp]: "stabilises_to R (Sils n (Vis F)) = (pran F \<subseteq> Collect R)"
-  by (auto, auto simp add: Sils_Vis_iff stabilises_alt_def image_subset_iff, metis Sils_Vis_not_Ret)
+  by (auto, auto simp add: Sils_Vis_iff stabilises_alt_def image_subset_iff)
 
 subsection \<open> Divergence \<close>
 
@@ -119,10 +119,15 @@ text \<open> There is a unique divergent @{type itree}. \<close>
 lemma diverges_implies_equal: 
   assumes "P \<Up>" "Q \<Up>"
   shows "P = Q"
-using assms proof (coinduction arbitrary: P Q rule: itree_coind)
-  case (wform P Q)
-  then show ?case
-    by blast
+using assms proof (coinduction arbitrary: P Q rule: itree_coind')
+  case RetF
+  then show ?case by blast
+next
+  case SilF
+  then show ?case by blast
+next
+  case VisF
+  then show ?case by blast
 next
   case (Ret x y)
   then show ?case
@@ -391,21 +396,38 @@ lemma evalpha_diverge [simp]: "\<^bold>A(diverge) = {}"
   by (auto simp add: evalpha_def)
      (meson diverges_diverge stabilises_traceI)
 
-subsection \<open> Iteration \<close>
+subsection \<open> Removing Leading Silent Steps \<close>
 
-text \<open> For now we support only basic tail-recursive iteration. \<close>
+definition "un_Sils P = (if (stabilises P) then (THE P'. \<exists> n. P = Sils n P' \<and> stable P') else P)"
 
-corec iterate :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
-"iterate b P s = (if (b s) then (P s \<bind> (\<tau> \<circ> (iterate b P))) else Ret s)"
+lemma un_Sils_Ret [simp]: "un_Sils (Ret x) = Ret x"
+  by (simp add: un_Sils_def, rule the_equality, auto)
 
-abbreviation "loop \<equiv> iterate (\<lambda> s. True)"
+lemma un_Sils_Vis [simp]: "un_Sils (Vis F) = Vis F"
+  by (simp add: un_Sils_def, rule the_equality, auto)
+     (metis Sils.simps(1), metis Sils_0 is_Vis_Sils itree.disc(9))
 
-abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
+lemma un_Sils_Sil [simp]: "un_Sils (Sil P) = un_Sils P"
+proof (cases "P = diverge")
+  case True
+  then show ?thesis
+    by (metis diverge.code)
+next
+  case False
+  hence "stabilises P"
+    using diverges_then_diverge by auto
+  then show ?thesis
+    by (auto simp add: un_Sils_def)
+       (metis (mono_tags, hide_lams) Sils.simps(1) Sils.simps(2) itree.disc(5) itree.sel(2) un_Sil_Sils)
+qed
 
-lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
-  by (simp add: kleisli_comp_def fun_eq_iff iterate.code)
+lemma un_Sils_Sils [simp]: "un_Sils (Sils n P) = un_Sils P"
+  by (induct n, simp_all)
 
-lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
-  by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge iterate.code)
+lemma stable_un_Sils [simp]: "stable P \<Longrightarrow> un_Sils (Sils n P) = P"
+  by (auto simp add: un_Sils_def, meson stabilises_def)
+
+lemma diverge_un_Sils [simp]: "un_Sils diverge = diverge"
+  by (simp add: un_Sils_def)
 
 end

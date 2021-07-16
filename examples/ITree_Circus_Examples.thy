@@ -1,7 +1,7 @@
 section \<open> ITree Circus Examples \<close>
 
 theory ITree_Circus_Examples
-  imports "../ITree_Circus"
+  imports "../ITree_Circus" "../ITree_Extraction"
 begin
 
 lit_vars
@@ -11,13 +11,7 @@ subsection \<open> Buffer \<close>
 alphabet State = 
   buf :: "integer list"
 
-instantiation State_ext :: (default) default
-begin
-  definition default_State_ext :: "'a State_scheme" where
-    "default_State_ext = State.extend (State.make []) default"
-
-instance ..
-end
+record_default State
 
 chantype Chan =
   Input :: integer
@@ -25,10 +19,10 @@ chantype Chan =
   State :: "integer list"
 
 definition "buffer I
-  = proc 
+  = process
       ([buf \<leadsto> []] :: State \<Rightarrow> State)
       (loop ((Input?(i):I \<rightarrow> buf := (buf @ [i]))
-            \<box> ((length(buf) > 0) & Output!(hd buf) \<rightarrow> buf := (tl buf))
+            \<box> ((length(buf) > 0) & Output!(hd buf) \<rightarrow> (buf := (tl buf)))
             \<box> State!(buf) \<rightarrow> Skip))"
 
 subsection \<open> Other Examples \<close>

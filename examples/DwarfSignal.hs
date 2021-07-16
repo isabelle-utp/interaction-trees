@@ -58,11 +58,7 @@ member x (Coset xs) = not (membera xs x);
 member x (Set xs) = membera xs x;
 
 less_eq_set :: forall a. (Eq a) => Set a -> Set a -> Bool;
-less_eq_set (Coset xs) (Set ys) =
-  (if null xs && null ys then False
-    else (error :: forall a. String -> (() -> a) -> a)
-           "subset_eq (List.coset _) (List.set _) requires type class instance card_UNIV"
-           (\ _ -> less_eq_set (Coset xs) (Set ys)));
+less_eq_set (Coset []) (Set []) = False;
 less_eq_set a (Coset ys) = all (\ y -> not (member y a)) ys;
 less_eq_set (Set xs) b = all (\ x -> member x b) xs;
 
@@ -201,6 +197,8 @@ map_prod (Pfun_of_map f) (Pfun_of_map g) =
                         (Just xa, Nothing) -> Just xa;
                         (Just _, Just _) -> Nothing;
                       }));
+map_prod p (Pfun_of_alist []) = p;
+map_prod (Pfun_of_alist []) p = p;
 
 extchoice_itree ::
   forall a b. (Eq a, Eq b) => Itree a b -> Itree a b -> Itree a b;
@@ -340,10 +338,6 @@ prism_build (Prism_ext prism_match prism_build more) = prism_build;
 outp :: forall a b. Prism_ext a b () -> a -> Itree b ();
 outp c v = Vis (Pfun_of_alist [(prism_build c v, Ret ())]);
 
-is_none :: forall a. Maybe a -> Bool;
-is_none (Just x) = False;
-is_none Nothing = True;
-
 map_filter :: forall a b. (a -> Maybe b) -> [a] -> [b];
 map_filter f [] = [];
 map_filter f (x : xs) = (case f x of {
@@ -457,25 +451,10 @@ init =
       current_state (sexp (\ _ -> signalLamps Stop)))
     desired_proper_state (sexp (\ _ -> Stop));
 
-prism_match :: forall a b c. Prism_ext a b c -> b -> Maybe a;
-prism_match (Prism_ext prism_match prism_build more) = prism_match;
-
-the :: forall a. Maybe a -> a;
-the (Just x2) = x2;
-
-inp_list :: forall a b. Prism_ext a b () -> [a] -> Itree b a;
-inp_list c b =
-  Vis (Pfun_of_alist
-        (map_filter
-          (\ x ->
-            (if not (is_none (prism_match c (prism_build c x)))
-              then Just (prism_build c x,
-                          Ret (the (prism_match c (prism_build c x))))
-              else Nothing))
-          b));
-
-inp_in :: forall a b. Prism_ext a b () -> Set a -> Itree b a;
-inp_in c (Set b) = inp_list c b;
+pabs :: forall a b. Set a -> (a -> Bool) -> (a -> b) -> Pfun a b;
+pabs (Set xs) p f =
+  Pfun_of_alist
+    (map_filter (\ x -> (if p x then Just (x, f x) else Nothing)) xs);
 
 lens_get :: forall a b c. Lens_ext a b c -> b -> a;
 lens_get (Lens_ext lens_get lens_put more) = lens_get;
@@ -498,7 +477,12 @@ ctor_prism ctor disc sel =
 shinea :: Prism_ext (Set LampId) Chan ();
 shinea = ctor_prism Shine_C is_shine_C un_shine_C;
 
+map_option :: forall a b. (a -> b) -> Maybe a -> Maybe b;
+map_option f Nothing = Nothing;
+map_option f (Just x2) = Just (f x2);
+
 map_pfun :: forall a b c. (a -> b) -> Pfun c a -> Pfun c b;
+map_pfun f (Pfun_of_map g) = Pfun_of_map (\ x -> map_option f (g x));
 map_pfun f (Pfun_of_alist m) = Pfun_of_alist (map (\ (k, v) -> (k, f v)) m);
 
 bind_itree :: forall a b c. Itree a b -> (b -> Itree a c) -> Itree a c;
@@ -523,8 +507,29 @@ deadlock = Vis zero_pfun;
 test :: forall a b. (a -> Bool) -> a -> Itree b a;
 test b = (\ s -> (if b s then Ret s else deadlock));
 
+the :: forall a. Maybe a -> a;
+the (Just x2) = x2;
+
 kleisli_comp :: forall a b c d. (a -> b -> c) -> (d -> a) -> b -> d -> c;
 kleisli_comp bnd f g = (\ x -> bnd (f x) g);
+
+prism_match :: forall a b c. Prism_ext a b c -> b -> Maybe a;
+prism_match (Prism_ext prism_match prism_build more) = prism_match;
+
+inp_in_where ::
+  forall a b. Prism_ext a b () -> Set a -> (a -> Bool) -> Itree b a;
+inp_in_where c a p =
+  Vis (pabs (image (prism_build c) a) (\ e -> p (the (prism_match c e)))
+        (\ e -> Ret (the (prism_match c e))));
+
+input_in_where ::
+  forall a b c.
+    Prism_ext a b () ->
+      (c -> Set a) -> (a -> (c -> Bool, c -> Itree b c)) -> c -> Itree b c;
+input_in_where c a p =
+  (\ s ->
+    bind_itree (inp_in_where c (a s) (\ v -> fst (p v) s))
+      (\ x -> snd (p x) s));
 
 sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
 sup_set (Coset xs) a = Coset (filter (\ x -> not (member x a)) xs);
@@ -543,33 +548,30 @@ is_turnOn_C (Violation_C x5) = False;
 turnOna :: Prism_ext LampId Chan ();
 turnOna = ctor_prism TurnOn_C is_turnOn_C un_turnOn_C;
 
-input_in ::
-  forall a b c.
-    Prism_ext a b () -> (c -> Set a) -> (a -> c -> Itree b c) -> c -> Itree b c;
-input_in c a p = (\ s -> bind_itree (inp_in c (a s)) (\ x -> p x s));
-
 assigns :: forall a b c. (a -> b) -> a -> Itree c b;
 assigns sigma = (\ s -> Ret (sigma s));
 
 turnOn :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
 turnOn =
-  input_in turnOna (sexp (lens_get turn_on))
-    (\ l ->
-      kleisli_comp bind_itree
-        (kleisli_comp bind_itree
+  input_in_where turnOna (sexp (lens_get turn_on))
+    (\ e ->
+      (sexp (\ _ -> True),
+        kleisli_comp bind_itree
           (kleisli_comp bind_itree
+            (kleisli_comp bind_itree
+              (assigns
+                (subst_upd subst_id turn_off
+                  (sexp (\ s -> remove e (lens_get turn_off s)))))
+              (assigns
+                (subst_upd subst_id turn_on
+                  (sexp (\ s -> remove e (lens_get turn_on s))))))
             (assigns
-              (subst_upd subst_id turn_off
-                (sexp (\ s -> remove l (lens_get turn_off s)))))
-            (assigns
-              (subst_upd subst_id turn_on
-                (sexp (\ s -> remove l (lens_get turn_on s))))))
+              (subst_upd subst_id last_state (sexp (lens_get current_state)))))
           (assigns
-            (subst_upd subst_id last_state (sexp (lens_get current_state)))))
-        (assigns
-          (subst_upd subst_id current_state
-            (sexp (\ s ->
-                    sup_set (lens_get current_state s) (insert l bot_set))))));
+            (subst_upd subst_id current_state
+              (sexp (\ s ->
+                      sup_set (lens_get current_state s)
+                        (insert e bot_set)))))));
 
 un_turnOff_C :: Chan -> LampId;
 un_turnOff_C (TurnOff_C x3) = x3;
@@ -586,22 +588,23 @@ turnOffa = ctor_prism TurnOff_C is_turnOff_C un_turnOff_C;
 
 turnOff :: forall a. Dwarf_ext a -> Itree Chan (Dwarf_ext a);
 turnOff =
-  input_in turnOffa (sexp (lens_get turn_off))
-    (\ l ->
-      kleisli_comp bind_itree
-        (kleisli_comp bind_itree
+  input_in_where turnOffa (sexp (lens_get turn_off))
+    (\ e ->
+      (sexp (\ _ -> True),
+        kleisli_comp bind_itree
           (kleisli_comp bind_itree
+            (kleisli_comp bind_itree
+              (assigns
+                (subst_upd subst_id turn_off
+                  (sexp (\ s -> remove e (lens_get turn_off s)))))
+              (assigns
+                (subst_upd subst_id turn_on
+                  (sexp (\ s -> remove e (lens_get turn_on s))))))
             (assigns
-              (subst_upd subst_id turn_off
-                (sexp (\ s -> remove l (lens_get turn_off s)))))
-            (assigns
-              (subst_upd subst_id turn_on
-                (sexp (\ s -> remove l (lens_get turn_on s))))))
+              (subst_upd subst_id last_state (sexp (lens_get current_state)))))
           (assigns
-            (subst_upd subst_id last_state (sexp (lens_get current_state)))))
-        (assigns
-          (subst_upd subst_id current_state
-            (sexp (\ s -> remove l (lens_get current_state s))))));
+            (subst_upd subst_id current_state
+              (sexp (\ s -> remove e (lens_get current_state s)))))));
 
 extchoice_fun :: forall a b. (Extchoice b) => (a -> b) -> (a -> b) -> a -> b;
 extchoice_fun p q = (\ s -> extchoice (p s) (q s));
@@ -734,30 +737,32 @@ setNewProperState =
     (test (sexp (\ s ->
                   equal_set (lens_get current_state s)
                     (signalLamps (lens_get desired_proper_state s)))))
-    (input_in setNewProperStatea
+    (input_in_where setNewProperStatea
       (sexp (\ s -> remove (lens_get desired_proper_state s) properState))
-      (\ st ->
-        kleisli_comp bind_itree
-          (kleisli_comp bind_itree
+      (\ e ->
+        (sexp (\ _ -> True),
+          kleisli_comp bind_itree
             (kleisli_comp bind_itree
               (kleisli_comp bind_itree
+                (kleisli_comp bind_itree
+                  (assigns
+                    (subst_upd subst_id last_proper_state
+                      (sexp (lens_get desired_proper_state))))
+                  (assigns
+                    (subst_upd subst_id turn_off
+                      (sexp (\ s ->
+                              minus_set (lens_get current_state s)
+                                (signalLamps e))))))
                 (assigns
-                  (subst_upd subst_id last_proper_state
-                    (sexp (lens_get desired_proper_state))))
-                (assigns
-                  (subst_upd subst_id turn_off
+                  (subst_upd subst_id turn_on
                     (sexp (\ s ->
-                            minus_set (lens_get current_state s)
-                              (signalLamps st))))))
+                            minus_set (signalLamps e)
+                              (lens_get current_state s))))))
               (assigns
-                (subst_upd subst_id turn_on
-                  (sexp (\ s ->
-                          minus_set (signalLamps st)
-                            (lens_get current_state s))))))
+                (subst_upd subst_id last_state
+                  (sexp (lens_get current_state)))))
             (assigns
-              (subst_upd subst_id last_state (sexp (lens_get current_state)))))
-          (assigns
-            (subst_upd subst_id desired_proper_state (sexp (\ _ -> st))))));
+              (subst_upd subst_id desired_proper_state (sexp (\ _ -> e)))))));
 
 iterate :: forall a b. (a -> Bool) -> (a -> Itree b a) -> a -> Itree b a;
 iterate b p s = (if b s then bind_itree (p s) (Sil . iterate b p) else Ret s);
@@ -814,6 +819,5 @@ simulate_cnt n t@(Vis (Pfun_of_map f)) =
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
 simulate = simulate_cnt 0;
-
 
 }
