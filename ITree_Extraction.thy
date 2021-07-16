@@ -43,4 +43,6 @@ definition "default_pfun = ({}\<^sub>p :: ('a, 'b) pfun)"
 instance ..
 end
 
+lit_vars
+
 end
