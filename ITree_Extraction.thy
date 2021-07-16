@@ -1,8 +1,12 @@
 subsection \<open> ITree Code Generation Support \<close>
 
 theory ITree_Extraction
-  imports ITree_Circus ITree_Operations ITree_Procedure ITree_Hoare Record_Default_Instance Enum_Type
+  imports ITree_Circus ITree_Operations ITree_Procedure ITree_Hoare Record_Default_Instance Enum_Type "HOL-Library.Code_Lazy"
 begin
+
+text \<open> Necessary to deal with SML value restriction \<close>
+
+declare deadlock_def [code_unfold]
 
 text \<open> Configuring the code generator; either partial functions or associative lists can be used
   in specifying choice functions. Partial injections are also supported using lists. \<close>

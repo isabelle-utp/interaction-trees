@@ -55,10 +55,12 @@ simulate = simulate_cnt 0;
 ML \<open> 
 fun cmd def = "fn path => let val n = (Path.implode path) \n val ret = Isabelle_System.bash (\"/home/simonfoster/Isabelle/simulate.sh \" ^ n ^ \"/code/simulate\"  ^ \" \" ^ \"" ^ def ^ ".hs\") in () end";
 
-fun simulate def =
+(* Need to figure out how to get this to include all generated files in current theory *)
+
+fun simulate def thy =
   Generated_Files.compile_generated_files 
     @{context} 
-    [([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
+    [([], thy), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
     (Path.binding0 (Path.make []))
   (Input.string (cmd def));
 \<close>
