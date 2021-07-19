@@ -51,9 +51,9 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s 
 simulate = simulate_cnt 0;
 \<close>
 
-
 ML \<open> 
-fun cmd def = "fn path => let val n = (Path.implode path) \n val ret = Isabelle_System.bash (\"/home/simonfoster/Isabelle/simulate.sh \" ^ n ^ \"/code/simulate\"  ^ \" \" ^ \"" ^ def ^ ".hs\") in () end";
+fun cmd def = 
+  "fn path => let val n = (Path.implode path) \n val ret = Isabelle_System.bash (\"/home/simonfoster/Isabelle/simulate.sh \" ^ n ^ \"/code/simulate\"  ^ \" \" ^ \"" ^ def ^ ".hs\") in () end";
 
 (* Need to figure out how to get this to include all generated files in current theory *)
 
