@@ -28,7 +28,7 @@ definition "TIDS_stm0_set = set TIDS_stm0_list"
 definition "ITIDS_stm0_list = [TID_stm0_t1, TID_stm0_t2]"
 definition "ITIDS_stm0 = set ITIDS_stm0_list"  
 
-rcchantype Chan_stm0 stm0 "SIDS_stm0 \<times> SIDS_stm0" =
+chantype Chan_stm0 =
 (* flow channels *)
   (* will be hidden *)
   internal_stm0 :: TIDS_stm0
@@ -36,12 +36,10 @@ rcchantype Chan_stm0 stm0 "SIDS_stm0 \<times> SIDS_stm0" =
   enterV_stm0 :: SIDS_stm0 
   exitV_stm0  :: SIDS_stm0 
   exitedV_stm0 :: SIDS_stm0 *)
-  (* 
   enter_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   entered_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exit_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exited_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
-  *)
   terminate_stm0 :: unit
 (* variable channels : the next 3 channels will be hidden *)
   get_l_stm0 :: core_int
@@ -399,7 +397,7 @@ definition "TIDS_stm1_set = set TIDS_stm1_list"
 definition "ITIDS_stm1_list = [TID_stm1_t1, TID_stm1_t2]"
 definition "ITIDS_stm1 = set ITIDS_stm1_list"
 
-rcchantype Chan_stm1 stm1 "SIDS_stm1 \<times> SIDS_stm1" =
+chantype Chan_stm1 =
 (* flow channels *)
   internal_stm1 :: TIDS_stm1
 (*
@@ -407,12 +405,12 @@ rcchantype Chan_stm1 stm1 "SIDS_stm1 \<times> SIDS_stm1" =
   enterV_stm1 :: SIDS_stm1 
   exitV_stm1  :: SIDS_stm1 
   exitedV_stm1 :: SIDS_stm1
+*)
   enter_stm1 :: "SIDS_stm1 \<times> SIDS_stm1"
   entered_stm1 :: "SIDS_stm1 \<times> SIDS_stm1"
   exit_stm1 :: "SIDS_stm1 \<times> SIDS_stm1"
   exited_stm1 :: "SIDS_stm1 \<times> SIDS_stm1"
-*)
-  terminate_stm1 :: unit (* Is this right? *)
+  terminate_stm1 :: unit
 (* variable channels *)
   get_l_stm1 :: core_int
   set_l_stm1 :: core_int

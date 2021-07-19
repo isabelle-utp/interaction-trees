@@ -6,6 +6,8 @@ theory RoboChart_ChemicalDetector_autonomous
   imports "../../ITree_RoboChart" "../../RC_Channel_Type" "../../Bounded_List"
 begin
 
+declare [[show_types]]
+
 subsection \<open> General definitions \<close>
 interpretation rc: robochart_confs "-2" "2" "2" "-2" "2".
 
@@ -14,6 +16,9 @@ abbreviation "Chemical_Chem_list \<equiv> [0::core_real, 1]"
 
 typedef Chemical_Chem = "set Chemical_Chem_list"
   by (meson list.set_intros(1))
+
+term "Abs_Chemical_Chem"
+term "Rep_Chemical_Chem"
 
 (*
 typedef Chemical_Chem = "{0::core_real, 1}"
@@ -36,7 +41,7 @@ using @{text "typedef"} with the parameter n. The only parameters allowed for @{
 is type variables like @{text "'a"}. For this reason, we, therefore, use an abbreviation 
 @{text "N"} below.
 \<close>
-(*
+
 abbreviation "N \<equiv> 2"
 typedef ('a) LSeq = "{s :: 'a list. length s \<le> N}"
   morphisms list_of_lseq lseq_of_list 
@@ -53,16 +58,19 @@ fun lseq where
 
 fun lseqn where
 "lseqn s 0 = lseq s 0" |
-"lseqn s (Suc n) = lseq s n"
+"lseqn s (Suc n) = lseqn s n @ (lseq s (Suc n))"
 
+value "lseq [1::integer, 3, 4] 2"
+value "lseq [1::integer, 3, 4] 1"
 value "lseqn [1::integer, 3, 4] 2"
+
+(* How to give a code equation for blist based on lseqn *)
 
 typedef ('a) ILSeq = "{s :: 'a list. length s \<le> N \<and> distinct s}"
   morphisms list_of_ilseq ilseq_of_list 
   by (metis card.empty card_distinct list.set(1) list.size(3) mem_Collect_eq zero_le)
-*)
 
-abbreviation "const_GasAnalysis_thr \<equiv> 0"
+definition "const_GasAnalysis_thr \<equiv> 0"
 
 subsection \<open> Chemical package \<close>
 enumtype Chemical_Status = 
@@ -77,7 +85,7 @@ abbreviation "Chemical_Angle_set \<equiv> set Chemical_Angle_list"
 
 type_synonym Chemical_GasSensor = "Chemical_Chem \<times> Chemical_Intensity"
 abbreviation "Chemical_GasSensor_list \<equiv> 
-  [(c, i). c \<leftarrow> Chemical_Chem_list, i \<leftarrow> Chemical_Intensity_list]"
+  [(Abs_Chemical_Chem c, Abs_Chemical_Intensity i). c \<leftarrow> Chemical_Chem_list, i \<leftarrow> Chemical_Intensity_list]"
 
 subsection \<open> Location package \<close>
 enumtype Location_Loc = 
@@ -114,6 +122,21 @@ definition "ITIDS_GasAnalysis_list = [TID_GasAnalysis_t0,
 
 definition "ITIDS_GasAnalysis = set ITIDS_GasAnalysis_list"  
 
+term "a::int[2]blist"
+value "CARD(3)"
+term "a::Chemical_GasSensor[2]blist"
+value "bmake TYPE(3) Chemical_GasSensor_list"
+term "lists"
+(* Explanation of "TYPE" and "itself" 
+https://stackoverflow.com/questions/18819388/isabelle-evaluating-formula-with-quantifiers *)
+term "TYPE('a)" 
+term "TYPE(3)"
+
+definition mk_blist :: "'n itself \<Rightarrow> 'a list \<Rightarrow> ('a['n::finite]blist) list" where
+"mk_blist _ xs = map (bmake TYPE('n)) (lseqn xs CARD('n))"
+
+value "mk_blist TYPE(2) Chemical_GasSensor_list"
+
 chantype Chan_GasAnalysis =
 (* flow channels *)
   internal_GasAnalysis :: TIDS_GasAnalysis
@@ -126,16 +149,16 @@ chantype Chan_GasAnalysis =
 (* Variables *)
   get_st_GasAnalysis :: Chemical_Status
   set_st_GasAnalysis :: Chemical_Status
-  get_gs_GasAnalysis :: "Chemical_GasSensor LSeq"
-  set_gs_GasAnalysis :: "Chemical_GasSensor LSeq"
+  get_gs_GasAnalysis :: "Chemical_GasSensor[2]blist" (* "Chemical_GasSensor LSeq"*)
+  set_gs_GasAnalysis :: "Chemical_GasSensor[2]blist"
   get_i_GasAnalysis :: "Chemical_Intensity"
   set_i_GasAnalysis :: "Chemical_Intensity"
   get_a_GasAnalysis :: "Chemical_Angle"
   set_a_GasAnalysis :: "Chemical_Angle"
 
 (* event channels *)
-  gas__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut \<times> Chemical_GasSensor LSeq"
-  gas_GasAnalysis :: "InOut \<times> Chemical_GasSensor LSeq"
+  gas__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut \<times> Chemical_GasSensor[2]blist"
+  gas_GasAnalysis :: "InOut \<times> Chemical_GasSensor[2]blist"
   resume__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut"
   resume_GasAnalysis :: "InOut"
   turn__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut \<times> Chemical_Angle"
@@ -144,6 +167,7 @@ chantype Chan_GasAnalysis =
   stop_GasAnalysis :: "InOut"
 
 subsubsection \<open> Sets of events \<close>
+(* How to use a list to represent all possible values of Chemical_GasSensor[2]blist *)
 definition int_int_GasAnalysis where
 "int_int_GasAnalysis = set (
   (enumchans3 [gas__GasAnalysis_C] 
@@ -151,7 +175,7 @@ definition int_int_GasAnalysis where
      TID_GasAnalysis_t3, TID_GasAnalysis_t4,
      TID_GasAnalysis_t8, TID_GasAnalysis_t9a] 
     [din, dout] 
-    rc.core_int_list) @
+    (mk_blist TYPE(2) Chemical_GasSensor_list)) @
   (enumchans2 [resume__GasAnalysis_C] 
     [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
      TID_GasAnalysis_t3, TID_GasAnalysis_t4,
