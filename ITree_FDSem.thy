@@ -439,7 +439,7 @@ lemma failures_inp:
     {([], E) | E. \<forall> x\<in>A. Ev (build\<^bsub>c\<^esub> x) \<notin> E} 
     \<union> {([Ev (build\<^bsub>c\<^esub> x)], E) | E x. x \<in> A \<and> \<cmark> () \<notin> E}
     \<union> {([Ev (build\<^bsub>c\<^esub> x), \<cmark> ()], E) | E x. x \<in> A}"
-  by (simp add: inp_in_def failures_Vis failures_Ret, safe)
+  by (simp add: inp_in_where_def failures_Vis failures_Ret, safe)
      (auto simp add: wb_prism.range_build failures_Ret)  
   
 lemma dom_bind [simp]: "Map.dom (\<lambda> x. P x \<bind> Q) = {x \<in> Map.dom P. the(P x) \<in> Map.dom Q}"
