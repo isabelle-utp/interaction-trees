@@ -147,15 +147,16 @@ definition "ITIDS_stm1_list = [TID_stm1_t1, TID_stm1_t2]"
 definition "ITIDS_stm1 = set ITIDS_stm1_list"
 
 subsection \<open> Channel type\<close>
-rcchantype Chan1 =
+chantype Chan1 =
   e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e_b_stm0 :: "core_bool"
+  terminate :: unit
 
 chantype Chan =
-  e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
-  e_b_stm0 :: "core_bool"
+  e1__stm0' :: "TIDS_stm0 \<times> InOut \<times> core_int"
+  e_b_stm0' :: "core_bool"
 
-chantype Chan1 =
+chantype Chan1' =
   e1_stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e1'_stm0 :: "InOut \<times> core_int"
 
