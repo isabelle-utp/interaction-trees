@@ -52,17 +52,36 @@ simulate = simulate_cnt 0;
 \<close>
 
 ML \<open> 
-fun cmd def = 
-  "fn path => let val n = (Path.implode path) \n val ret = Isabelle_System.bash (\"/home/simonfoster/Isabelle/simulate.sh \" ^ n ^ \"/code/simulate\"  ^ \" \" ^ \"" ^ def ^ ".hs\") in () end";
+structure ITree_Simulator =
+struct
 
-(* Need to figure out how to get this to include all generated files in current theory *)
+structure ISim_Path = Theory_Data
+  (type T = Path.T option
+   val empty = NONE
+   val extend = I
+   val merge = fn (_, y) => y);
 
-fun simulate def thy =
+fun simulator_setup thy = 
+  let open Isabelle_System; val tmp = create_tmp_path "itree-simulate" ""
+  in case @{print}(ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
+    mkdir tmp; ISim_Path.put (SOME tmp) thy; tmp
+  end
+
+val sim_files_cp = 
+  "(fn path => let open Isabelle_System;" ^
+  " val tmp = ITree_Simulator.simulator_setup @{theory}" ^ 
+  " in copy_dir (Path.append path (Path.make [\"code\", \"simulate\"])) tmp end)"
+
+open Named_Target
+
+fun prep_simulation thy =
   Generated_Files.compile_generated_files 
-    @{context} 
+    (Named_Target.theory_init thy) 
     [([], thy), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
     (Path.binding0 (Path.make []))
-  (Input.string (cmd def));
+  (Input.string sim_files_cp);
+
+end;
 \<close>
 
 end
