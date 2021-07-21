@@ -35,6 +35,9 @@ abbreviation "Chemical_Intensity2_set \<equiv> set Chemical_Intensity2_list"
 definition Chemical_Intensity_is_zero::"(2 Chemical_Intensity) \<Rightarrow> bool" where
 "Chemical_Intensity_is_zero x = (if x = (Chemical_Intensity_C (0::2)) then True else False)"
 
+fun Chemical_goreq :: "2 Chemical_Intensity \<Rightarrow> 2 Chemical_Intensity \<Rightarrow> bool" where
+"Chemical_goreq (Chemical_Intensity_C x) (Chemical_Intensity_C y) = (x \<ge> y) "
+
 text \<open> In CSP, LSeq(T,n) from core_defs.csp can be used as a type or an expression. In this 
 RoboChart model, it is used as a type, parametrised by n. We use bounded_list to implement it, 
 such as @{typ "int[2]blist"} for LSeq(int, 2).
@@ -67,6 +70,10 @@ enumtype Chemical_Angle =
 abbreviation "Chemical_Angle_list \<equiv> enum_Chemical_Angle_inst.enum_Chemical_Angle"
 abbreviation "Chemical_Angle_set \<equiv> set Chemical_Angle_list"
 
+text \<open> The angle function \<close>
+definition Chemical_angle :: "nat \<Rightarrow> Chemical_Angle" where
+"Chemical_angle x = (if x > 0 then Chemical_Angle_Right else Chemical_Angle_Front)"
+
 record 'a Chemical_GasSensor = 
   c :: "'a Chemical_Chem"
   i :: "'a Chemical_Intensity"
@@ -79,9 +86,6 @@ definition Chemical_GasSensor2_list :: "Chemical_GasSensor2 list" where
 
 abbreviation "lseq_gassensor_enum \<equiv> mk_blist TYPE(2) Chemical_GasSensor2_list"
 
-fun Chemical_goreq :: "2 Chemical_Intensity \<Rightarrow> 2 Chemical_Intensity \<Rightarrow> bool" where
-"Chemical_goreq (Chemical_Intensity_C x) (Chemical_Intensity_C y) = (x \<ge> y) "
-
 (*
 function Chemical_analysis :: "2 Chemical_GasSensor[2]blist \<Rightarrow> Chemical_Status" where
 "Chemical_analysis (bmake TYPE(2) []) =  Chemical_Status_noGas" |
@@ -92,8 +96,8 @@ function Chemical_analysis :: "2 Chemical_GasSensor[2]blist \<Rightarrow> Chemic
 *)
 
 function Chemical_analysis :: "2 Chemical_GasSensor[2]blist \<Rightarrow> Chemical_Status" where
-"Chemical_analysis (bls) = 
-  (case list_of_blist bls of
+"Chemical_analysis (gs) = 
+  (case list_of_blist gs of
     []      \<Rightarrow> Chemical_Status_noGas |
     (p#ps)  \<Rightarrow> (if Chemical_Chem_is_zero (c p) \<and> 
                   (Chemical_analysis (bmake TYPE(2) ps) = Chemical_Status_noGas) 
@@ -103,21 +107,74 @@ function Chemical_analysis :: "2 Chemical_GasSensor[2]blist \<Rightarrow> Chemic
   by auto
 
 termination Chemical_analysis 
-  apply (relation "measure (\<lambda> bls. blength bls)")
+  apply (relation "measure (\<lambda> gs. blength gs)")
   apply (auto)
 proof -
-  fix bls::"2 Chemical_GasSensor [2]blist" and 
+  fix gs::"2 Chemical_GasSensor [2]blist" and 
       x21::"2 Chemical_GasSensor" and 
       x22::"2 Chemical_GasSensor list"
-  assume a1: "list_of_blist bls = x21 # x22"
-  from a1 have f1: "blength bls > 0"
+  assume a1: "list_of_blist gs = x21 # x22"
+  from a1 have f1: "blength gs > 0"
     by (simp add: blength_def)
-  show "blength (bmake TYPE(2) x22) < blength bls"
+  show "blength (bmake TYPE(2) x22) < blength gs"
     by (metis a1 blist_remove_head f1 list.sel(3))
 qed
 
 value "Chemical_analysis (bmake TYPE(2) [])"
 value "Chemical_analysis (bmake TYPE(2) [\<lparr>c = Chemical_Chem_C (0::2), i = Chemical_Intensity_C (0::2)\<rparr>])"
+
+text \<open> The intensity function \<close>
+definition pre_Chemical_intensity :: "2 Chemical_GasSensor[2]blist \<Rightarrow> bool" where
+"pre_Chemical_intensity gs = (blength gs > 0)"
+
+function Chemical_intensity :: "2 Chemical_GasSensor[2]blist \<Rightarrow> (2 Chemical_Intensity)" where
+"Chemical_intensity (gs) = 
+  (case list_of_blist gs of
+    []      \<Rightarrow> Chemical_Intensity_C (0::2) |
+    (p#ps)  \<Rightarrow> (if Chemical_goreq (i p) (Chemical_intensity (bmake TYPE(2) ps)) 
+                then i p
+                else Chemical_intensity (bmake TYPE(2) ps))
+  )"
+  by auto
+
+termination Chemical_intensity 
+  apply (relation "measure (\<lambda> gs. blength gs)")
+  apply (auto)
+  by (metis add_Suc_right blength.rep_eq blist_remove_head less_nat_zero_code linorder_cases 
+      list.sel(3) list.size(4) nat.simps(3))+
+
+value "Chemical_intensity (bmake TYPE(2) [])"
+value "Chemical_intensity (bmake TYPE(2) 
+  [\<lparr>c = Chemical_Chem_C (0::2), i = Chemical_Intensity_C (1::2)\<rparr>,
+   \<lparr>c = Chemical_Chem_C (1::2), i = Chemical_Intensity_C (0::2)\<rparr>])"
+
+text \<open> The location function \<close>
+definition pre_Chemical_location :: "2 Chemical_GasSensor[2]blist \<Rightarrow> bool" where
+"pre_Chemical_location gs = (blength gs > 0)"
+
+function Chemical_location' :: "2 Chemical_GasSensor[2]blist \<Rightarrow> nat \<Rightarrow> (Chemical_Angle)" where
+"Chemical_location' (gs) x = 
+  (case list_of_blist gs of
+    []      \<Rightarrow> Chemical_angle(x) |
+    (p#ps)  \<Rightarrow> (if (i p) = (Chemical_intensity (gs))
+                then Chemical_angle(x)
+                else Chemical_location' (bmake TYPE(2) ps) (x+1)
+               )
+  )"
+  by auto
+
+termination Chemical_location'
+  apply (relation "measure (\<lambda> (gs, n). blength gs)")
+  apply (auto)
+  by (metis add_Suc_right blength.rep_eq blist_remove_head less_nat_zero_code linorder_cases 
+      list.sel(3) list.size(4) nat.simps(3))+
+
+abbreviation "Chemical_location gs \<equiv> Chemical_location' gs 0"
+
+value "Chemical_location (bmake TYPE(2) [])"
+value "Chemical_location (bmake TYPE(2) 
+  [\<lparr>c = Chemical_Chem_C (0::2), i = Chemical_Intensity_C (0::2)\<rparr>,
+   \<lparr>c = Chemical_Chem_C (1::2), i = Chemical_Intensity_C (1::2)\<rparr>])"
 
 subsection \<open> Location package \<close>
 enumtype Location_Loc = 
@@ -321,8 +378,8 @@ in Haskell
 
 subsubsection \<open> States \<close>
 paragraph \<open> Initial \<close>
-definition I_GasAnalysis_i0 where
-"I_GasAnalysis_i0 = (\<lambda> (id::integer) . 
+definition I_GasAnalysis_i1 where
+"I_GasAnalysis_i1 = (\<lambda> (id::integer) . 
   do {outp internal_GasAnalysis TID_GasAnalysis_t1 ; 
       outp enter_GasAnalysis (SID_GasAnalysis, SID_GasAnalysis_NoGas);
       outp entered_GasAnalysis (SID_GasAnalysis, SID_GasAnalysis_NoGas)
@@ -424,38 +481,8 @@ definition State_GasAnalysis_NoGas where
                       outp entered_GasAnalysis (SID_GasAnalysis_NoGas, SID_GasAnalysis_Analysis);
                       Ret(False, fst (snd s), SID_GasAnalysis_NoGas)
                     } \<box>
-                \<comment> \<open> internal \<close>
-                do {inp_in internal_GasAnalysis (set tids_GasAnalysis_NoGas);
-                    y \<leftarrow> inp_in exit_GasAnalysis Other_SIDs_to_NoGas_GasAnalysis;
-                      outp exited_GasAnalysis (fst y, SID_GasAnalysis_NoGas);
-                      Ret(False, fst (snd s), SID_GasAnalysis_NoGas)
-                    } \<box>
-                do {t \<leftarrow> inp_in gas__GasAnalysis (set [(t, d, gs). 
-                        t \<leftarrow> (tids_GasAnalysis_NoGas), d \<leftarrow> InOut_list,
-                        gs \<leftarrow> (lseq_gassensor_enum)]) ;
-                      y \<leftarrow> inp_in exit_GasAnalysis Other_SIDs_to_NoGas_GasAnalysis;
-                        outp exited_GasAnalysis (fst y, SID_GasAnalysis_NoGas);
-                        Ret(False, fst (snd s), SID_GasAnalysis_NoGas)
-                    } \<box>
-                do {t \<leftarrow> inp_in resume__GasAnalysis (set [(t, d). 
-                        t \<leftarrow> (tids_GasAnalysis_NoGas), d \<leftarrow> InOut_list]) ;
-                      y \<leftarrow> inp_in exit_GasAnalysis Other_SIDs_to_NoGas_GasAnalysis;
-                        outp exited_GasAnalysis (fst y, SID_GasAnalysis_NoGas);
-                        Ret(False, fst (snd s), SID_GasAnalysis_NoGas)
-                    } \<box>
-                do {t \<leftarrow> inp_in turn__GasAnalysis (set [(t, d, a). 
-                        t \<leftarrow> (tids_GasAnalysis_NoGas), d \<leftarrow> InOut_list,
-                        a \<leftarrow> Chemical_Angle_list]) ;
-                      y \<leftarrow> inp_in exit_GasAnalysis Other_SIDs_to_NoGas_GasAnalysis;
-                        outp exited_GasAnalysis (fst y, SID_GasAnalysis_NoGas);
-                        Ret(False, fst (snd s), SID_GasAnalysis_NoGas)
-                    } \<box>
-                do {t \<leftarrow> inp_in stop__GasAnalysis (set [(t, d). 
-                        t \<leftarrow> (tids_GasAnalysis_NoGas), d \<leftarrow> InOut_list]) ;
-                      y \<leftarrow> inp_in exit_GasAnalysis Other_SIDs_to_NoGas_GasAnalysis;
-                        outp exited_GasAnalysis (fst y, SID_GasAnalysis_NoGas);
-                        Ret(False, fst (snd s), SID_GasAnalysis_NoGas)
-                    }
+                (exit_events_GasAnalysis (fst (snd s)) SID_GasAnalysis_NoGas 
+                   tids_GasAnalysis_NoGas Other_SIDs_to_NoGas_GasAnalysis)
                 )
               )
             })
@@ -563,17 +590,244 @@ definition State_GasAnalysis_Analysis_R where
    skip
 "
 
-definition flow_event_GasAnalysis_not_s0 where 
-"flow_event_GasAnalysis_not_s0 = set (
-  enumchans2 [enter_GasAnalysis_C, entered_GasAnalysis_C,exit_GasAnalysis_C,exited_GasAnalysis_C] 
-             SIDS_GasAnalysis_without_s0 [SID_GasAnalysis_NoGas]
+paragraph \<open> GasDetected \<close>
+definition CS_GasAnalysis_GasDetected_sync where
+"CS_GasAnalysis_GasDetected_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_GasAnalysis [SID_GasAnalysis_GasDetected] SIDS_GasAnalysis_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_GasAnalysis SIDS_GasAnalysis_nodes [SID_GasAnalysis_GasDetected])
+)"
+
+definition GasAnalysis_GasDetected_triggers where
+"GasAnalysis_GasDetected_triggers = set (
+  (enumchan1 internal_GasAnalysis_C 
+    [TID_GasAnalysis_t3, TID_GasAnalysis_t4,
+     TID_GasAnalysis_t8, TID_GasAnalysis_t9a]) @
+  (enumchans3 [gas__GasAnalysis_C] 
+    [TID_GasAnalysis_t0, TID_GasAnalysis_t2] 
+    [din, dout] 
+    (lseq_gassensor_enum))
+)
+"
+
+definition tids_GasAnalysis_GasDetected where
+" tids_GasAnalysis_GasDetected = 
+    (filter 
+        (\<lambda> s. s \<notin> {NULLTRANSITION__GasAnalysis, TID_GasAnalysis_t9a,
+          TID_GasAnalysis_t8, TID_GasAnalysis_t4, TID_GasAnalysis_t3, 
+          TID_GasAnalysis_t2, TID_GasAnalysis_t0}) 
+        ITIDS_GasAnalysis_list)"
+
+definition Other_SIDs_to_GasDetected_GasAnalysis where
+"Other_SIDs_to_GasDetected_GasAnalysis = 
+  set [(s, SID_GasAnalysis_GasDetected) . s \<leftarrow> (SIDS_GasAnalysis_no_GasDetected)]"
+
+definition State_GasAnalysis_GasDetected where 
+"State_GasAnalysis_GasDetected = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_GasAnalysis Other_SIDs_to_GasDetected_GasAnalysis ; 
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_GasAnalysis_GasDetected_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {
+              gs \<leftarrow> inp_in get_gs_GasAnalysis (set (lseq_gassensor_enum));
+              guard (pre_Chemical_intensity(gs));
+              outp set_i_GasAnalysis (Chemical_intensity gs);
+              outp entered_GasAnalysis (snd (snd s), SID_GasAnalysis_GasDetected);
+              (do {skip ; stop} \<triangle>
+                (
+                \<comment> \<open> T_GasAnalysis_t8 \<close>
+                do {outp internal_GasAnalysis TID_GasAnalysis_t8 ;
+                    outp exit_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
+                    outp exited_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
+                    outp stop_GasAnalysis dout;
+                    outp enter_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_j1);
+                    outp entered_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_j1);
+                    Ret(False, fst (snd s), SID_GasAnalysis_GasDetected)
+                    } \<box>
+                 \<comment> \<open> T_GasAnalysis_t9a \<close>
+                do {outp internal_GasAnalysis TID_GasAnalysis_t9a ;
+                    outp exit_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
+                    outp exited_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
+                    gs \<leftarrow> inp_in get_gs_GasAnalysis (set (lseq_gassensor_enum));
+                    guard (pre_Chemical_location(gs));
+                    outp set_a_GasAnalysis (Chemical_location gs);
+                    a \<leftarrow> inp_in get_a_GasAnalysis Chemical_Angle_set;
+                    outp turn_GasAnalysis (dout, a);
+                    outp enter_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_Reading);
+                    outp entered_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_Reading);
+                    Ret(False, fst (snd s), SID_GasAnalysis_GasDetected)
+                    } \<box>
+                (exit_events_GasAnalysis (fst (snd s)) SID_GasAnalysis_GasDetected 
+                   tids_GasAnalysis_GasDetected Other_SIDs_to_GasDetected_GasAnalysis)
+                )
+              )
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
+        Ret (id)
+  }
+)
+"
+
+definition State_GasAnalysis_GasDetected_R where
+"State_GasAnalysis_GasDetected_R (idd::integer) = 
+   (discard_state (State_GasAnalysis_GasDetected idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_GasAnalysis - GasAnalysis_GasDetected_triggers) \<^esub> 
+   skip
+"
+
+paragraph \<open> Final \<close>
+definition CS_GasAnalysis_j1_sync where
+"CS_GasAnalysis_j1_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_GasAnalysis [SID_GasAnalysis_j1] SIDS_GasAnalysis_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_GasAnalysis SIDS_GasAnalysis_nodes [SID_GasAnalysis_j1])
+)"
+
+definition GasAnalysis_j1_triggers where
+"GasAnalysis_j1_triggers = set ([])
+"
+
+definition tids_GasAnalysis_j1 where
+" tids_GasAnalysis_j1 = 
+    (filter 
+        (\<lambda> s. s \<notin> {NULLTRANSITION__GasAnalysis, TID_GasAnalysis_t9a,
+          TID_GasAnalysis_t8, TID_GasAnalysis_t4, TID_GasAnalysis_t3, 
+          TID_GasAnalysis_t2, TID_GasAnalysis_t0}) 
+        ITIDS_GasAnalysis_list)"
+
+definition Other_SIDs_to_j1_GasAnalysis where
+"Other_SIDs_to_j1_GasAnalysis = 
+  set [(s, SID_GasAnalysis_j1) . s \<leftarrow> (SIDS_GasAnalysis_no_j1)]"
+
+definition State_GasAnalysis_j1 where 
+"State_GasAnalysis_j1 = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_GasAnalysis Other_SIDs_to_j1_GasAnalysis ; 
+        outp terminate_GasAnalysis ();
+        Ret (id)
+    }
+)
+"
+
+definition State_GasAnalysis_j1_R where
+"State_GasAnalysis_j1_R (idd::integer) = 
+   (discard_state (State_GasAnalysis_j1 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_GasAnalysis - GasAnalysis_j1_triggers) \<^esub> 
+   skip
+"
+
+paragraph \<open> Reading \<close>
+definition CS_GasAnalysis_Reading_sync where
+"CS_GasAnalysis_Reading_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_GasAnalysis [SID_GasAnalysis_Reading] SIDS_GasAnalysis_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_GasAnalysis SIDS_GasAnalysis_nodes [SID_GasAnalysis_Reading])
+)"
+
+definition GasAnalysis_Reading_triggers where
+"GasAnalysis_Reading_triggers = set (
+  (enumchan1 internal_GasAnalysis_C 
+    [TID_GasAnalysis_t3, TID_GasAnalysis_t4,
+     TID_GasAnalysis_t8, TID_GasAnalysis_t9a]) @
+  (enumchans3 [gas__GasAnalysis_C] 
+    [TID_GasAnalysis_t0, TID_GasAnalysis_t2] 
+    [din, dout] 
+    (lseq_gassensor_enum))
+)
+"
+
+definition tids_GasAnalysis_Reading where
+" tids_GasAnalysis_Reading = 
+    (filter 
+        (\<lambda> s. s \<notin> {NULLTRANSITION__GasAnalysis, TID_GasAnalysis_t9a,
+          TID_GasAnalysis_t8, TID_GasAnalysis_t4, TID_GasAnalysis_t3, 
+          TID_GasAnalysis_t2, TID_GasAnalysis_t0}) 
+        ITIDS_GasAnalysis_list)"
+
+definition Other_SIDs_to_Reading_GasAnalysis where
+"Other_SIDs_to_Reading_GasAnalysis = 
+  set [(s, SID_GasAnalysis_Reading) . s \<leftarrow> (SIDS_GasAnalysis_no_Reading)]"
+
+definition State_GasAnalysis_Reading where 
+"State_GasAnalysis_Reading = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_GasAnalysis Other_SIDs_to_Reading_GasAnalysis ; 
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_GasAnalysis_Reading_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {
+              outp entered_GasAnalysis (snd (snd s), SID_GasAnalysis_Reading);
+              (do {skip ; stop} \<triangle>
+                (
+                \<comment> \<open> T_GasAnalysis_t0 \<close>
+                do {gs \<leftarrow> inp_in gas__GasAnalysis (set [(TID_GasAnalysis_t0, din, x). 
+                        x \<leftarrow> (lseq_gassensor_enum)]) ;
+                    outp set_gs_GasAnalysis (snd (snd gs));
+                    outp exit_GasAnalysis (SID_GasAnalysis_Reading, SID_GasAnalysis_Reading);
+                    outp exited_GasAnalysis (SID_GasAnalysis_Reading, SID_GasAnalysis_Reading);
+                    outp enter_GasAnalysis (SID_GasAnalysis_Reading, SID_GasAnalysis_Analysis);
+                    outp entered_GasAnalysis (SID_GasAnalysis_Reading, SID_GasAnalysis_Analysis);
+                    Ret(False, fst (snd s), SID_GasAnalysis_Reading)
+                    } \<box>
+                (exit_events_GasAnalysis (fst (snd s)) SID_GasAnalysis_Reading 
+                   tids_GasAnalysis_Reading Other_SIDs_to_Reading_GasAnalysis)
+                )
+              )
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
+        Ret (id)
+  }
+)
+"
+
+definition State_GasAnalysis_Reading_R where
+"State_GasAnalysis_Reading_R (idd::integer) = 
+   (discard_state (State_GasAnalysis_Reading idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_GasAnalysis - GasAnalysis_Reading_triggers) \<^esub> 
+   skip
+"
+
+definition flow_events_GasAnalysis_stm_to_nodes where
+"flow_events_GasAnalysis_stm_to_nodes = (
+ let nodes = [SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,
+              SID_GasAnalysis_j1,SID_GasAnalysis_Reading]
+ in set (
+      enumchans2 [enter_GasAnalysis_C, entered_GasAnalysis_C,exit_GasAnalysis_C,exited_GasAnalysis_C] 
+          (filter (\<lambda> s. s \<notin> set nodes) SIDS_GasAnalysis_list) nodes
+  )
 )"
 
 definition STM_GasAnalysis where
 "STM_GasAnalysis (idd::integer) = 
-   (I_GasAnalysis_i0(idd))
-    \<parallel>\<^bsub> flow_event_GasAnalysis_not_s0 \<^esub> 
-   State_GasAnalysis_s0_R(idd)
+   (I_GasAnalysis_i1(idd))
+    \<parallel>\<^bsub> flow_events_GasAnalysis_stm_to_nodes \<^esub> 
+   (  State_GasAnalysis_GasDetected_R(idd)
+        \<parallel>\<^bsub> CS_GasAnalysis_GasDetected_sync \<inter> (CS_GasAnalysis_j1_sync \<union> CS_GasAnalysis_Reading_sync) \<^esub> 
+      (State_GasAnalysis_j1_R(idd)  
+        \<parallel>\<^bsub> CS_GasAnalysis_j1_sync \<inter> CS_GasAnalysis_Reading_sync \<^esub> 
+      State_GasAnalysis_Reading_R(idd))
+   )
 "
 
 definition GasAnalysis_e1_x_internal_set where
