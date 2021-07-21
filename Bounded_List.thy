@@ -26,6 +26,23 @@ lift_definition bmake :: "'n itself \<Rightarrow> 'a list \<Rightarrow> 'a['n::f
 
 code_datatype bmake
 
+thm "blist_of_list_inverse"
+thm "list_of_blist"
+lemma bmake_length_card:
+  "blength (bmake TYPE('n::finite) xs) = (if length xs \<le> CARD('n) then length xs else CARD('n))"
+  apply (simp add: blength_def bmake_def, auto)
+  by (simp add: blist_of_list_inverse)+
+
+lemma blist_always_bounded:
+  "length (list_of_blist (bl::'a['n::finite]blist)) \<le> CARD('n)"
+  using list_of_blist by blast
+
+lemma blist_remove_head:
+  fixes bl :: "'a['n::finite]blist"
+  assumes "blength bl > 0"
+  shows "blength (bmake TYPE('n::finite) (tl (list_of_blist (bl::'a['n::finite]blist)))) < blength bl"
+  by (metis One_nat_def Suc_pred assms blength.rep_eq bmake_length_card length_tl less_Suc_eq_le linear)
+
 text \<open> This proof is performed by transfer \<close>
 
 lemma bappend_bmake [code]: 
