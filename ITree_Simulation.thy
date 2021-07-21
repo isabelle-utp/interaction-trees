@@ -51,6 +51,8 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s 
 simulate = simulate_cnt 0;
 \<close>
 
+ML \<open> Path.explode "/tmp/hello"\<close>
+
 ML \<open> 
 structure ITree_Simulator =
 struct
@@ -62,24 +64,31 @@ structure ISim_Path = Theory_Data
    val merge = fn (_, y) => y);
 
 fun simulator_setup thy = 
-  let open Isabelle_System; val tmp = create_tmp_path "itree-simulate" ""
-  in case @{print}(ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
-    mkdir tmp; ISim_Path.put (SOME tmp) thy; tmp
+  let open Isabelle_System; val tmp = Path.expand (create_tmp_path "itree-simulate" "")
+  in case (ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
+    mkdir tmp; (tmp, ISim_Path.put (SOME tmp) thy)
   end
 
-val sim_files_cp = 
-  "(fn path => let open Isabelle_System;" ^
-  " val tmp = ITree_Simulator.simulator_setup @{theory}" ^ 
-  " in copy_dir (Path.append path (Path.make [\"code\", \"simulate\"])) tmp end)"
+fun sim_files_cp tmp = 
+  "(fn path => let open Isabelle_System" ^
+  " in copy_dir (Path.append path (Path.make [\"code\", \"simulate\"])) (Path.explode \"" ^ tmp ^ "\") end)"
 
 open Named_Target
 
 fun prep_simulation thy =
+  let val (tmp, thy') = simulator_setup thy
+  in
   Generated_Files.compile_generated_files 
-    (Named_Target.theory_init thy) 
-    [([], thy), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
+    (Named_Target.theory_init thy') 
+    [([], thy'), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
     (Path.binding0 (Path.make []))
-  (Input.string sim_files_cp);
+  (Input.string (sim_files_cp (Path.implode tmp))); thy'
+  end
+
+fun run_simulation thy =
+  case ISim_Path.get thy of
+    NONE => error "No simulation" |
+    SOME f => writeln (Active.run_system_shell_command ("cd " ^ Path.implode f ^ "; ghci Simulate.hs") "Start Simulation")
 
 end;
 \<close>
