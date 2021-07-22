@@ -290,21 +290,26 @@ definition internal_events_GasAnalysis where
   enumchans2 enter_exit_channels_GasAnalysis SIDS_GasAnalysis_list SIDS_GasAnalysis_list
 )"
 
-(*
-definition GasAnalysis_l_events where
-"GasAnalysis_l_events = 
-    set (enumchans1 [get_l_GasAnalysis_C, set_l_GasAnalysis_C] rc.core_int_list)
+
+definition GasAnalysis_i_events where
+"GasAnalysis_i_events = 
+    set (enumchans1 [get_i_GasAnalysis_C, set_i_GasAnalysis_C] Chemical_Intensity2_list)
 "
 
-definition GasAnalysis_x_events where
-"GasAnalysis_x_events = 
-    set (
-        (enumchans1 [get_x_GasAnalysis_C, set_x_GasAnalysis_C] rc.core_int_list) @
-        (enumchan1 set_EXT_x_GasAnalysis_C rc.core_int_list)
-    )
+definition GasAnalysis_st_events where
+"GasAnalysis_st_events = 
+    set (enumchans1 [get_st_GasAnalysis_C, set_st_GasAnalysis_C] Chemical_Status_list)
 "
 
-*)
+definition GasAnalysis_gs_events where
+"GasAnalysis_gs_events = 
+    set (enumchans1 [get_gs_GasAnalysis_C, set_gs_GasAnalysis_C] lseq_gassensor_enum)
+"
+
+definition GasAnalysis_a_events where
+"GasAnalysis_a_events = 
+    set (enumchans1 [get_a_GasAnalysis_C, set_a_GasAnalysis_C] Chemical_Angle_list)
+"
 
 definition GasAnalysis_MachineInternalEvents where
 "GasAnalysis_MachineInternalEvents = 
@@ -366,15 +371,6 @@ definition GasAnalysis_MemoryTransitions_opt_2 where
     }
   )
 "
-
-export_code
-  GasAnalysis_MemoryTransitions_opt_0
-  GasAnalysis_MemoryTransitions_opt_1
-  GasAnalysis_MemoryTransitions_opt_2
-in Haskell 
-  (* module_name GasAnalysis *)
-  file_prefix RoboChart_ChemicalDetector 
-  (string_classes) 
 
 subsubsection \<open> States \<close>
 paragraph \<open> Initial \<close>
@@ -808,6 +804,7 @@ definition State_GasAnalysis_Reading_R where
    skip
 "
 
+subsubsection \<open> State machine \<close>
 definition flow_events_GasAnalysis_stm_to_nodes where
 "flow_events_GasAnalysis_stm_to_nodes = (
  let nodes = [SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,
@@ -822,115 +819,117 @@ definition STM_GasAnalysis where
 "STM_GasAnalysis (idd::integer) = 
    (I_GasAnalysis_i1(idd))
     \<parallel>\<^bsub> flow_events_GasAnalysis_stm_to_nodes \<^esub> 
-   (  State_GasAnalysis_GasDetected_R(idd)
-        \<parallel>\<^bsub> CS_GasAnalysis_GasDetected_sync \<inter> (CS_GasAnalysis_j1_sync \<union> CS_GasAnalysis_Reading_sync) \<^esub> 
-      (State_GasAnalysis_j1_R(idd)  
-        \<parallel>\<^bsub> CS_GasAnalysis_j1_sync \<inter> CS_GasAnalysis_Reading_sync \<^esub> 
-      State_GasAnalysis_Reading_R(idd))
+   (State_GasAnalysis_NoGas_R(idd)
+      \<parallel>\<^bsub> CS_GasAnalysis_Analysis_sync \<inter> (CS_GasAnalysis_Analysis_sync \<union> 
+          (CS_GasAnalysis_GasDetected_sync \<union> (CS_GasAnalysis_j1_sync \<union> CS_GasAnalysis_Reading_sync))) \<^esub>
+      (State_GasAnalysis_Analysis_R(idd)
+        \<parallel>\<^bsub> CS_GasAnalysis_Analysis_sync \<inter> (CS_GasAnalysis_GasDetected_sync \<union> 
+            (CS_GasAnalysis_j1_sync \<union> CS_GasAnalysis_Reading_sync)) \<^esub> 
+        ( State_GasAnalysis_GasDetected_R(idd)
+          \<parallel>\<^bsub> CS_GasAnalysis_GasDetected_sync \<inter> (CS_GasAnalysis_j1_sync \<union> CS_GasAnalysis_Reading_sync) \<^esub> 
+          (State_GasAnalysis_j1_R(idd)  
+            \<parallel>\<^bsub> CS_GasAnalysis_j1_sync \<inter> CS_GasAnalysis_Reading_sync \<^esub> 
+          State_GasAnalysis_Reading_R(idd))
+        )
+      )
    )
 "
 
-definition GasAnalysis_e1_x_internal_set where
-"GasAnalysis_e1_x_internal_set = 
-  set ((enumchan3 e1__GasAnalysis_C [TID_GasAnalysis_t1] [din, dout] rc.core_int_list) @ 
-       [internal_GasAnalysis_C TID_GasAnalysis_t2] @
-       (enumchan1 set_x_GasAnalysis_C rc.core_int_list)
+definition GasAnalysis_opt_0_internal_set where
+"GasAnalysis_opt_0_internal_set = 
+  set (([internal_GasAnalysis_C TID_GasAnalysis_t1]) @ 
+       (enumchans3 [gas__GasAnalysis_C] 
+          [TID_GasAnalysis_t0, TID_GasAnalysis_t2] 
+          [din, dout] 
+          (lseq_gassensor_enum))
 )"
 
-subsubsection \<open> State machine \<close>
+definition GasAnalysis_opt_1_internal_set where
+"GasAnalysis_opt_1_internal_set = 
+  set ((enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t4, TID_GasAnalysis_t3]) @
+       (enumchans1 [set_st_GasAnalysis_C] Chemical_Status_list)
+)"
+
+definition GasAnalysis_opt_2_internal_set where
+"GasAnalysis_opt_2_internal_set = 
+  set ((enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t8, TID_GasAnalysis_t9a])
+)"
+
 definition MemorySTM_opt_GasAnalysis where
 "MemorySTM_opt_GasAnalysis (idd::integer) = 
-  (hide
-    (
-      (discard_state (GasAnalysis_Memory_opt_x 0))
-      \<parallel>\<^bsub> GasAnalysis_x_events \<^esub>
-      (hide 
-        (
-          (par_hide
-            (par_hide (discard_state (GasAnalysis_Memory_opt_l idd)) GasAnalysis_l_events (STM_GasAnalysis idd))
-            {internal_GasAnalysis_C TID_GasAnalysis_t0}
-            (discard_state (GasAnalysis_MemoryTransitions_opt_0 idd))
+  (par_hide
+    (discard_state (GasAnalysis_Memory_opt_i (Chemical_Intensity_C (0::2))))
+    GasAnalysis_i_events
+    (par_hide 
+      (par_hide
+        (discard_state (GasAnalysis_Memory_opt_st (Chemical_Status_noGas)))
+        GasAnalysis_st_events
+        (hide 
+          (
+            (hide
+              (
+                (par_hide
+                  (discard_state (GasAnalysis_Memory_opt_gs (bmake TYPE(2) [])))
+                  GasAnalysis_gs_events
+                  (par_hide 
+                    (discard_state (GasAnalysis_Memory_opt_a Chemical_Angle_Left)) 
+                    GasAnalysis_a_events 
+                    (STM_GasAnalysis idd)
+                  )
+                )
+                \<parallel>\<^bsub> GasAnalysis_opt_0_internal_set \<^esub>
+                (discard_state (GasAnalysis_MemoryTransitions_opt_0 idd))
+              )
+              ({internal_GasAnalysis_C TID_GasAnalysis_t1})
+            )
+            \<parallel>\<^bsub> GasAnalysis_opt_1_internal_set \<^esub> 
+            (discard_state (GasAnalysis_MemoryTransitions_opt_1 idd))
           )
-          \<parallel>\<^bsub> GasAnalysis_e1_x_internal_set \<^esub> 
-          (discard_state (GasAnalysis_MemoryTransitions_opt_1 idd))
+          (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t4, TID_GasAnalysis_t3]))
         )
-        {internal_GasAnalysis_C TID_GasAnalysis_t2}
       )
+      GasAnalysis_opt_2_internal_set
+      (discard_state (GasAnalysis_MemoryTransitions_opt_2 idd))
     )
-    (set [get_x_GasAnalysis_C n. n \<leftarrow> rc.core_int_list])
   )   
 "
 
-text \<open> This definition actually defines a non-injective mapping as shown below.
-@{text
-  "[
-    (e1__GasAnalysis_C (TID_GasAnalysis_t0, din, 0), e1_GasAnalysis_C (din, 0)),
-    (e1__GasAnalysis_C (TID_GasAnalysis_t1, din, 0), e1_GasAnalysis_C (din, 0)), 
-    ...
-  ]"
-}
-here multiple @{term "e1__GasAnalysis"} events are mapped to one @{term "e1_GasAnalysis"} event.
-So we cannot rename a process with a non-injective mapping now.
-\<close>
-(*
 definition rename_GasAnalysis_events where
 "rename_GasAnalysis_events = 
-  [(e1__GasAnalysis_C (tid, dir, n), e1_GasAnalysis_C (dir, n)) . 
-          tid \<leftarrow> TIDS_GasAnalysis_list, 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list] @
-  [(e3__GasAnalysis_C (tid, dir, n), e3_GasAnalysis_C (dir, n)) . 
-          tid \<leftarrow> TIDS_GasAnalysis_list, 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list]
-"*)
-
-definition rename_GasAnalysis_events where
-"rename_GasAnalysis_events = 
-  concat ((enumchan2 (forget_first2 e1__GasAnalysis_C e1_GasAnalysis_C TIDS_GasAnalysis_list) InOut_list rc.core_int_list) @
-          (enumchan2 (forget_first2 e3__GasAnalysis_C e3_GasAnalysis_C TIDS_GasAnalysis_list) InOut_list rc.core_int_list))
+  concat (
+    (enumchan2 (forget_first2 gas__GasAnalysis_C gas_GasAnalysis_C TIDS_GasAnalysis_list) 
+            InOut_list lseq_gassensor_enum) @
+    (enumchan2 (forget_first2 turn__GasAnalysis_C turn_GasAnalysis_C TIDS_GasAnalysis_list) 
+            InOut_list Chemical_Angle_list) @
+    (enumchan1 (forget_first resume__GasAnalysis_C resume_GasAnalysis_C TIDS_GasAnalysis_list) 
+            InOut_list) @
+    (enumchan1 (forget_first stop__GasAnalysis_C stop_GasAnalysis_C TIDS_GasAnalysis_list) 
+            InOut_list)
+  )
 "
+
+term "\<lbrace>resume__GasAnalysis (t, x) \<mapsto> resume_GasAnalysis x | x. x \<in> InOut_set\<rbrace>"
+term "\<lbrace>terminate_GasAnalysis () \<mapsto> terminate_GasAnalysis () | _. True\<rbrace>"
 
 definition rename_GasAnalysis_events_others where
 "rename_GasAnalysis_events_others = 
   (enumchanp1 terminate_GasAnalysis_C [()]) @
-  (enumchansp1 [get_x_GasAnalysis_C, set_x_GasAnalysis_C, set_EXT_x_GasAnalysis_C] rc.core_int_list) @
-  (enumchansp2 [e1_GasAnalysis_C, e3_GasAnalysis_C] InOut_list rc.core_int_list) @
-  (enumchansp2 [enter_GasAnalysis_C, entered_GasAnalysis_C, exit_GasAnalysis_C, exited_GasAnalysis_C] SIDS_GasAnalysis_list SIDS_GasAnalysis_list)
+  (enumchansp1 [get_i_GasAnalysis_C, set_i_GasAnalysis_C] Chemical_Intensity2_list) @
+  (enumchansp1 [get_a_GasAnalysis_C, set_a_GasAnalysis_C] Chemical_Angle_list) @
+  (enumchansp1 [get_st_GasAnalysis_C, set_st_GasAnalysis_C] Chemical_Status_list) @
+  (enumchansp1 [get_gs_GasAnalysis_C, set_gs_GasAnalysis_C] lseq_gassensor_enum) @
+  (enumchansp2 [gas_GasAnalysis_C] InOut_list lseq_gassensor_enum) @
+  (enumchansp2 [turn_GasAnalysis_C] InOut_list Chemical_Angle_list) @
+  (enumchansp1 [resume_GasAnalysis_C, stop_GasAnalysis_C] InOut_list) @
+  (enumchansp2 [enter_GasAnalysis_C, entered_GasAnalysis_C, exit_GasAnalysis_C, exited_GasAnalysis_C] 
+    SIDS_GasAnalysis_list SIDS_GasAnalysis_list) @
+  (enumchansp1 [internal_GasAnalysis_C] TIDS_GasAnalysis_list)
 "
-(*
-definition rename_GasAnalysis_events_others' where
-"rename_GasAnalysis_events_others' = 
-  [(terminate_GasAnalysis_C(), terminate_GasAnalysis_C () ) ] @
-  [(get_x_GasAnalysis_C (n), get_x_GasAnalysis_C (n)) . 
-          n \<leftarrow> rc.core_int_list] @
-  [(set_x_GasAnalysis_C (n), set_x_GasAnalysis_C (n)) . 
-          n \<leftarrow> rc.core_int_list] @
-  [(set_EXT_x_GasAnalysis_C (n), set_EXT_x_GasAnalysis_C (n)) .
-          n \<leftarrow> rc.core_int_list] @
-  [(e1_GasAnalysis_C (dir, n), e1_GasAnalysis_C (dir, n)) . 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list] @
-  [(e3_GasAnalysis_C (dir, n), e3_GasAnalysis_C (dir, n)) . 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list] @
-  [(enter_GasAnalysis_C (sid1, sid2), enter_GasAnalysis_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_GasAnalysis_list, 
-          sid2 \<leftarrow> SIDS_GasAnalysis_list] @
-  [(entered_GasAnalysis_C (sid1, sid2), entered_GasAnalysis_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_GasAnalysis_list, 
-          sid2 \<leftarrow> SIDS_GasAnalysis_list] @
-  [(exit_GasAnalysis_C (sid1, sid2), exit_GasAnalysis_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_GasAnalysis_list, 
-          sid2 \<leftarrow> SIDS_GasAnalysis_list] @
-  [(exited_GasAnalysis_C (sid1, sid2), exited_GasAnalysis_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_GasAnalysis_list, 
-          sid2 \<leftarrow> SIDS_GasAnalysis_list] 
-"*)
 
 definition rename_MemorySTM_opt_GasAnalysis where
 "rename_MemorySTM_opt_GasAnalysis idd = 
-  rename (set (rename_GasAnalysis_events @ rename_GasAnalysis_events_others)) (MemorySTM_opt_GasAnalysis idd)
+  rename (set (rename_GasAnalysis_events @ rename_GasAnalysis_events_others)) 
+    (MemorySTM_opt_GasAnalysis idd)
 "
 
 definition AUX_opt_GasAnalysis where
@@ -947,6 +946,27 @@ definition D__GasAnalysis where
 "D__GasAnalysis (idd::integer) = 
   hide (AUX_opt_GasAnalysis idd) internal_events_GasAnalysis
 "
+
+export_code
+  GasAnalysis_Memory_opt_gs
+  GasAnalysis_MemoryTransitions_opt_0
+  GasAnalysis_MemoryTransitions_opt_1
+  GasAnalysis_MemoryTransitions_opt_2
+  I_GasAnalysis_i1
+  State_GasAnalysis_NoGas
+  State_GasAnalysis_NoGas_R
+  State_GasAnalysis_Analysis_R
+  State_GasAnalysis_GasDetected_R
+  State_GasAnalysis_j1_R
+  State_GasAnalysis_Reading_R
+  MemorySTM_opt_GasAnalysis
+  AUX_opt_GasAnalysis
+  D__GasAnalysis
+in Haskell 
+  (* module_name GasAnalysis *)
+  file_prefix RoboChart_ChemicalDetector 
+  (string_classes) 
+
 
 subsection \<open> stm1 \<close>
 

@@ -276,7 +276,7 @@ definition MemorySTM_opt_stm0 where
       (hide 
         (
           (par_hide
-            (par_hide (discard_state (stm0_Memory_opt_l idd)) stm0_l_events (STM_stm0 idd))
+            (par_hide (discard_state (stm0_Memory_opt_l 0)) stm0_l_events (STM_stm0 idd))
             {internal_stm0_C TID_stm0_t0}
             (discard_state (stm0_MemoryTransitions_opt_0 idd))
           )
