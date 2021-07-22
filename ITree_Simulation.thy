@@ -51,8 +51,6 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s 
 simulate = simulate_cnt 0;
 \<close>
 
-ML \<open> Path.explode "/tmp/hello"\<close>
-
 ML \<open> 
 structure ITree_Simulator =
 struct
@@ -75,20 +73,33 @@ fun sim_files_cp tmp =
 
 open Named_Target
 
-fun prep_simulation thy =
-  let val (tmp, thy') = simulator_setup thy
+fun simulation_file model =
+  "module Simulation where \n" ^
+  "import Simulate; \n" ^
+  "import " ^ model ^ "; \n"
+
+fun prep_simulation model ctx =
+  let open Generated_Files; 
+      val (tmp, thy') = simulator_setup (Local_Theory.exit_global ctx);
+      val ctx' = Named_Target.theory_init thy'
   in
-  Generated_Files.compile_generated_files 
-    (Named_Target.theory_init thy') 
-    [([], thy'), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
-    (Path.binding0 (Path.make []))
-  (Input.string (sim_files_cp (Path.implode tmp))); thy'
+  generate_file (Path.binding0 (Path.make ["code", "simulate", "Simulation.hs"]), (Input.string (simulation_file model))) ctx' |>
+  (fn ctx' => 
+    let val _ = compile_generated_files 
+                 ctx'
+                 [([], (Local_Theory.exit_global ctx')), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
+                 (Path.binding0 (Path.make []))
+                 (Input.string (sim_files_cp (Path.implode tmp)))
+    in ctx' end)
+
+
+(*  (fn ctx => let val _ = export_generated_files ctx [([], Local_Theory.exit_global ctx), ([], @{theory})] in ctx end) *)
   end
 
 fun run_simulation thy =
   case ISim_Path.get thy of
     NONE => error "No simulation" |
-    SOME f => writeln (Active.run_system_shell_command ("cd " ^ Path.implode f ^ "; ghci Simulate.hs") "Start Simulation")
+    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("ghci Simulation.hs") "Start Simulation")
 
 end;
 \<close>
