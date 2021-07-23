@@ -2,10 +2,8 @@ section \<open> Simulation of a very basic RoboChart model \<close>
 text \<open> This theory aims for simulation of a trivial RoboChart model based on its CSP
  semantics. We use the @{term "rename"} operator for renaming.
 \<close>
-theory RoboChart_ChemicalDetector_autonomous
+theory RoboChart_ChemicalDetector_autonomous_microcontroller
   imports "RoboChart_ChemicalDetector_autonomous_general"
-    "RoboChart_ChemicalDetector_autonomous_maincontroller"
-    "RoboChart_ChemicalDetector_autonomous_microcontroller"
 begin
 
 declare [[show_types]]
