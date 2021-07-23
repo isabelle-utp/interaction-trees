@@ -1,5 +1,6 @@
 theory ITree_Simulation
   imports ITree_Extraction
+  keywords "simulate" :: "thy_defn"
 begin
 
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
@@ -101,7 +102,20 @@ fun run_simulation thy =
     NONE => error "No simulation" |
     SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("ghci Simulation.hs") "Start Simulation")
 
+fun simulate c thy =
+  let val ctx = Named_Target.theory_init thy
+      val ctx' =
+        (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) c] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), (Token.explode (Thy_Header.get_keywords' @{context}) Position.none "string_classes"))] ctx)
+        |> prep_simulation (Context.theory_name thy)
+  in run_simulation (Local_Theory.exit_global ctx'); (Local_Theory.exit_global ctx')
+  end 
+
 end;
+\<close>
+
+ML \<open>
+  Outer_Syntax.command @{command_keyword simulate} "simulate an ITree"
+  (Parse.name >> (fn model => Toplevel.theory (ITree_Simulator.simulate model)))
 \<close>
 
 end
