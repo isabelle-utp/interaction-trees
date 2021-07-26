@@ -1,7 +1,7 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "ITree_Extraction"
+  imports "ITree_Extraction" "HOL-Library.Numeral_Type"
 begin
 
 subsection \<open> CSP operators \<close>
@@ -146,5 +146,44 @@ definition mem_of_lvar :: "('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightar
   (do {outp outc s; Ret (s)} \<box> 
    do {x \<leftarrow> inp_in inc iset; Ret (x)})
 )"
+
+subsection \<open> Transition Identifiers \<close>
+
+text \<open> A generic way to create a @{text "TrID"} type for transition identifiers. 
+This type has two variables: @{text "'sm"} denoting a state machine and 
+@{text "'tid"} for an enumerable type to denote transition ids. We note @{text "'sm"}
+ is not used in the definition, and its purpose is to make this type instantiated 
+for different state machines. One example to construct such type is 
+@{text "typedef Movement = \"{()}\" by auto"}. One advantage of this generic type, when compared to 
+enumerations by datatype, is the declaration of a new transition id type being easily parsed and 
+resolved in Isabelle because a datatype with many enumerations (transition ids) makes Isabelle 
+hard to resolve.
+\<close>
+
+typedef ('sm, 'tid::enum) TrID = "UNIV :: 'tid set"
+  morphisms Rep_TrID mk_trid
+  by auto
+
+definition MkTrid :: "'sm itself \<Rightarrow> ('tid::enum) \<Rightarrow> ('sm, 'tid) TrID" where
+"MkTrid sm tid = mk_trid tid"
+
+instantiation TrID :: (type, enum) equal
+begin
+
+definition equal_TrID :: "('a, 'b) TrID \<Rightarrow> ('a, 'b) TrID \<Rightarrow> bool" where
+"equal_TrID m1 m2 \<longleftrightarrow> (Rep_TrID m1 = Rep_TrID m2)"
+
+instance by (intro_classes, auto simp add: equal_TrID_def, transfer, simp add: Rep_TrID_inject)
+end
+
+(*
+instantiation TrID :: (type, enum) enum
+begin
+
+definition enum_TrID :: "('a, 'b) TrID list" where
+"enum_TrID = map (MkTrid TYPE('a)  \<circ> (\<lambda>i. (Abs_bit0' i))) (upt 0 CARD('b))"
+
+end
+*)
 
 end

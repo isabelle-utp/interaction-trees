@@ -76,6 +76,7 @@ subsubsection \<open> Sets of events \<close>
 term "\<lbrace>gas__GasAnalysis (t, d, s). t \<in> set [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
      TID_GasAnalysis_t3, TID_GasAnalysis_t4,
      TID_GasAnalysis_t8, TID_GasAnalysis_t9a] \<and> d \<in> set [din, dout] \<and> s \<in> set lseq_gassensor_enum\<rbrace> \<union> {}"
+
 definition int_int_GasAnalysis' where
 "int_int_GasAnalysis' = set (
   (enumchans3 [gas__GasAnalysis_C] 
@@ -153,6 +154,19 @@ definition GasAnalysis_i_events where
 "GasAnalysis_i_events = 
     set (enumchans1 [get_i_GasAnalysis_C, set_i_GasAnalysis_C] Chemical_Intensity2_list)
 "
+
+(*
+definition GasAnalysis_i_events where
+"GasAnalysis_i_events = 
+    \<lbrace>get_i_GasAnalysis x. x \<in> set Chemical_Intensity2_list \<rbrace>
+"
+
+(*
+Type 2 Chemical_Intensity not of sort {enum,equal}
+No type arity Chemical_Intensity :: enum 
+*)
+value "GasAnalysis_i_events"
+*)
 
 definition GasAnalysis_st_events where
 "GasAnalysis_st_events = 
