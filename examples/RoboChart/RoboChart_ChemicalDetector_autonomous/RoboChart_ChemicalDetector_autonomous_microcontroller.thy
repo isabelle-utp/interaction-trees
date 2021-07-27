@@ -41,7 +41,7 @@ definition "SIDS_Movement_set = set SIDS_Movement_list"
 definition "SIDS_Movement_nodes = (removeAll SID_Movement SIDS_Movement_list)"
 definition "SIDS_Movement_no_Waiting = (removeAll SID_Movement_Waiting SIDS_Movement_list)"
 definition "SIDS_Movement_no_Going = (removeAll SID_Movement_Going SIDS_Movement_list)"
-definition "SIDS_Movement_no_GasDetected = (removeAll SID_Movement_Found SIDS_Movement_list)"
+definition "SIDS_Movement_no_Found = (removeAll SID_Movement_Found SIDS_Movement_list)"
 definition "SIDS_Movement_no_Avoiding = (removeAll SID_Movement_Avoiding SIDS_Movement_list)"
 definition "SIDS_Movement_no_j1 = (removeAll SID_Movement_j1 SIDS_Movement_list)"
 definition "SIDS_Movement_no_TryingAgain = (removeAll SID_Movement_TryingAgain SIDS_Movement_list)"
@@ -198,17 +198,17 @@ chantype Chan_Movement =
   shortRandomWalkCall_Movement :: unit
 
 subsubsection \<open> Operation Calls \<close>
-definition CALL__changeDirection :: "integer \<Rightarrow> Location_Loc \<Rightarrow> (Chan_Movement, unit) itree" where
-"CALL__changeDirection idd l = do {outp changeDirectionCall_Movement l}"
+definition CALL__changeDirection_Movement :: "integer \<Rightarrow> Location_Loc \<Rightarrow> (Chan_Movement, unit) itree" where
+"CALL__changeDirection_Movement idd l = do {outp changeDirectionCall_Movement l}"
 
-definition CALL__randomWalk :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
-"CALL__randomWalk idd = do {outp randomeWalkCall_Movement ()}"
+definition CALL__randomWalk_Movement :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
+"CALL__randomWalk_Movement idd = do {outp randomeWalkCall_Movement ()}"
 
-definition CALL__move :: "integer \<Rightarrow> core_real \<Rightarrow> Chemical_Angle \<Rightarrow> (Chan_Movement, unit) itree" where
-"CALL__move idd lv a = do {outp moveCall_Movement (lv, a)}"
+definition CALL__move_Movement :: "integer \<Rightarrow> core_real \<Rightarrow> Chemical_Angle \<Rightarrow> (Chan_Movement, unit) itree" where
+"CALL__move_Movement idd lv a = do {outp moveCall_Movement (lv, a)}"
 
-definition CALL__shortRandomWalk :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
-"CALL__shortRandomWalk idd = do {outp shortRandomWalkCall_Movement ()}"
+definition CALL__shortRandomWalk_Movement :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
+"CALL__shortRandomWalk_Movement idd = do {outp shortRandomWalkCall_Movement ()}"
 
 subsubsection \<open> Sets of events \<close>
 
@@ -223,11 +223,11 @@ abbreviation "int_int_tids_Movement \<equiv>
 
 definition int_int_Movement where
 "int_int_Movement = set (
-  (enumchans3 [obstacle__Movement_C] int_int_tids_Movement [din, dout] Location_Loc_list) @
-  (enumchans3 [odometer__Movement_C] int_int_tids_Movement [din, dout] rc.core_real_list) @
+  (enumchans3 [obstacle__Movement_C] int_int_tids_Movement InOut_list Location_Loc_list) @
+  (enumchans3 [odometer__Movement_C] int_int_tids_Movement InOut_list rc.core_real_list) @
   (enumchans2 [resume__Movement_C, stop__Movement_C, flag__Movement_C] 
-    int_int_tids_Movement [din, dout]) @
-  (enumchans3 [turn__Movement_C] int_int_tids_Movement [din, dout] Chemical_Angle_list) @
+    int_int_tids_Movement InOut_list) @
+  (enumchans3 [turn__Movement_C] int_int_tids_Movement InOut_list Chemical_Angle_list) @
   (enumchan1 internal_Movement_C int_int_tids_Movement)
 )"
 
@@ -357,24 +357,27 @@ definition CS_Movement_Waiting_sync where
 
 definition Movement_Waiting_triggers where
 "Movement_Waiting_triggers = set (
-  (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] [din, dout] Location_Loc_list) @
+  (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list) @
   (enumchans2 [resume__Movement_C] 
     [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10, 
-    TID_Movement_t19] [din, dout]) @
+    TID_Movement_t19] InOut_list) @
   (enumchans2 [stop__Movement_C] 
     [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
-    TID_Movement_t9] [din, dout]) @
+    TID_Movement_t9] InOut_list) @
   (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, 
-    TID_Movement_t8, TID_Movement_t2] [din, dout] Chemical_Angle_list) @
+    TID_Movement_t8, TID_Movement_t2] InOut_list Chemical_Angle_list) @
   (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13])
 )
 "
 
-(* empty list *)
 definition tids_Movement_Waiting where
 " tids_Movement_Waiting = 
     (filter 
-        (\<lambda> s. s \<notin> (set ITIDS_Movement_list)) 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
         ITIDS_Movement_list)"
 
 abbreviation Other_SIDs_to_Waiting_Movement where
@@ -383,39 +386,51 @@ abbreviation Other_SIDs_to_Waiting_Movement where
 
 definition exit_event_Movement1 :: 
   "integer \<Rightarrow> (TIDS_Movement \<Longrightarrow>\<^sub>\<triangle> Chan_Movement) \<Rightarrow> SIDS_Movement
-   \<Rightarrow> TIDS_Movement list \<Rightarrow> SIDS_Movement rel \<Rightarrow> bool 
+   \<Rightarrow> TIDS_Movement list \<Rightarrow> SIDS_Movement rel 
    \<Rightarrow> (Chan_Movement, bool \<times> integer \<times> SIDS_Movement) itree" where
-"exit_event_Movement1 idd ch sid tids other_sids ret = 
+"exit_event_Movement1 idd ch sid tids other_sids = 
   do {inp_in ch (set tids);
       y \<leftarrow> inp_in exit_Movement other_sids;
       outp exited_Movement (fst y, sid);
-      Ret(ret, idd, sid)
+      Ret(False, idd, sid)
 }"
 
 definition exit_event_Movement2 :: 
   "integer \<Rightarrow> (TIDS_Movement \<times> InOut \<Longrightarrow>\<^sub>\<triangle> Chan_Movement) \<Rightarrow> SIDS_Movement
-   \<Rightarrow> TIDS_Movement list \<Rightarrow> SIDS_Movement rel \<Rightarrow> bool 
+   \<Rightarrow> TIDS_Movement list \<Rightarrow> SIDS_Movement rel 
    \<Rightarrow> (Chan_Movement, bool \<times> integer \<times> SIDS_Movement) itree" where
-"exit_event_Movement2 idd ch sid tids other_sids ret = 
+"exit_event_Movement2 idd ch sid tids other_sids = 
   do {r \<leftarrow> inp_in ch (set [(t, d). t \<leftarrow> (tids), d \<leftarrow> InOut_list]);
       y \<leftarrow> inp_in exit_Movement other_sids;
       outp exited_Movement (fst y, sid);
-      Ret(ret, idd, sid)
+      Ret(False, idd, sid)
   }
 "
 
 definition exit_event_Movement3 :: 
   "integer \<Rightarrow> (TIDS_Movement \<times> InOut \<times> 'a \<Longrightarrow>\<^sub>\<triangle> Chan_Movement) \<Rightarrow> SIDS_Movement
-   \<Rightarrow> TIDS_Movement list \<Rightarrow> 'a list \<Rightarrow> SIDS_Movement rel \<Rightarrow> bool 
+   \<Rightarrow> TIDS_Movement list \<Rightarrow> 'a list \<Rightarrow> SIDS_Movement rel
    \<Rightarrow> (Chan_Movement, bool \<times> integer \<times> SIDS_Movement) itree" where
-"exit_event_Movement3 idd ch sid tids alist other_sids ret = 
+"exit_event_Movement3 idd ch sid tids alist other_sids = 
   do {r \<leftarrow> inp_in ch (set [(t, d, a). t \<leftarrow> (tids), d \<leftarrow> InOut_list, a \<leftarrow> alist]);
       y \<leftarrow> inp_in exit_Movement other_sids;
       outp exited_Movement (fst y, sid);
-      Ret(ret, idd, sid)
+      Ret(False, idd, sid)
   }
 "
+definition exit_events_Movement ::  "integer \<Rightarrow> SIDS_Movement \<Rightarrow> TIDS_Movement list
+    \<Rightarrow> SIDS_Movement rel \<Rightarrow> (Chan_Movement, bool \<times> integer \<times> SIDS_Movement) itree" where
+"exit_events_Movement idd sid tids other_sids =
+    (exit_event_Movement1 idd internal_Movement sid tids other_sids \<box>
+     exit_event_Movement3 idd obstacle__Movement sid tids Location_Loc_list other_sids \<box>
+     exit_event_Movement3 idd odometer__Movement sid tids rc.core_real_list other_sids \<box>
+     exit_event_Movement2 idd resume__Movement sid tids other_sids \<box>
+     exit_event_Movement3 idd turn__Movement sid tids Chemical_Angle_list other_sids \<box>
+     exit_event_Movement2 idd stop__Movement sid tids other_sids \<box>
+     exit_event_Movement2 idd flag__Movement sid tids other_sids
+    )"
 
+(*
 definition exit_events_Movement ::  "integer \<Rightarrow> SIDS_Movement \<Rightarrow> TIDS_Movement list
     \<Rightarrow> SIDS_Movement rel \<Rightarrow> (Chan_Movement, bool \<times> integer \<times> SIDS_Movement) itree" where
 "exit_events_Movement idd sid tids other_sids =
@@ -464,7 +479,7 @@ definition exit_events_Movement ::  "integer \<Rightarrow> SIDS_Movement \<Right
             Ret(False, idd, sid)
         }
     )"
-
+*)
 
 definition State_Movement_Waiting where 
 "State_Movement_Waiting = 
@@ -480,7 +495,7 @@ definition State_Movement_Waiting where
            (\<lambda> s.
             do {
               outp entered_Movement (snd (snd s), SID_Movement_Waiting);
-              (do {guard(True); CALL__randomWalk(id) ; stop} \<triangle>
+              (do {guard(True); CALL__randomWalk_Movement(id) ; stop} \<triangle>
                 (
                 \<comment> \<open> T_Movement_t2 \<close>
                 do {t \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t2, din, a). 
@@ -497,7 +512,6 @@ definition State_Movement_Waiting where
                       outp exit_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       outp exited_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       outp enter_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
-                      outp entered_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       Ret(True, fst (snd s), SID_Movement_Waiting)
                     } \<box>
                 \<comment> \<open> T_Movement_t15 \<close>
@@ -528,77 +542,92 @@ definition State_Movement_Waiting_R where
    skip
 "
 
-paragraph \<open> Analysis \<close>
-definition CS_Movement_Analysis_sync where
-"CS_Movement_Analysis_sync = 
+paragraph \<open> Going \<close>
+definition CS_Movement_Going_sync where
+"CS_Movement_Going_sync = 
   set (
       \<comment> \<open> enter from x to y \<close>
-      (enumchans2 enter_exit_channels_Movement [SID_Movement_Analysis] SIDS_Movement_nodes)@
+      (enumchans2 enter_exit_channels_Movement [SID_Movement_Going] SIDS_Movement_nodes)@
       \<comment> \<open> enter from y to x \<close>
-      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Analysis])
+      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Going])
 )"
 
-definition Movement_Analysis_triggers where
-"Movement_Analysis_triggers = set (
-  (enumchan1 internal_Movement_C 
-    [TID_Movement_t3, TID_Movement_t4,
-     TID_Movement_t8, TID_Movement_t9a]) @
-  (enumchans3 [gas__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t2] 
-    [din, dout] 
-    (lseq_gassensor_enum))
+definition Movement_Going_triggers where
+"Movement_Going_triggers = set (
+  (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+  (enumchans2 [resume__Movement_C] 
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+     TID_Movement_t19] InOut_list) @
+  (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
+    TID_Movement_t2] InOut_list Chemical_Angle_list) @
+  (enumchans2 [stop__Movement_C] 
+    [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
+    TID_Movement_t9] InOut_list) @
+  (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list)
 )
 "
 
-definition tids_Movement_Analysis where
-" tids_Movement_Analysis = 
+definition tids_Movement_Going where
+" tids_Movement_Going = 
     (filter 
-        (\<lambda> s. s \<notin> {NULLTRANSITION__Movement, TID_Movement_t9a,
-          TID_Movement_t8, TID_Movement_t4, TID_Movement_t3, 
-          TID_Movement_t2, TID_Movement_t0}) 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
         ITIDS_Movement_list)"
 
-abbreviation Other_SIDs_to_Analysis_Movement where
-"Other_SIDs_to_Analysis_Movement \<equiv> 
-  set [(s, SID_Movement_Analysis) . s \<leftarrow> (SIDS_Movement_no_Analysis)]"
+abbreviation Other_SIDs_to_Going_Movement where
+"Other_SIDs_to_Going_Movement \<equiv>
+  set [(s, SID_Movement_Going) . s \<leftarrow> (SIDS_Movement_no_Going)]"
 
-definition State_Movement_Analysis where 
-"State_Movement_Analysis = 
+definition State_Movement_Going where 
+"State_Movement_Going = 
   loop (\<lambda> (id::integer).
-    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Analysis_Movement ; 
+    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Going_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_Analysis_execute \<close>
+        \<comment> \<open> State_Movement_Going_execute \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
            \<comment> \<open> P \<close>
            (\<lambda> s.
             do {
-              gs \<leftarrow> inp_in get_gs_Movement (set (lseq_gassensor_enum));
-              outp set_st_Movement (Chemical_analysis gs);
-              outp entered_Movement (snd (snd s), SID_Movement_Analysis);
+              a \<leftarrow> inp_in get_a_Movement (set Chemical_Angle_list);
+              guard(True); CALL__move_Movement id  const_Movement_lv  a;
+              outp entered_Movement (snd (snd s), SID_Movement_Going);
               (do {skip ; stop} \<triangle>
                 (
                 \<comment> \<open> T_Movement_t3 \<close>
-                do {outp internal_Movement TID_Movement_t3 ;
-                    outp exit_Movement (SID_Movement_Analysis, SID_Movement_Analysis);
-                    outp exited_Movement (SID_Movement_Analysis, SID_Movement_Analysis);
-                    outp resume_Movement dout;
-                    outp enter_Movement (SID_Movement_Analysis, SID_Movement_Waiting);
-                    outp entered_Movement (SID_Movement_Analysis, SID_Movement_Waiting);
-                    Ret(False, fst (snd s), SID_Movement_Analysis)
+                do {t \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t2, din, a). 
+                                a \<leftarrow> (Chemical_Angle_list)]) ;
+                      outp set_a_Movement (snd (snd t)) ; 
+                      outp exit_Movement (SID_Movement_Going, SID_Movement_Going);
+                      outp exited_Movement (SID_Movement_Going, SID_Movement_Going);
+                      outp enter_Movement (SID_Movement_Going, SID_Movement_Going);
+                      Ret(True, fst (snd s), SID_Movement_Going)
                     } \<box>
                 \<comment> \<open> T_Movement_t4 \<close>
-                do {outp internal_Movement TID_Movement_t4 ;
-                    outp exit_Movement (SID_Movement_Analysis, SID_Movement_Analysis);
-                    outp exited_Movement (SID_Movement_Analysis, SID_Movement_Analysis);
-                    outp enter_Movement (SID_Movement_Analysis, SID_Movement_GasDetected);
-                    outp entered_Movement (SID_Movement_Analysis, SID_Movement_GasDetected);
-                    Ret(False, fst (snd s), SID_Movement_Analysis)
+                do {outp stop__Movement (TID_Movement_t4, din) ;
+                      outp exit_Movement (SID_Movement_Going, SID_Movement_Going);
+                      outp exited_Movement (SID_Movement_Going, SID_Movement_Going);
+                      outp enter_Movement (SID_Movement_Going, SID_Movement_Found);
+                      outp entered_Movement (SID_Movement_Going, SID_Movement_Found);
+                      Ret(False, fst (snd s), SID_Movement_Going)
                     } \<box>
-                (exit_events_Movement (fst (snd s)) SID_Movement_Analysis 
-                   tids_Movement_Analysis Other_SIDs_to_Analysis_Movement)
+                \<comment> \<open> T_Movement_t6 \<close>
+                do {r \<leftarrow> inp_in obstacle__Movement (set [(TID_Movement_t6, din, a). 
+                        a \<leftarrow> Location_Loc_list]);
+                      outp set_l_Movement (snd (snd r)) ; 
+                      outp exit_Movement (SID_Movement_Going, SID_Movement_Going);
+                      outp exited_Movement (SID_Movement_Going, SID_Movement_Going);
+                      outp enter_Movement (SID_Movement_Going, SID_Movement_Avoiding);
+                      outp entered_Movement (SID_Movement_Going, SID_Movement_Avoiding);
+                      Ret(False, fst (snd s), SID_Movement_Going)
+                    } \<box>
+                (exit_events_Movement (fst (snd s)) SID_Movement_Going 
+                   tids_Movement_Going Other_SIDs_to_Going_Movement)
                 )
               )
             })
@@ -610,90 +639,71 @@ definition State_Movement_Analysis where
 )
 "
 
-definition State_Movement_Analysis_R where
-"State_Movement_Analysis_R (idd::integer) = 
-   (discard_state (State_Movement_Analysis idd)) \<comment> \<open> discard state to match with skip on the right\<close>
-    \<parallel>\<^bsub> (int_int_Movement - Movement_Analysis_triggers) \<^esub> 
+definition State_Movement_Going_R where
+"State_Movement_Going_R (idd::integer) = 
+   (discard_state (State_Movement_Going idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_Movement - Movement_Going_triggers) \<^esub> 
    skip
 "
 
-paragraph \<open> GasDetected \<close>
-definition CS_Movement_GasDetected_sync where
-"CS_Movement_GasDetected_sync = 
+paragraph \<open> Found \<close>
+definition CS_Movement_Found_sync where
+"CS_Movement_Found_sync = 
   set (
       \<comment> \<open> enter from x to y \<close>
-      (enumchans2 enter_exit_channels_Movement [SID_Movement_GasDetected] SIDS_Movement_nodes)@
+      (enumchans2 enter_exit_channels_Movement [SID_Movement_Found] SIDS_Movement_nodes)@
       \<comment> \<open> enter from y to x \<close>
-      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_GasDetected])
+      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Found])
 )"
 
-definition Movement_GasDetected_triggers where
-"Movement_GasDetected_triggers = set (
-  (enumchan1 internal_Movement_C 
-    [TID_Movement_t3, TID_Movement_t4,
-     TID_Movement_t8, TID_Movement_t9a]) @
-  (enumchans3 [gas__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t2] 
-    [din, dout] 
-    (lseq_gassensor_enum))
-)
+definition Movement_Found_triggers where
+"Movement_Found_triggers = set (
+  (enumchan1 internal_Movement_C [TID_Movement_t5]))
 "
 
-definition tids_Movement_GasDetected where
-" tids_Movement_GasDetected = 
+definition tids_Movement_Found where
+" tids_Movement_Found = 
     (filter 
-        (\<lambda> s. s \<notin> {NULLTRANSITION__Movement, TID_Movement_t9a,
-          TID_Movement_t8, TID_Movement_t4, TID_Movement_t3, 
-          TID_Movement_t2, TID_Movement_t0}) 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
         ITIDS_Movement_list)"
 
-abbreviation Other_SIDs_to_GasDetected_Movement where
-"Other_SIDs_to_GasDetected_Movement \<equiv>
-  set [(s, SID_Movement_GasDetected) . s \<leftarrow> (SIDS_Movement_no_GasDetected)]"
+abbreviation Other_SIDs_to_Found_Movement where
+"Other_SIDs_to_Found_Movement \<equiv>
+  set [(s, SID_Movement_Found) . s \<leftarrow> (SIDS_Movement_no_Found)]"
 
-definition State_Movement_GasDetected where 
-"State_Movement_GasDetected = 
+definition State_Movement_Found where 
+"State_Movement_Found = 
   loop (\<lambda> (id::integer).
-    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_GasDetected_Movement ; 
+    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Found_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_GasDetected_execute \<close>
+        \<comment> \<open> State_Movement_Found_execute \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
            \<comment> \<open> P \<close>
            (\<lambda> s.
             do {
-              gs \<leftarrow> inp_in get_gs_Movement (set (lseq_gassensor_enum));
-              guard (pre_Chemical_intensity(gs));
-              outp set_i_Movement (Chemical_intensity gs);
-              outp entered_Movement (snd (snd s), SID_Movement_GasDetected);
+              guard(True); CALL__move_Movement id  0  Chemical_Angle_Front;
+              guard(True); outp flag_Movement dout;
+              outp entered_Movement (snd (snd s), SID_Movement_Found);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t8 \<close>
-                do {outp internal_Movement TID_Movement_t8 ;
-                    outp exit_Movement (SID_Movement_GasDetected, SID_Movement_GasDetected);
-                    outp exited_Movement (SID_Movement_GasDetected, SID_Movement_GasDetected);
-                    outp stop_Movement dout;
-                    outp enter_Movement (SID_Movement_GasDetected, SID_Movement_j1);
-                    outp entered_Movement (SID_Movement_GasDetected, SID_Movement_j1);
-                    Ret(False, fst (snd s), SID_Movement_GasDetected)
+                \<comment> \<open> T_Movement_t5 \<close>
+                do {
+                      outp internal_Movement TID_Movement_t5 ; 
+                      outp exit_Movement (SID_Movement_Found, SID_Movement_Found);
+                      outp exited_Movement (SID_Movement_Found, SID_Movement_Found);
+                      outp enter_Movement (SID_Movement_Found, SID_Movement_j1);
+                      outp entered_Movement (SID_Movement_Found, SID_Movement_j1);
+                      Ret(False, fst (snd s), SID_Movement_Found)
                     } \<box>
-                 \<comment> \<open> T_Movement_t9a \<close>
-                do {outp internal_Movement TID_Movement_t9a ;
-                    outp exit_Movement (SID_Movement_GasDetected, SID_Movement_GasDetected);
-                    outp exited_Movement (SID_Movement_GasDetected, SID_Movement_GasDetected);
-                    gs \<leftarrow> inp_in get_gs_Movement (set (lseq_gassensor_enum));
-                    guard (pre_Chemical_location(gs));
-                    outp set_a_Movement (Chemical_location gs);
-                    a \<leftarrow> inp_in get_a_Movement Chemical_Angle_set;
-                    outp turn_Movement (dout, a);
-                    outp enter_Movement (SID_Movement_GasDetected, SID_Movement_Reading);
-                    outp entered_Movement (SID_Movement_GasDetected, SID_Movement_Reading);
-                    Ret(False, fst (snd s), SID_Movement_GasDetected)
-                    } \<box>
-                (exit_events_Movement (fst (snd s)) SID_Movement_GasDetected 
-                   tids_Movement_GasDetected Other_SIDs_to_GasDetected_Movement)
+                (exit_events_Movement (fst (snd s)) SID_Movement_Found 
+                   tids_Movement_Found Other_SIDs_to_Found_Movement)
                 )
               )
             })
@@ -705,14 +715,13 @@ definition State_Movement_GasDetected where
 )
 "
 
-definition State_Movement_GasDetected_R where
-"State_Movement_GasDetected_R (idd::integer) = 
-   (discard_state (State_Movement_GasDetected idd)) \<comment> \<open> discard state to match with skip on the right\<close>
-    \<parallel>\<^bsub> (int_int_Movement - Movement_GasDetected_triggers) \<^esub> 
+definition State_Movement_Found_R where
+"State_Movement_Found_R (idd::integer) = 
+   (discard_state (State_Movement_Found idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_Movement - Movement_Found_triggers) \<^esub> 
    skip
 "
-
-paragraph \<open> Final \<close>
+paragraph \<open> j1 \<close>
 definition CS_Movement_j1_sync where
 "CS_Movement_j1_sync = 
   set (
@@ -729,9 +738,11 @@ definition Movement_j1_triggers where
 definition tids_Movement_j1 where
 " tids_Movement_j1 = 
     (filter 
-        (\<lambda> s. s \<notin> {NULLTRANSITION__Movement, TID_Movement_t9a,
-          TID_Movement_t8, TID_Movement_t4, TID_Movement_t3, 
-          TID_Movement_t2, TID_Movement_t0}) 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
         ITIDS_Movement_list)"
 
 abbreviation Other_SIDs_to_j1_Movement where
@@ -742,9 +753,24 @@ definition State_Movement_j1 where
 "State_Movement_j1 = 
   loop (\<lambda> (id::integer).
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_j1_Movement ; 
-        outp terminate_Movement ();
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_Movement_j1_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {
+              outp entered_Movement (snd (snd s), SID_Movement_j1);
+              outp terminate_Movement ();
+              Ret (False, id, SID_Movement_j1)
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
         Ret (id)
-    }
+  }
 )
 "
 
@@ -755,68 +781,102 @@ definition State_Movement_j1_R where
    skip
 "
 
-paragraph \<open> Reading \<close>
-definition CS_Movement_Reading_sync where
-"CS_Movement_Reading_sync = 
+paragraph \<open> Avoiding \<close>
+definition CS_Movement_Avoiding_sync where
+"CS_Movement_Avoiding_sync = 
   set (
       \<comment> \<open> enter from x to y \<close>
-      (enumchans2 enter_exit_channels_Movement [SID_Movement_Reading] SIDS_Movement_nodes)@
+      (enumchans2 enter_exit_channels_Movement [SID_Movement_Avoiding] SIDS_Movement_nodes)@
       \<comment> \<open> enter from y to x \<close>
-      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Reading])
+      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Avoiding])
 )"
 
-definition Movement_Reading_triggers where
-"Movement_Reading_triggers = set (
-  (enumchan1 internal_Movement_C 
-    [TID_Movement_t3, TID_Movement_t4,
-     TID_Movement_t8, TID_Movement_t9a]) @
-  (enumchans3 [gas__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t2] 
-    [din, dout] 
-    (lseq_gassensor_enum))
+definition Movement_Avoiding_triggers where
+"Movement_Avoiding_triggers = set (
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+  (enumchans2 [resume__Movement_C] 
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+     TID_Movement_t19] InOut_list) @
+  (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
+    TID_Movement_t2] InOut_list Chemical_Angle_list) @
+  (enumchans2 [stop__Movement_C] 
+    [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
+    TID_Movement_t9] InOut_list) @
+  (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list)
 )
 "
 
-definition tids_Movement_Reading where
-" tids_Movement_Reading = 
+definition tids_Movement_Avoiding where
+" tids_Movement_Avoiding = 
     (filter 
-        (\<lambda> s. s \<notin> {NULLTRANSITION__Movement, TID_Movement_t9a,
-          TID_Movement_t8, TID_Movement_t4, TID_Movement_t3, 
-          TID_Movement_t2, TID_Movement_t0}) 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
         ITIDS_Movement_list)"
 
-abbreviation Other_SIDs_to_Reading_Movement where
-"Other_SIDs_to_Reading_Movement \<equiv>
-  set [(s, SID_Movement_Reading) . s \<leftarrow> (SIDS_Movement_no_Reading)]"
+abbreviation Other_SIDs_to_Avoiding_Movement where
+"Other_SIDs_to_Avoiding_Movement \<equiv>
+  set [(s, SID_Movement_Avoiding) . s \<leftarrow> (SIDS_Movement_no_Avoiding)]"
 
-definition State_Movement_Reading where 
-"State_Movement_Reading = 
+definition State_Movement_Avoiding where 
+"State_Movement_Avoiding = 
   loop (\<lambda> (id::integer).
-    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Reading_Movement ; 
+    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Avoiding_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_Reading_execute \<close>
+        \<comment> \<open> State_Movement_Avoiding_execute \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
            \<comment> \<open> P \<close>
            (\<lambda> s.
             do {
-              outp entered_Movement (snd (snd s), SID_Movement_Reading);
+              guard(True); r \<leftarrow> inp_in odometer_Movement (set 
+                  [(d, l). d \<leftarrow> InOut_list, l \<leftarrow> rc.core_real_list]);  
+              outp set_d0_Movement (snd r);
+              l \<leftarrow> inp_in get_l_Movement Location_Loc_set;
+              guard(True); CALL__changeDirection_Movement id l;
+              outp entered_Movement (snd (snd s), SID_Movement_Avoiding);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t0 \<close>
-                do {gs \<leftarrow> inp_in gas__Movement (set [(TID_Movement_t0, din, x). 
-                        x \<leftarrow> (lseq_gassensor_enum)]) ;
-                    outp set_gs_Movement (snd (snd gs));
-                    outp exit_Movement (SID_Movement_Reading, SID_Movement_Reading);
-                    outp exited_Movement (SID_Movement_Reading, SID_Movement_Reading);
-                    outp enter_Movement (SID_Movement_Reading, SID_Movement_Analysis);
-                    outp entered_Movement (SID_Movement_Reading, SID_Movement_Analysis);
-                    Ret(False, fst (snd s), SID_Movement_Reading)
+                \<comment> \<open> T_Movement_t7 \<close>
+                do {r \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t7, din, a). 
+                            a \<leftarrow> (Chemical_Angle_list)]);
+                      outp set_a_Movement (snd (snd r)); 
+                      outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                      outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                      outp enter_Movement (SID_Movement_Avoiding, SID_Movement_TryingAgain);
+                      outp entered_Movement (SID_Movement_Avoiding, SID_Movement_TryingAgain);
+                      Ret(False, fst (snd s), SID_Movement_Avoiding)
                     } \<box>
-                (exit_events_Movement (fst (snd s)) SID_Movement_Reading 
-                   tids_Movement_Reading Other_SIDs_to_Reading_Movement)
+                \<comment> \<open> T_Movement_t18 \<close>
+                do {outp stop__Movement (TID_Movement_t18, din);
+                    outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                    outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                    outp enter_Movement (SID_Movement_Avoiding, SID_Movement_Found);
+                    outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Found);
+                    Ret(False, fst (snd s), SID_Movement_Avoiding)
+                  } \<box>
+                \<comment> \<open> T_Movement_t19 \<close>
+                do {outp resume__Movement (TID_Movement_t19, din);
+                    outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                    outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                    outp enter_Movement (SID_Movement_Avoiding, SID_Movement_Waiting);
+                    outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Waiting);
+                    Ret(False, fst (snd s), SID_Movement_Avoiding)
+                  } \<box>
+                \<comment> \<open> T_Movement_t21 \<close>
+                do {outp resume__Movement (TID_Movement_t21, din);
+                    outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                    outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
+                    outp enter_Movement (SID_Movement_Avoiding, SID_Movement_Going);
+                    outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Going);
+                    Ret(False, fst (snd s), SID_Movement_Avoiding)
+                  } \<box>
+                (exit_events_Movement (fst (snd s)) SID_Movement_Avoiding 
+                   tids_Movement_Avoiding Other_SIDs_to_Avoiding_Movement)
                 )
               )
             })
@@ -828,133 +888,517 @@ definition State_Movement_Reading where
 )
 "
 
-definition State_Movement_Reading_R where
-"State_Movement_Reading_R (idd::integer) = 
-   (discard_state (State_Movement_Reading idd)) \<comment> \<open> discard state to match with skip on the right\<close>
-    \<parallel>\<^bsub> (int_int_Movement - Movement_Reading_triggers) \<^esub> 
+definition State_Movement_Avoiding_R where
+"State_Movement_Avoiding_R (idd::integer) = 
+   (discard_state (State_Movement_Avoiding idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_Movement - Movement_Avoiding_triggers) \<^esub> 
+   skip
+"
+
+paragraph \<open> TryingAgain \<close>
+definition CS_Movement_TryingAgain_sync where
+"CS_Movement_TryingAgain_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_Movement [SID_Movement_TryingAgain] SIDS_Movement_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_TryingAgain])
+)"
+
+definition Movement_TryingAgain_triggers where
+"Movement_TryingAgain_triggers = set (
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+  (enumchans2 [resume__Movement_C] 
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+     TID_Movement_t19] InOut_list) @
+  (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
+    TID_Movement_t2] InOut_list Chemical_Angle_list) @
+  (enumchans2 [stop__Movement_C] 
+    [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
+    TID_Movement_t9] InOut_list) @
+  (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list)
+)
+"
+
+definition tids_Movement_TryingAgain where
+" tids_Movement_TryingAgain = 
+    (filter 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
+        ITIDS_Movement_list)"
+
+abbreviation Other_SIDs_to_TryingAgain_Movement where
+"Other_SIDs_to_TryingAgain_Movement \<equiv>
+  set [(s, SID_Movement_TryingAgain) . s \<leftarrow> (SIDS_Movement_no_TryingAgain)]"
+
+definition State_Movement_TryingAgain where 
+"State_Movement_TryingAgain = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_TryingAgain_Movement ; 
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_Movement_TryingAgain_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {a \<leftarrow> inp_in get_a_Movement Chemical_Angle_set;
+              guard(True); CALL__move_Movement id const_Movement_lv a; 
+              outp entered_Movement (snd (snd s), SID_Movement_TryingAgain);
+              (do {skip ; stop} \<triangle>
+                (
+                \<comment> \<open> T_Movement_t8 \<close>
+                do {r \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t7, din, a). 
+                            a \<leftarrow> (Chemical_Angle_list)]);
+                      outp set_a_Movement (snd (snd r)); 
+                      outp exit_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                      outp exited_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                      outp enter_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                      Ret(True, fst (snd s), SID_Movement_TryingAgain)
+                    } \<box>
+                \<comment> \<open> T_Movement_t9 \<close>
+                do {outp stop__Movement (TID_Movement_t9, din);
+                    outp exit_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                    outp exited_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                    outp enter_Movement (SID_Movement_TryingAgain, SID_Movement_Found);
+                    outp entered_Movement (SID_Movement_TryingAgain, SID_Movement_Found);
+                    Ret(False, fst (snd s), SID_Movement_TryingAgain)
+                  } \<box>
+                \<comment> \<open> T_Movement_t10 \<close>
+                do {outp resume__Movement (TID_Movement_t10, din);
+                    outp exit_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                    outp exited_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                    outp enter_Movement (SID_Movement_TryingAgain, SID_Movement_Waiting);
+                    outp entered_Movement (SID_Movement_TryingAgain, SID_Movement_Waiting);
+                    Ret(False, fst (snd s), SID_Movement_TryingAgain)
+                  } \<box>
+                \<comment> \<open> T_Movement_t11 \<close>
+                do {r \<leftarrow> inp_in obstacle__Movement (set [(TID_Movement_t11, din, l). 
+                        l \<leftarrow> Location_Loc_list]);
+                      outp set_l_Movement (snd (snd r)) ; 
+                    outp exit_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                    outp exited_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
+                    guard(True); r \<leftarrow> inp_in odometer_Movement (set 
+                          [(d, l). d \<leftarrow> InOut_list, l \<leftarrow> rc.core_real_list]);
+                    outp set_d1_Movement (snd r);
+                    outp enter_Movement (SID_Movement_TryingAgain, SID_Movement_AvoidingAgain);
+                    outp entered_Movement (SID_Movement_TryingAgain, SID_Movement_AvoidingAgain);
+                    Ret(False, fst (snd s), SID_Movement_TryingAgain)
+                  } \<box>
+                (exit_events_Movement (fst (snd s)) SID_Movement_TryingAgain 
+                   tids_Movement_TryingAgain Other_SIDs_to_TryingAgain_Movement)
+                )
+              )
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
+        Ret (id)
+  }
+)
+"
+
+definition State_Movement_TryingAgain_R where
+"State_Movement_TryingAgain_R (idd::integer) = 
+   (discard_state (State_Movement_TryingAgain idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_Movement - Movement_TryingAgain_triggers) \<^esub> 
+   skip
+"
+
+paragraph \<open> AvoidingAgain \<close>
+definition CS_Movement_AvoidingAgain_sync where
+"CS_Movement_AvoidingAgain_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_Movement [SID_Movement_AvoidingAgain] SIDS_Movement_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_AvoidingAgain])
+)"
+
+definition Movement_AvoidingAgain_triggers where
+"Movement_AvoidingAgain_triggers = set (
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+  (enumchans2 [resume__Movement_C] 
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+     TID_Movement_t19] InOut_list) @
+  (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
+    TID_Movement_t2] InOut_list Chemical_Angle_list) @
+  (enumchans2 [stop__Movement_C] 
+    [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
+    TID_Movement_t9] InOut_list) @
+  (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list)
+)
+"
+
+definition tids_Movement_AvoidingAgain where
+" tids_Movement_AvoidingAgain = 
+    (filter 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
+        ITIDS_Movement_list)"
+
+abbreviation Other_SIDs_to_AvoidingAgain_Movement where
+"Other_SIDs_to_AvoidingAgain_Movement \<equiv>
+  set [(s, SID_Movement_AvoidingAgain) . s \<leftarrow> (SIDS_Movement_no_AvoidingAgain)]"
+
+definition State_Movement_AvoidingAgain where 
+"State_Movement_AvoidingAgain = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_AvoidingAgain_Movement ; 
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_Movement_AvoidingAgain_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {
+              outp entered_Movement (snd (snd s), SID_Movement_AvoidingAgain);
+              (do {skip ; stop} \<triangle>
+                (
+                \<comment> \<open> T_Movement_t12 \<close>
+                do {outp internal_Movement TID_Movement_t12;
+                      outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                      outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                      outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_Avoiding);
+                      outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_Avoiding);
+                      Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
+                    } \<box>
+                \<comment> \<open> T_Movement_t17 \<close>
+                do {outp stop__Movement (TID_Movement_t17, din);
+                    outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                    outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                    outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_Found);
+                    outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_Found);
+                    Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
+                  } \<box>
+                \<comment> \<open> T_Movement_t22 \<close>
+                do {outp resume__Movement (TID_Movement_t22, din);
+                    outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                    outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                    outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_Waiting);
+                    outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_Waiting);
+                    Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
+                  } \<box>
+                \<comment> \<open> T_Movement_t13 \<close>
+                do {outp internal_Movement TID_Movement_t13;
+                      outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                      outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                      outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
+                      outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
+                      Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
+                    } \<box>
+                (exit_events_Movement (fst (snd s)) SID_Movement_AvoidingAgain 
+                   tids_Movement_AvoidingAgain Other_SIDs_to_AvoidingAgain_Movement)
+                )
+              )
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
+        Ret (id)
+  }
+)
+"
+
+definition State_Movement_AvoidingAgain_R where
+"State_Movement_AvoidingAgain_R (idd::integer) = 
+   (discard_state (State_Movement_AvoidingAgain idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_Movement - Movement_AvoidingAgain_triggers) \<^esub> 
+   skip
+"
+
+paragraph \<open> GettingOut \<close>
+definition CS_Movement_GettingOut_sync where
+"CS_Movement_GettingOut_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_Movement [SID_Movement_GettingOut] SIDS_Movement_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_GettingOut])
+)"
+
+definition Movement_GettingOut_triggers where
+"Movement_GettingOut_triggers = set (
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+  (enumchans2 [resume__Movement_C] 
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+     TID_Movement_t19] InOut_list) @
+  (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
+    TID_Movement_t2] InOut_list Chemical_Angle_list) @
+  (enumchans2 [stop__Movement_C] 
+    [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
+    TID_Movement_t9] InOut_list) @
+  (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list)
+)
+"
+
+definition tids_Movement_GettingOut where
+" tids_Movement_GettingOut = 
+    (filter 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__Movement,TID_Movement_t0,TID_Movement_t3,TID_Movement_t12,
+          TID_Movement_t16,TID_Movement_t17,TID_Movement_t14,TID_Movement_t22,TID_Movement_t18,
+          TID_Movement_t20,TID_Movement_t6,TID_Movement_t21,TID_Movement_t15,TID_Movement_t5,
+          TID_Movement_t13,TID_Movement_t4,TID_Movement_t10,TID_Movement_t7,TID_Movement_t19,
+          TID_Movement_t9,TID_Movement_t11,TID_Movement_t8,TID_Movement_t2])) 
+        ITIDS_Movement_list)"
+
+abbreviation Other_SIDs_to_GettingOut_Movement where
+"Other_SIDs_to_GettingOut_Movement \<equiv>
+  set [(s, SID_Movement_GettingOut) . s \<leftarrow> (SIDS_Movement_no_GettingOut)]"
+
+definition State_Movement_GettingOut where 
+"State_Movement_GettingOut = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_GettingOut_Movement ; 
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_Movement_GettingOut_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {
+              guard(True); CALL__shortRandomWalk_Movement id; 
+              outp entered_Movement (snd (snd s), SID_Movement_GettingOut);
+              (do {skip ; stop} \<triangle>
+                (
+                \<comment> \<open> T_Movement_t14 \<close>
+                do {r \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t14, din, a). 
+                            a \<leftarrow> (Chemical_Angle_list)]);
+                      outp set_a_Movement (snd (snd r)); 
+                      outp exit_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
+                      outp exited_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
+                      outp enter_Movement (SID_Movement_GettingOut, SID_Movement_Going);
+                      outp entered_Movement (SID_Movement_GettingOut, SID_Movement_Going);
+                      Ret(False, fst (snd s), SID_Movement_GettingOut)
+                    } \<box>
+                \<comment> \<open> T_Movement_t16 \<close>
+                do {outp stop__Movement (TID_Movement_t16, din);
+                    outp exit_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
+                    outp exited_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
+                    outp enter_Movement (SID_Movement_GettingOut, SID_Movement_Found);
+                    outp entered_Movement (SID_Movement_GettingOut, SID_Movement_Found);
+                    Ret(False, fst (snd s), SID_Movement_GettingOut)
+                  } \<box>
+                \<comment> \<open> T_Movement_t20 \<close>
+                do {outp resume__Movement (TID_Movement_t20, din);
+                    outp exit_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
+                    outp exited_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
+                    outp enter_Movement (SID_Movement_GettingOut, SID_Movement_Waiting);
+                    outp entered_Movement (SID_Movement_GettingOut, SID_Movement_Waiting);
+                    Ret(False, fst (snd s), SID_Movement_GettingOut)
+                  } \<box>
+                (exit_events_Movement (fst (snd s)) SID_Movement_GettingOut 
+                   tids_Movement_GettingOut Other_SIDs_to_GettingOut_Movement)
+                )
+              )
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
+        Ret (id)
+  }
+)
+"
+
+definition State_Movement_GettingOut_R where
+"State_Movement_GettingOut_R (idd::integer) = 
+   (discard_state (State_Movement_GettingOut idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_Movement - Movement_GettingOut_triggers) \<^esub> 
    skip
 "
 
 subsubsection \<open> State machine \<close>
 definition flow_events_Movement_stm_to_nodes where
 "flow_events_Movement_stm_to_nodes = (
- let nodes = [SID_Movement_Waiting,SID_Movement_Analysis,SID_Movement_GasDetected,
-              SID_Movement_j1,SID_Movement_Reading]
+ let nodes = [SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,
+    SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,
+    SID_Movement_GettingOut]
  in set (
       enumchans2 [enter_Movement_C, entered_Movement_C,exit_Movement_C,exited_Movement_C] 
           (filter (\<lambda> s. s \<notin> set nodes) SIDS_Movement_list) nodes
   )
 )"
 
+definition STM_Movement_1 where
+"STM_Movement_1 (idd::integer) =
+  (State_Movement_AvoidingAgain_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_AvoidingAgain_sync \<inter> CS_Movement_GettingOut_sync \<^esub> 
+  State_Movement_GettingOut_R(idd))
+"
+
+definition STM_Movement_2 where
+"STM_Movement_2 (idd::integer) =
+  (State_Movement_TryingAgain_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_TryingAgain_sync \<inter> 
+      (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync) \<^esub> 
+  STM_Movement_1(idd))
+"
+
+definition STM_Movement_3 where
+"STM_Movement_3 (idd::integer) =
+  (State_Movement_Avoiding_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_Avoiding_sync \<inter> 
+      (CS_Movement_TryingAgain_sync \<union> 
+        (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync)) \<^esub> 
+  STM_Movement_2(idd))
+"
+
+definition STM_Movement_4 where
+"STM_Movement_4 (idd::integer) =
+  (State_Movement_j1_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_j1_sync \<inter>
+      (CS_Movement_Avoiding_sync \<union>
+        (CS_Movement_TryingAgain_sync \<union> 
+          (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync))) \<^esub> 
+  STM_Movement_3(idd))
+"
+
+definition STM_Movement_5 where
+"STM_Movement_5 (idd::integer) =
+  (State_Movement_Found_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_Found_sync \<inter>
+      (CS_Movement_j1_sync \<union>
+        (CS_Movement_Avoiding_sync \<union>
+          (CS_Movement_TryingAgain_sync \<union> 
+            (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync)))) \<^esub> 
+  STM_Movement_4(idd))
+"
+
+definition STM_Movement_6 where
+"STM_Movement_6 (idd::integer) =
+  (State_Movement_Going_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_Going_sync \<inter>
+      (CS_Movement_Found_sync \<union>
+        (CS_Movement_j1_sync \<union>
+          (CS_Movement_Avoiding_sync \<union>
+            (CS_Movement_TryingAgain_sync \<union> 
+              (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync))))) \<^esub> 
+  STM_Movement_5(idd))
+"
+
+definition STM_Movement_7 where
+"STM_Movement_7 (idd::integer) =
+  (State_Movement_Waiting_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_Waiting_sync \<inter>
+      (CS_Movement_Going_sync \<union>
+        (CS_Movement_Found_sync \<union>
+          (CS_Movement_j1_sync \<union>
+            (CS_Movement_Avoiding_sync \<union>
+              (CS_Movement_TryingAgain_sync \<union> 
+                (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync)))))) \<^esub> 
+  STM_Movement_6(idd))
+"
+
 definition STM_Movement where
 "STM_Movement (idd::integer) = 
    (I_Movement_i1(idd))
     \<parallel>\<^bsub> flow_events_Movement_stm_to_nodes \<^esub> 
-   (State_Movement_Waiting_R(idd)
-      \<parallel>\<^bsub> CS_Movement_Analysis_sync \<inter> (CS_Movement_Analysis_sync \<union> 
-          (CS_Movement_GasDetected_sync \<union> (CS_Movement_j1_sync \<union> CS_Movement_Reading_sync))) \<^esub>
-      (State_Movement_Analysis_R(idd)
-        \<parallel>\<^bsub> CS_Movement_Analysis_sync \<inter> (CS_Movement_GasDetected_sync \<union> 
-            (CS_Movement_j1_sync \<union> CS_Movement_Reading_sync)) \<^esub> 
-        ( State_Movement_GasDetected_R(idd)
-          \<parallel>\<^bsub> CS_Movement_GasDetected_sync \<inter> (CS_Movement_j1_sync \<union> CS_Movement_Reading_sync) \<^esub> 
-          (State_Movement_j1_R(idd)  
-            \<parallel>\<^bsub> CS_Movement_j1_sync \<inter> CS_Movement_Reading_sync \<^esub> 
-          State_Movement_Reading_R(idd))
-        )
-      )
-   )
+   STM_Movement_7(idd)
 "
 
 definition Movement_opt_0_internal_set where
 "Movement_opt_0_internal_set = 
-  set (([internal_Movement_C TID_Movement_t1]) @ 
-       (enumchans3 [gas__Movement_C] 
-          [TID_Movement_t0, TID_Movement_t2] 
-          [din, dout] 
-          (lseq_gassensor_enum))
+  set ((enumchans1 [internal_Movement_C] [TID_Movement_t1, TID_Movement_t5]) @ 
+      (enumchans2 [stop__Movement_C] 
+          [TID_Movement_t18, TID_Movement_t17, TID_Movement_t16, TID_Movement_t9, TID_Movement_t15,
+          TID_Movement_t4] InOut_list) @
+       (enumchans3 [turn__Movement_C] 
+          [TID_Movement_t3, TID_Movement_t2, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8] 
+          InOut_list Chemical_Angle_list) @
+       (enumchans2 [resume__Movement_C] 
+          [TID_Movement_t21, TID_Movement_t10, TID_Movement_t22, TID_Movement_t20, TID_Movement_t0,
+          TID_Movement_t19] InOut_list) @
+       (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] 
+          InOut_list Location_Loc_list)
 )"
 
 definition Movement_opt_1_internal_set where
 "Movement_opt_1_internal_set = 
-  set ((enumchans1 [internal_Movement_C] [TID_Movement_t4, TID_Movement_t3]) @
-       (enumchans1 [set_st_Movement_C] Chemical_Status_list)
-)"
-
-definition Movement_opt_2_internal_set where
-"Movement_opt_2_internal_set = 
-  set ((enumchans1 [internal_Movement_C] [TID_Movement_t8, TID_Movement_t9a])
+  set ((enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]) @
+       (enumchans1 [set_d0_Movement_C, set_d1_Movement_C] rc.core_real_list)
 )"
 
 definition MemorySTM_opt_Movement where
 "MemorySTM_opt_Movement (idd::integer) = 
   (par_hide
-    (discard_state (Movement_Memory_opt_i (Chemical_IntensityC (0::2))))
-    Movement_i_events
-    (par_hide 
-      (par_hide
-        (discard_state (Movement_Memory_opt_st (Chemical_Status_noGas)))
-        Movement_st_events
-        (hide 
-          (
-            (hide
-              (
-                (par_hide
-                  (discard_state (Movement_Memory_opt_gs (bmake TYPE(2) [])))
-                  Movement_gs_events
-                  (par_hide 
-                    (discard_state (Movement_Memory_opt_a Chemical_Angle_Left)) 
-                    Movement_a_events 
-                    (STM_Movement idd)
-                  )
+    (discard_state (Movement_Memory_opt_d1 (0)))
+    Movement_d1_events 
+    (par_hide
+      (discard_state (Movement_Memory_opt_d0 (0)))
+      Movement_d0_events
+      (hide 
+        (
+          (hide
+            (
+              (par_hide
+                (discard_state (Movement_Memory_opt_l (Location_Loc_left)))
+                Movement_l_events
+                (par_hide 
+                  (discard_state (Movement_Memory_opt_a Chemical_Angle_Left)) 
+                  Movement_a_events 
+                  (STM_Movement idd)
                 )
-                \<parallel>\<^bsub> Movement_opt_0_internal_set \<^esub>
-                (discard_state (Movement_MemoryTransitions_opt_0 idd))
               )
-              ({internal_Movement_C TID_Movement_t1})
+              \<parallel>\<^bsub> Movement_opt_0_internal_set \<^esub>
+              (discard_state (Movement_MemoryTransitions_opt_0 idd))
             )
-            \<parallel>\<^bsub> Movement_opt_1_internal_set \<^esub> 
-            (discard_state (Movement_MemoryTransitions_opt_1 idd))
+            (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1])
           )
-          (set (enumchans1 [internal_Movement_C] [TID_Movement_t4, TID_Movement_t3]))
+          \<parallel>\<^bsub> Movement_opt_1_internal_set \<^esub> 
+          (discard_state (Movement_MemoryTransitions_opt_1 idd))
         )
+        (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
       )
-      Movement_opt_2_internal_set
-      (discard_state (Movement_MemoryTransitions_opt_2 idd))
     )
-  )   
+  )
 "
 
 definition rename_Movement_events where
 "rename_Movement_events = 
   concat (
-    (enumchan2 (forget_first2 gas__Movement_C gas_Movement_C TIDS_Movement_list) 
-            InOut_list lseq_gassensor_enum) @
-    (enumchan2 (forget_first2 turn__Movement_C turn_Movement_C TIDS_Movement_list) 
-            InOut_list Chemical_Angle_list) @
+    (enumchan2 (forget_first2 obstacle__Movement_C obstacle_Movement_C TIDS_Movement_list) 
+            InOut_list Location_Loc_list) @
+    (enumchan2 (forget_first2 odometer__Movement_C odometer_Movement_C TIDS_Movement_list) 
+            InOut_list rc.core_real_list) @
     (enumchan1 (forget_first resume__Movement_C resume_Movement_C TIDS_Movement_list) 
             InOut_list) @
+    (enumchan2 (forget_first2 turn__Movement_C turn_Movement_C TIDS_Movement_list) 
+            InOut_list Chemical_Angle_list) @
     (enumchan1 (forget_first stop__Movement_C stop_Movement_C TIDS_Movement_list) 
+            InOut_list) @
+    (enumchan1 (forget_first flag__Movement_C flag_Movement_C TIDS_Movement_list) 
             InOut_list)
   )
 "
 
-term "\<lbrace>resume__Movement (t, x) \<mapsto> resume_Movement x | x. x \<in> InOut_set\<rbrace>"
-term "\<lbrace>terminate_Movement () \<mapsto> terminate_Movement () | _. True\<rbrace>"
-
 definition rename_Movement_events_others where
 "rename_Movement_events_others = 
   (enumchanp1 terminate_Movement_C [()]) @
-  (enumchansp1 [get_i_Movement_C, set_i_Movement_C] Chemical_Intensity2_list) @
+  (enumchansp1 [get_l_Movement_C, set_l_Movement_C] Location_Loc_list) @
   (enumchansp1 [get_a_Movement_C, set_a_Movement_C] Chemical_Angle_list) @
-  (enumchansp1 [get_st_Movement_C, set_st_Movement_C] Chemical_Status_list) @
-  (enumchansp1 [get_gs_Movement_C, set_gs_Movement_C] lseq_gassensor_enum) @
-  (enumchansp2 [gas_Movement_C] InOut_list lseq_gassensor_enum) @
+  (enumchansp1 [get_d0_Movement_C, set_d0_Movement_C] rc.core_real_list) @
+  (enumchansp1 [get_d1_Movement_C, set_d1_Movement_C] rc.core_real_list) @
+  (enumchansp2 [obstacle_Movement_C] InOut_list Location_Loc_list) @
+  (enumchansp2 [odometer_Movement_C] InOut_list rc.core_real_list) @
   (enumchansp2 [turn_Movement_C] InOut_list Chemical_Angle_list) @
-  (enumchansp1 [resume_Movement_C, stop_Movement_C] InOut_list) @
+  (enumchansp1 [resume_Movement_C, stop_Movement_C, flag_Movement_C] InOut_list) @
   (enumchansp2 [enter_Movement_C, entered_Movement_C, exit_Movement_C, exited_Movement_C] 
     SIDS_Movement_list SIDS_Movement_list) @
-  (enumchansp1 [internal_Movement_C] TIDS_Movement_list)
+  (enumchansp1 [internal_Movement_C] TIDS_Movement_list) @
+  (enumchansp1 [changeDirectionCall_Movement_C] Location_Loc_list) @
+  (enumchansp1 [randomeWalkCall_Movement_C, shortRandomWalkCall_Movement_C] [()]) @
+  (enumchansp2 [moveCall_Movement_C] rc.core_real_list Chemical_Angle_list)
 "
 
 definition rename_MemorySTM_opt_Movement where
@@ -978,39 +1422,47 @@ definition D__Movement where
   hide (AUX_opt_Movement idd) internal_events_Movement
 "
 
-subsection \<open> MainController \<close>
-chantype Chan_MainCtrl =
-  terminate_MainCtrl :: unit
-  gas_MainCtrl :: "InOut \<times> 2 Chemical_GasSensor[2]blist"
-  resume_MainCtrl :: "InOut"
-  turn_MainCtrl :: "InOut \<times> Chemical_Angle"
-  stop_MainCtrl :: "InOut"
+subsection \<open> MicroController \<close>
+chantype Chan_MicroCtrl =
+  terminate_MicroController :: unit
+  obstacle_MicroController :: "InOut \<times> Location_Loc"
+  resume_MicroController :: "InOut"
+  turn_MicroController :: "InOut \<times> Chemical_Angle"
+  odometer_MicroController :: "InOut \<times> core_real"
+  stop_MicroController :: "InOut"
+  flag_MicroController :: "InOut"
+(* *)
+  randomeWalkCall_MicroController :: unit
+  moveCall_MicroController :: "core_real \<times> Chemical_Angle"
+  shortRandomWalkCall_MicroController :: unit
 
 subsubsection \<open> Memory \<close>
-definition Memory_MainCtrl where
-"Memory_MainCtrl (idd::integer) = skip"
+definition Memory_MicroController where
+"Memory_MicroController (idd::integer) = skip"
 
 subsubsection \<open> Controller \<close>
 
-definition rename_MainCtrl_Movement_events where
-"rename_MainCtrl_Movement_events = 
-  (enumchanp2_1 (terminate_Movement_C,terminate_MainCtrl_C) [()]) @
-  (enumchansp2_2 [(gas_Movement_C, gas_MainCtrl_C)] InOut_list lseq_gassensor_enum) @
-  (enumchansp2_1 [(resume_Movement_C, resume_MainCtrl_C)] InOut_list) @
-  (enumchansp2_2 [(turn_Movement_C, turn_MainCtrl_C)] InOut_list Chemical_Angle_list) @
-  (enumchansp2_1 [(stop_Movement_C, stop_MainCtrl_C)] InOut_list)
+definition rename_MicroController_Movement_events where
+"rename_MicroController_Movement_events = 
+  (enumchanp2_1 (terminate_Movement_C,terminate_MicroController_C) [()]) @
+  (enumchansp2_1 [(resume_Movement_C, resume_MicroController_C)] InOut_list) @
+  (enumchansp2_2 [(turn_Movement_C, turn_MicroController_C)] InOut_list Chemical_Angle_list) @
+  (enumchansp2_2 [(obstacle_Movement_C, obstacle_MicroController_C)] InOut_list Location_Loc_list) @
+  (enumchansp2_2 [(odometer_Movement_C, odometer_MicroController_C)] InOut_list rc.core_real_list) @
+  (enumchansp2_1 [(stop_Movement_C, stop_MicroController_C)] InOut_list) @
+  (enumchansp2_1 [(flag_Movement_C, flag_MicroController_C)] InOut_list)
 "
 
 definition rename_D__Movement where
-  "rename_D__Movement idd = rename (set rename_MainCtrl_Movement_events) (D__Movement idd)"
+  "rename_D__Movement idd = rename (set rename_MicroController_Movement_events) (D__Movement idd)"
 
-definition D__MainCtrl where
-"D__MainCtrl (idd::integer) = 
+definition D__MicroController where
+"D__MicroController (idd::integer) = 
   (par_hide
     (rename_D__Movement idd)
     {}
-    (discard_state (Memory_MainCtrl idd))
-  )  \<lbrakk> set [terminate_MainCtrl_C ()] \<Zrres> skip
+    (discard_state (Memory_MicroController idd))
+  )  \<lbrakk> set [terminate_MicroController_C ()] \<Zrres> skip
 "
 *)
 
@@ -1040,13 +1492,13 @@ in Haskell
 
 subsection \<open> Module \<close>
 chantype Chan_mod0 =
-(* terminates of MainCtrl are mapped to it *)
+(* terminates of MicroController are mapped to it *)
   terminate_mod0 :: unit 
 (* variable channels: set_x and get_x of Movement and stm1 are mapped to these channels *)
   set_x_mod0 :: core_int
   get_x_mod0 :: core_int
 (* shared variable channels *)
-  set_EXT_x_mod0_MainCtrl :: core_int
+  set_EXT_x_mod0_MicroController :: core_int
 (* e1 of Movement is mapped to it *)
   e1_mod0 :: "InOut \<times> core_int"
 (* e2 of stm1 is mapped to it *)
@@ -1055,32 +1507,32 @@ chantype Chan_mod0 =
 definition Memory_mod0 where
 "Memory_mod0 = loop (\<lambda> id::integer.
   ( do {x \<leftarrow> inp_in set_x_mod0 rc.core_int_set; 
-        outp set_EXT_x_mod0_MainCtrl x; Ret (id)}
+        outp set_EXT_x_mod0_MicroController x; Ret (id)}
   )
 )"
 
 (*
-definition rename_mod0_MainCtrl_events where
-"rename_mod0_MainCtrl_events = 
-  [(terminate_MainCtrl_C (), terminate_mod0_C ())] @
-  [(set_x_MainCtrl_C n, set_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(get_x_MainCtrl_C n, get_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(e1_MainCtrl_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
-  [(e2_MainCtrl_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
-  [(set_EXT_x_MainCtrl_C n, set_EXT_x_mod0_MainCtrl_C n). n \<leftarrow> rc.core_int_list]
+definition rename_mod0_MicroController_events where
+"rename_mod0_MicroController_events = 
+  [(terminate_MicroController_C (), terminate_mod0_C ())] @
+  [(set_x_MicroController_C n, set_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
+  [(get_x_MicroController_C n, get_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
+  [(e1_MicroController_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
+  [(e2_MicroController_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
+  [(set_EXT_x_MicroController_C n, set_EXT_x_mod0_MicroController_C n). n \<leftarrow> rc.core_int_list]
 "
 *)
-definition rename_mod0_MainCtrl_events where
-"rename_mod0_MainCtrl_events = 
-  (enumchanp2_1 (terminate_MainCtrl_C,terminate_mod0_C) [()]) @
-  (enumchansp2_1 [(set_x_MainCtrl_C, set_x_mod0_C), (get_x_MainCtrl_C, get_x_mod0_C), 
-      (set_EXT_x_MainCtrl_C, set_EXT_x_mod0_MainCtrl_C)] rc.core_int_list) @
-  (enumchanp2_1 (e2_MainCtrl_C, e2_mod0_C) InOut_list) @
-  (enumchanp2_2 (e1_MainCtrl_C, e1_mod0_C) InOut_list rc.core_int_list)
+definition rename_mod0_MicroController_events where
+"rename_mod0_MicroController_events = 
+  (enumchanp2_1 (terminate_MicroController_C,terminate_mod0_C) [()]) @
+  (enumchansp2_1 [(set_x_MicroController_C, set_x_mod0_C), (get_x_MicroController_C, get_x_mod0_C), 
+      (set_EXT_x_MicroController_C, set_EXT_x_mod0_MicroController_C)] rc.core_int_list) @
+  (enumchanp2_1 (e2_MicroController_C, e2_mod0_C) InOut_list) @
+  (enumchanp2_2 (e1_MicroController_C, e1_mod0_C) InOut_list rc.core_int_list)
 "
 
-definition rename_D__MainCtrl where
-"rename_D__MainCtrl idd = rename (set rename_mod0_MainCtrl_events) (D__MainCtrl idd)"
+definition rename_D__MicroController where
+"rename_D__MicroController idd = rename (set rename_mod0_MicroController_events) (D__MicroController idd)"
 
 definition "mod0_set_x_events = set (
   enumchan1 set_x_mod0_C  rc.core_int_list
@@ -1091,12 +1543,12 @@ definition "mod0_get_x_events = set (
 )"
 
 definition "mod0_set_EXT_x_events = set (
-  enumchan1 set_EXT_x_mod0_MainCtrl_C  rc.core_int_list
+  enumchan1 set_EXT_x_mod0_MicroController_C  rc.core_int_list
 )"
 
 definition D__ctr_mem where
 "D__ctr_mem (idd::integer) = (
-              (rename_D__MainCtrl idd) 
+              (rename_D__MicroController idd) 
               \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
               (discard_state (Memory_mod0 idd))
             )"
@@ -1109,7 +1561,7 @@ definition D__mod0 where
         (
           hide 
             (
-              (rename_D__MainCtrl idd) 
+              (rename_D__MicroController idd) 
               \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
               (discard_state (Memory_mod0 idd))
             )
@@ -1144,8 +1596,8 @@ export_code
   D__stm1
   rename_D__Movement
   rename_D__stm1
-  D__MainCtrl
-  rename_D__MainCtrl
+  D__MicroController
+  rename_D__MicroController
   D__ctr_mem
   D__mod0
   in Haskell 

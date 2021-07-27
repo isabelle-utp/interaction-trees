@@ -820,38 +820,38 @@ definition D__GasAnalysis where
 "
 
 subsection \<open> MainController \<close>
-chantype Chan_MainCtrl =
-  terminate_MainCtrl :: unit
-  gas_MainCtrl :: "InOut \<times> 2 Chemical_GasSensor[2]blist"
-  resume_MainCtrl :: "InOut"
-  turn_MainCtrl :: "InOut \<times> Chemical_Angle"
-  stop_MainCtrl :: "InOut"
+chantype Chan_MainController =
+  terminate_MainController :: unit
+  gas_MainController :: "InOut \<times> 2 Chemical_GasSensor[2]blist"
+  resume_MainController :: "InOut"
+  turn_MainController :: "InOut \<times> Chemical_Angle"
+  stop_MainController :: "InOut"
 
 subsubsection \<open> Memory \<close>
-definition Memory_MainCtrl where
-"Memory_MainCtrl (idd::integer) = skip"
+definition Memory_MainController where
+"Memory_MainController (idd::integer) = skip"
 
 subsubsection \<open> Controller \<close>
 
-definition rename_MainCtrl_GasAnalysis_events where
-"rename_MainCtrl_GasAnalysis_events = 
-  (enumchanp2_1 (terminate_GasAnalysis_C,terminate_MainCtrl_C) [()]) @
-  (enumchansp2_2 [(gas_GasAnalysis_C, gas_MainCtrl_C)] InOut_list lseq_gassensor_enum) @
-  (enumchansp2_1 [(resume_GasAnalysis_C, resume_MainCtrl_C)] InOut_list) @
-  (enumchansp2_2 [(turn_GasAnalysis_C, turn_MainCtrl_C)] InOut_list Chemical_Angle_list) @
-  (enumchansp2_1 [(stop_GasAnalysis_C, stop_MainCtrl_C)] InOut_list)
+definition rename_MainController_GasAnalysis_events where
+"rename_MainController_GasAnalysis_events = 
+  (enumchanp2_1 (terminate_GasAnalysis_C,terminate_MainController_C) [()]) @
+  (enumchansp2_2 [(gas_GasAnalysis_C, gas_MainController_C)] InOut_list lseq_gassensor_enum) @
+  (enumchansp2_1 [(resume_GasAnalysis_C, resume_MainController_C)] InOut_list) @
+  (enumchansp2_2 [(turn_GasAnalysis_C, turn_MainController_C)] InOut_list Chemical_Angle_list) @
+  (enumchansp2_1 [(stop_GasAnalysis_C, stop_MainController_C)] InOut_list)
 "
 
 definition rename_D__GasAnalysis where
-  "rename_D__GasAnalysis idd = rename (set rename_MainCtrl_GasAnalysis_events) (D__GasAnalysis idd)"
+  "rename_D__GasAnalysis idd = rename (set rename_MainController_GasAnalysis_events) (D__GasAnalysis idd)"
 
-definition D__MainCtrl where
-"D__MainCtrl (idd::integer) = 
+definition D__MainController where
+"D__MainController (idd::integer) = 
   (par_hide
     (rename_D__GasAnalysis idd)
     {}
-    (discard_state (Memory_MainCtrl idd))
-  )  \<lbrakk> set [terminate_MainCtrl_C ()] \<Zrres> skip
+    (discard_state (Memory_MainController idd))
+  )  \<lbrakk> set [terminate_MainController_C ()] \<Zrres> skip
 "
 
 export_code
