@@ -8,7 +8,384 @@ begin
 
 declare [[show_types]]
 
-subsection \<open> Movement \<close>
+subsection \<open> changeDirection operation \<close>
+subsubsection \<open> Constants \<close>
+abbreviation const_Location_changeDirection_lv :: "core_real" where
+"const_Location_changeDirection_lv \<equiv> 0"
+
+subsubsection \<open> Types \<close>
+enumtype SIDS_changeDirection = SID_changeDirection
+	              | SID_changeDirection_From
+	              | SID_changeDirection_j0
+
+definition "SIDS_changeDirection_list = enum_SIDS_changeDirection_inst.enum_SIDS_changeDirection"
+definition "SIDS_changeDirection_set = set SIDS_changeDirection_list"
+definition "SIDS_changeDirection_nodes = (removeAll SID_changeDirection SIDS_changeDirection_list)"
+definition "SIDS_changeDirection_no_From = (removeAll SID_changeDirection_From SIDS_changeDirection_list)"
+definition "SIDS_changeDirection_no_j0 = (removeAll SID_changeDirection_j0 SIDS_changeDirection_list)"
+
+datatype TIDS_changeDirection = NULLTRANSITION__changeDirection
+	              | TID_changeDirection_t1
+	              | TID_changeDirection_t2
+	              | TID_changeDirection_t3
+	              | TID_changeDirection_t4
+
+definition "TIDS_changeDirection_list = [NULLTRANSITION__changeDirection,
+  TID_changeDirection_t1, TID_changeDirection_t2, TID_changeDirection_t3, 
+  TID_changeDirection_t4]"
+definition "TIDS_changeDirection_set = set TIDS_changeDirection_list"
+
+text \<open> Identifiers of transitions that can interrupt a state, excluding transitions from junctions. \<close>
+definition "ITIDS_changeDirection_list = [
+  TID_changeDirection_t1, TID_changeDirection_t3,	TID_changeDirection_t4
+]"
+definition "ITIDS_changeDirection = set ITIDS_changeDirection_list"
+
+chantype Chan_changeDirection =
+(* flow channels *)
+  internal_changeDirection :: TIDS_changeDirection
+  enter_changeDirection :: "SIDS_changeDirection \<times> SIDS_changeDirection"
+  entered_changeDirection :: "SIDS_changeDirection \<times> SIDS_changeDirection"
+  exit_changeDirection :: "SIDS_changeDirection \<times> SIDS_changeDirection"
+  exited_changeDirection :: "SIDS_changeDirection \<times> SIDS_changeDirection"
+  terminate_changeDirection :: unit
+
+(* Variables *)
+  get_l_changeDirection :: "Location_Loc"
+  set_l_changeDirection :: "Location_Loc"
+
+(* Call events for undefined operations *)
+  randomeWalkCall_changeDirection :: unit
+  moveCall_changeDirection :: "core_real \<times> Chemical_Angle"
+  shortRandomWalkCall_changeDirection :: unit
+
+subsubsection \<open> Operation Calls \<close>
+definition CALL__randomWalk_changeDirection :: "integer \<Rightarrow> (Chan_changeDirection, unit) itree" where
+"CALL__randomWalk_changeDirection idd = do {outp randomeWalkCall_changeDirection ()}"
+
+definition CALL__move_changeDirection :: "integer \<Rightarrow> core_real \<Rightarrow> Chemical_Angle \<Rightarrow> 
+  (Chan_changeDirection, unit) itree" where
+"CALL__move_changeDirection idd lv a = do {outp moveCall_changeDirection (lv, a)}"
+
+definition CALL__shortRandomWalk_changeDirection :: "integer \<Rightarrow> (Chan_changeDirection, unit) itree" where
+"CALL__shortRandomWalk_changeDirection idd = do {outp shortRandomWalkCall_changeDirection ()}"
+
+subsubsection \<open> Sets of events \<close>
+
+abbreviation "int_int_tids_changeDirection \<equiv> 
+  [TID_changeDirection_t1, TID_changeDirection_t3,	TID_changeDirection_t4]"
+
+definition int_int_changeDirection where
+"int_int_changeDirection = set (
+  (enumchan1 internal_changeDirection_C int_int_tids_changeDirection)
+)"
+
+abbreviation "enter_exit_channels_changeDirection \<equiv>
+  [enter_changeDirection_C, entered_changeDirection_C, exit_changeDirection_C, exited_changeDirection_C]"
+
+definition internal_events_changeDirection where
+"internal_events_changeDirection = set (
+  enumchans2 enter_exit_channels_changeDirection SIDS_changeDirection_list SIDS_changeDirection_list
+)"
+
+definition changeDirection_l_events where
+"changeDirection_l_events = 
+    set (enumchans1 [get_l_changeDirection_C, set_l_changeDirection_C] Location_Loc_list)
+"
+
+definition changeDirection_MachineInternalEvents where
+"changeDirection_MachineInternalEvents = 
+  set (enumchan1 internal_changeDirection_C TIDS_changeDirection_list)
+"
+
+subsubsection \<open> State Machine Memory \<close>
+text \<open> Memory cell processes \<close>
+definition changeDirection_Memory_opt_l where
+"changeDirection_Memory_opt_l = mem_of_lvar get_l_changeDirection set_l_changeDirection (Location_Loc_set)"
+
+text \<open> Memory transition processes \<close>
+definition changeDirection_MemoryTransitions_opt_0 where
+"changeDirection_MemoryTransitions_opt_0 = 
+  loop (\<lambda> id::integer. 
+    (do {outp internal_changeDirection TID_changeDirection_t2 ; Ret (id)})
+)
+"
+
+definition changeDirection_MemoryTransitions_opt_1 where
+"changeDirection_MemoryTransitions_opt_1 = 
+  loop (\<lambda> id::integer.
+    do {l \<leftarrow> inp_in get_l_changeDirection Location_Loc_set ; 
+        (
+          do {guard (l=Location_Loc_left); outp internal_changeDirection TID_changeDirection_t1 ; 
+            Ret (id)} \<box>
+          do {guard (l=Location_Loc_front); outp internal_changeDirection TID_changeDirection_t4 ; 
+            Ret (id)} \<box>
+          do {guard (l=Location_Loc_right); outp internal_changeDirection TID_changeDirection_t3 ; 
+            Ret (id)} \<box>
+          do {inp_in set_l_changeDirection Location_Loc_set ; Ret (id)}
+        )
+    }
+  )
+"
+
+subsubsection \<open> States \<close>
+paragraph \<open> Initial \<close>
+definition I_changeDirection_i0 where
+"I_changeDirection_i0 = (\<lambda> (id::integer) . 
+  do {outp internal_changeDirection TID_changeDirection_t2 ; 
+      outp enter_changeDirection (SID_changeDirection, SID_changeDirection_From);
+      outp entered_changeDirection (SID_changeDirection, SID_changeDirection_From)
+  })
+"
+
+paragraph \<open> From \<close>
+definition CS_changeDirection_From_sync where
+"CS_changeDirection_From_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_changeDirection [SID_changeDirection_From] SIDS_changeDirection_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_changeDirection SIDS_changeDirection_nodes [SID_changeDirection_From])
+)"
+
+definition changeDirection_From_triggers where
+"changeDirection_From_triggers = set (
+  (enumchan1 internal_changeDirection_C [TID_changeDirection_t1, TID_changeDirection_t3, TID_changeDirection_t4])
+)
+"
+
+definition tids_changeDirection_From where
+" tids_changeDirection_From = 
+    (filter 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__changeDirection,TID_changeDirection_t1,TID_changeDirection_t3, TID_changeDirection_t4])) 
+        ITIDS_changeDirection_list)"
+
+abbreviation Other_SIDs_to_From_changeDirection where
+"Other_SIDs_to_From_changeDirection \<equiv>
+  set [(s, SID_changeDirection_From) . s \<leftarrow> (SIDS_changeDirection_no_From)]"
+
+definition exit_event_changeDirection1 :: 
+  "integer \<Rightarrow> (TIDS_changeDirection \<Longrightarrow>\<^sub>\<triangle> Chan_changeDirection) \<Rightarrow> SIDS_changeDirection
+   \<Rightarrow> TIDS_changeDirection list \<Rightarrow> SIDS_changeDirection rel 
+   \<Rightarrow> (Chan_changeDirection, bool \<times> integer \<times> SIDS_changeDirection) itree" where
+"exit_event_changeDirection1 idd ch sid tids other_sids = 
+  do {inp_in ch (set tids);
+      y \<leftarrow> inp_in exit_changeDirection other_sids;
+      outp exited_changeDirection (fst y, sid);
+      Ret(False, idd, sid)
+}"
+
+
+definition exit_events_changeDirection ::  "integer \<Rightarrow> SIDS_changeDirection \<Rightarrow> TIDS_changeDirection list
+    \<Rightarrow> SIDS_changeDirection rel \<Rightarrow> (Chan_changeDirection, bool \<times> integer \<times> SIDS_changeDirection) itree" where
+"exit_events_changeDirection idd sid tids other_sids =
+    (exit_event_changeDirection1 idd internal_changeDirection sid tids other_sids
+    )"
+
+definition State_changeDirection_From where 
+"State_changeDirection_From = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_changeDirection Other_SIDs_to_From_changeDirection ; 
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_changeDirection_From_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {
+              outp entered_changeDirection (snd (snd s), SID_changeDirection_From);
+              (do {skip ; stop} \<triangle>
+                (
+                \<comment> \<open> T_changeDirection_t1 \<close>
+              do {outp internal_changeDirection TID_changeDirection_t1 ;
+                  outp exit_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
+                  outp exited_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
+                  guard(True); CALL__move_changeDirection id const_Location_changeDirection_lv 
+                    Chemical_Angle_Right;
+                  outp enter_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
+                  outp entered_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
+                  Ret(False, fst (snd s), SID_changeDirection_From)
+              } \<box>
+              \<comment> \<open> T_changeDirection_t3 \<close>
+              do {outp internal_changeDirection TID_changeDirection_t3 ;
+                  outp exit_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
+                  outp exited_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
+                  guard(True); CALL__move_changeDirection id const_Location_changeDirection_lv 
+                    Chemical_Angle_Left;
+                  outp enter_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
+                  outp entered_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
+                  Ret(False, fst (snd s), SID_changeDirection_From)
+              } \<box>
+              \<comment> \<open> T_changeDirection_t4 \<close>
+              do {outp internal_changeDirection TID_changeDirection_t4 ;
+                  outp exit_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
+                  outp exited_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
+                  guard(True); CALL__move_changeDirection id const_Location_changeDirection_lv 
+                    Chemical_Angle_Back;
+                  outp enter_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
+                  outp entered_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
+                  Ret(False, fst (snd s), SID_changeDirection_From)
+              } \<box>
+                (exit_events_changeDirection (fst (snd s)) SID_changeDirection_From 
+                   tids_changeDirection_From Other_SIDs_to_From_changeDirection)
+                )
+              )
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
+        Ret (id)
+  }
+)
+"
+
+definition State_changeDirection_From_R where
+"State_changeDirection_From_R (idd::integer) = 
+   (discard_state (State_changeDirection_From idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_changeDirection - changeDirection_From_triggers) \<^esub> 
+   skip
+"
+
+paragraph \<open> j0 \<close>
+definition CS_changeDirection_j0_sync where
+"CS_changeDirection_j0_sync = 
+  set (
+      \<comment> \<open> enter from x to y \<close>
+      (enumchans2 enter_exit_channels_changeDirection [SID_changeDirection_j0] SIDS_changeDirection_nodes)@
+      \<comment> \<open> enter from y to x \<close>
+      (enumchans2 enter_exit_channels_changeDirection SIDS_changeDirection_nodes [SID_changeDirection_j0])
+)"
+
+definition changeDirection_j0_triggers where
+"changeDirection_j0_triggers = set ([])
+"
+
+abbreviation Other_SIDs_to_j0_changeDirection where
+"Other_SIDs_to_j0_changeDirection \<equiv>
+  set [(s, SID_changeDirection_j0) . s \<leftarrow> (SIDS_changeDirection_no_j0)]"
+
+definition State_changeDirection_j0 where 
+"State_changeDirection_j0 = 
+  loop (\<lambda> (id::integer).
+    do {sd \<leftarrow> inp_in enter_changeDirection Other_SIDs_to_j0_changeDirection ; 
+        \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
+        ret \<leftarrow> Ret (True, id, fst sd) ; 
+        \<comment> \<open> State_changeDirection_j0_execute \<close>
+        (iterate 
+           \<comment> \<open> condition \<close>
+           (\<lambda> s. fst s) 
+           \<comment> \<open> P \<close>
+           (\<lambda> s.
+            do {
+              outp entered_changeDirection (snd (snd s), SID_changeDirection_j0);
+              outp terminate_changeDirection ();
+              Ret(False, id, SID_changeDirection_j0)
+            })
+            \<comment> \<open> The previous state: a triple \<close> 
+            (ret)
+        ) ;
+        Ret (id)
+  }
+)
+"
+
+definition State_changeDirection_j0_R where
+"State_changeDirection_j0_R (idd::integer) = 
+   (discard_state (State_changeDirection_j0 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_changeDirection - changeDirection_j0_triggers) \<^esub> 
+   skip
+"
+
+subsubsection \<open> State machine \<close>
+definition flow_events_changeDirection_stm_to_nodes where
+"flow_events_changeDirection_stm_to_nodes = (
+ let nodes = [SID_changeDirection_From, SID_changeDirection_j0]
+ in set (
+      enumchans2 [enter_changeDirection_C, entered_changeDirection_C,
+          exit_changeDirection_C,exited_changeDirection_C] 
+          (filter (\<lambda> s. s \<notin> set nodes) SIDS_changeDirection_list) nodes
+  )
+)"
+
+definition STM_changeDirection_1 where
+"STM_changeDirection_1 (idd::integer) =
+  (State_changeDirection_From_R(idd)  
+    \<parallel>\<^bsub> CS_changeDirection_From_sync \<inter> CS_changeDirection_j0_sync \<^esub> 
+  State_changeDirection_j0_R(idd))
+"
+
+definition STM_changeDirection where
+"STM_changeDirection (idd::integer) = 
+   (I_changeDirection_i0(idd))
+    \<parallel>\<^bsub> flow_events_changeDirection_stm_to_nodes \<^esub> 
+   STM_changeDirection_1(idd)
+"
+
+definition STM_core_changeDirection where
+"STM_core_changeDirection (idd::integer) l = 
+   do {outp set_l_changeDirection l; STM_changeDirection idd}
+"
+
+definition changeDirection_opt_0_internal_set where
+"changeDirection_opt_0_internal_set = 
+  set ((enumchans1 [internal_changeDirection_C] 
+    [TID_changeDirection_t2]))"
+
+definition changeDirection_opt_1_internal_list where
+"changeDirection_opt_1_internal_list = 
+   ((enumchans1 [internal_changeDirection_C] 
+    [TID_changeDirection_t1, TID_changeDirection_t3, TID_changeDirection_t4]))"
+
+definition changeDirection_opt_1_internal_set where
+"changeDirection_opt_1_internal_set = 
+  set (changeDirection_opt_1_internal_list @ 
+  enumchan1 set_l_changeDirection_C Location_Loc_list)"
+
+definition MemorySTM_opt_changeDirection where
+"MemorySTM_opt_changeDirection (idd::integer) l = 
+    (par_hide
+      (discard_state (changeDirection_Memory_opt_l (Location_Loc_left)))
+      changeDirection_l_events
+      (hide 
+        (
+          (hide
+            (
+              (STM_core_changeDirection idd l)
+              \<parallel>\<^bsub> changeDirection_opt_0_internal_set \<^esub>
+              (discard_state (changeDirection_MemoryTransitions_opt_0 idd))
+            )
+            changeDirection_opt_0_internal_set
+          )
+          \<parallel>\<^bsub> set changeDirection_opt_1_internal_list \<^esub> 
+          (discard_state (changeDirection_MemoryTransitions_opt_1 idd))
+        )
+        changeDirection_opt_1_internal_set
+      )
+    )
+"
+
+definition AUX_opt_changeDirection where
+"AUX_opt_changeDirection (idd::integer) l = 
+  (hide 
+    ( 
+      (MemorySTM_opt_changeDirection idd l) \<lbrakk> set [terminate_changeDirection_C ()] \<Zrres> skip
+    )
+    changeDirection_MachineInternalEvents
+  )
+"
+
+text \<open> Here @{text "terminate"} is also treated as internal in an operation, which is different from 
+that of a state machine definition. \<close>
+
+definition D__changeDirection where
+"D__changeDirection (idd::integer) l = 
+  hide (hide (AUX_opt_changeDirection idd l) internal_events_changeDirection) 
+  (set [terminate_changeDirection_C ()])
+"
+
+subsection \<open> Movement state machine \<close>
 subsubsection \<open> Constants \<close>
 abbreviation const_Movement_lv :: "core_real" where
 "const_Movement_lv \<equiv> 0"
@@ -1450,7 +1827,11 @@ definition rename_MicroController_Movement_events where
   (enumchansp2_2 [(obstacle_Movement_C, obstacle_MicroController_C)] InOut_list Location_Loc_list) @
   (enumchansp2_2 [(odometer_Movement_C, odometer_MicroController_C)] InOut_list rc.core_real_list) @
   (enumchansp2_1 [(stop_Movement_C, stop_MicroController_C)] InOut_list) @
-  (enumchansp2_1 [(flag_Movement_C, flag_MicroController_C)] InOut_list)
+  (enumchansp2_1 [(flag_Movement_C, flag_MicroController_C)] InOut_list) @
+  (enumchansp2_1 [(randomeWalkCall_Movement_C, randomeWalkCall_MicroController_C), 
+      (shortRandomWalkCall_Movement_C, shortRandomWalkCall_MicroController_C)] [()]) @
+  (enumchanp2_2 (moveCall_Movement_C, moveCall_MicroController_C) rc.core_int_list 
+    Chemical_Angle_list)
 "
 
 definition rename_D__Movement where
@@ -1464,7 +1845,6 @@ definition D__MicroController where
     (discard_state (Memory_MicroController idd))
   )  \<lbrakk> set [terminate_MicroController_C ()] \<Zrres> skip
 "
-*)
 
 export_code
   Movement_Memory_opt_d0
@@ -1487,91 +1867,6 @@ in Haskell
   file_prefix RoboChart_ChemicalDetector 
   (string_classes) 
 
-
-
-
-subsection \<open> Module \<close>
-chantype Chan_mod0 =
-(* terminates of MicroController are mapped to it *)
-  terminate_mod0 :: unit 
-(* variable channels: set_x and get_x of Movement and stm1 are mapped to these channels *)
-  set_x_mod0 :: core_int
-  get_x_mod0 :: core_int
-(* shared variable channels *)
-  set_EXT_x_mod0_MicroController :: core_int
-(* e1 of Movement is mapped to it *)
-  e1_mod0 :: "InOut \<times> core_int"
-(* e2 of stm1 is mapped to it *)
-  e2_mod0 :: "InOut"
-
-definition Memory_mod0 where
-"Memory_mod0 = loop (\<lambda> id::integer.
-  ( do {x \<leftarrow> inp_in set_x_mod0 rc.core_int_set; 
-        outp set_EXT_x_mod0_MicroController x; Ret (id)}
-  )
-)"
-
-(*
-definition rename_mod0_MicroController_events where
-"rename_mod0_MicroController_events = 
-  [(terminate_MicroController_C (), terminate_mod0_C ())] @
-  [(set_x_MicroController_C n, set_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(get_x_MicroController_C n, get_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(e1_MicroController_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
-  [(e2_MicroController_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
-  [(set_EXT_x_MicroController_C n, set_EXT_x_mod0_MicroController_C n). n \<leftarrow> rc.core_int_list]
-"
-*)
-definition rename_mod0_MicroController_events where
-"rename_mod0_MicroController_events = 
-  (enumchanp2_1 (terminate_MicroController_C,terminate_mod0_C) [()]) @
-  (enumchansp2_1 [(set_x_MicroController_C, set_x_mod0_C), (get_x_MicroController_C, get_x_mod0_C), 
-      (set_EXT_x_MicroController_C, set_EXT_x_mod0_MicroController_C)] rc.core_int_list) @
-  (enumchanp2_1 (e2_MicroController_C, e2_mod0_C) InOut_list) @
-  (enumchanp2_2 (e1_MicroController_C, e1_mod0_C) InOut_list rc.core_int_list)
-"
-
-definition rename_D__MicroController where
-"rename_D__MicroController idd = rename (set rename_mod0_MicroController_events) (D__MicroController idd)"
-
-definition "mod0_set_x_events = set (
-  enumchan1 set_x_mod0_C  rc.core_int_list
-)"
-
-definition "mod0_get_x_events = set (
-  enumchan1 get_x_mod0_C  rc.core_int_list
-)"
-
-definition "mod0_set_EXT_x_events = set (
-  enumchan1 set_EXT_x_mod0_MicroController_C  rc.core_int_list
-)"
-
-definition D__ctr_mem where
-"D__ctr_mem (idd::integer) = (
-              (rename_D__MicroController idd) 
-              \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
-              (discard_state (Memory_mod0 idd))
-            )"
-
-definition D__mod0 where
-"D__mod0 (idd::integer) = 
-  (hide
-    (
-      (skip \<parallel>\<^bsub> {} \<^esub> 
-        (
-          hide 
-            (
-              (rename_D__MicroController idd) 
-              \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
-              (discard_state (Memory_mod0 idd))
-            )
-            ((mod0_set_x_events \<union> mod0_get_x_events) \<union> mod0_set_EXT_x_events)
-        )
-      )  \<lbrakk> set [terminate_mod0_C ()] \<Zrres> skip
-    )
-    (set [terminate_mod0_C ()])
-  )
-"
 
 subsection \<open> Export code \<close>
 export_code
