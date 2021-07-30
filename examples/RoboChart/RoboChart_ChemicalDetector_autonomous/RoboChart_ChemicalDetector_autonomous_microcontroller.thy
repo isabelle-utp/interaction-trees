@@ -143,21 +143,25 @@ definition CS_changeDirection_From_sync where
 "CS_changeDirection_From_sync = 
   set (
       \<comment> \<open> enter from x to y \<close>
-      (enumchans2 enter_exit_channels_changeDirection [SID_changeDirection_From] SIDS_changeDirection_nodes)@
+      (enumchans2 enter_exit_channels_changeDirection 
+        [SID_changeDirection_From] SIDS_changeDirection_nodes)@
       \<comment> \<open> enter from y to x \<close>
-      (enumchans2 enter_exit_channels_changeDirection SIDS_changeDirection_nodes [SID_changeDirection_From])
+      (enumchans2 enter_exit_channels_changeDirection 
+        SIDS_changeDirection_nodes [SID_changeDirection_From])
 )"
 
 definition changeDirection_From_triggers where
 "changeDirection_From_triggers = set (
-  (enumchan1 internal_changeDirection_C [TID_changeDirection_t1, TID_changeDirection_t3, TID_changeDirection_t4])
+  (enumchan1 internal_changeDirection_C 
+    [TID_changeDirection_t1, TID_changeDirection_t3, TID_changeDirection_t4])
 )
 "
 
 definition tids_changeDirection_From where
 " tids_changeDirection_From = 
     (filter 
-        (\<lambda> s. s \<notin> (set [NULLTRANSITION__changeDirection,TID_changeDirection_t1,TID_changeDirection_t3, TID_changeDirection_t4])) 
+        (\<lambda> s. s \<notin> (set [NULLTRANSITION__changeDirection,TID_changeDirection_t1,
+                        TID_changeDirection_t3, TID_changeDirection_t4])) 
         ITIDS_changeDirection_list)"
 
 abbreviation Other_SIDs_to_From_changeDirection where
@@ -175,9 +179,9 @@ definition exit_event_changeDirection1 ::
       Ret(False, idd, sid)
 }"
 
-
 definition exit_events_changeDirection ::  "integer \<Rightarrow> SIDS_changeDirection \<Rightarrow> TIDS_changeDirection list
-    \<Rightarrow> SIDS_changeDirection rel \<Rightarrow> (Chan_changeDirection, bool \<times> integer \<times> SIDS_changeDirection) itree" where
+    \<Rightarrow> SIDS_changeDirection rel 
+    \<Rightarrow> (Chan_changeDirection, bool \<times> integer \<times> SIDS_changeDirection) itree" where
 "exit_events_changeDirection idd sid tids other_sids =
     (exit_event_changeDirection1 idd internal_changeDirection sid tids other_sids
     )"
@@ -382,6 +386,27 @@ that of a state machine definition. \<close>
 definition D__changeDirection where
 "D__changeDirection (idd::integer) l = 
   hide (hide (AUX_opt_changeDirection idd l) internal_events_changeDirection) 
+  (set [terminate_changeDirection_C ()])
+"
+
+subsubsection \<open> State machine inside MicroController \<close>
+text \<open> This is the version inside the MicroController.csp. In this version, the memory of local 
+variables is with the state machine Movement, instead of inside this operation.
+\<close>
+
+definition AUX_changeDirection where
+"AUX_changeDirection (idd::integer) = 
+  (hide 
+    ( 
+      (STM_changeDirection idd) \<lbrakk> set [terminate_changeDirection_C ()] \<Zrres> skip
+    )
+    changeDirection_MachineInternalEvents
+  )
+"
+
+definition D__changeDirection' where
+"D__changeDirection' (idd::integer) = 
+  hide (hide (AUX_changeDirection idd) internal_events_changeDirection) 
   (set [terminate_changeDirection_C ()])
 "
 
