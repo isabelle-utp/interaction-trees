@@ -1,6 +1,6 @@
-section \<open> Simulation of a very basic RoboChart model \<close>
-text \<open> This theory aims for simulation of a trivial RoboChart model based on its CSP
- semantics. We use the @{term "rename"} operator for renaming.
+section \<open> Animation of the autonomous chemical detector RoboChart model \<close>
+text \<open> This theory aims for animation of a trivial RoboChart model based on its CSP
+ semantics. 
 \<close>
 theory RoboChart_ChemicalDetector_autonomous
   imports "RoboChart_ChemicalDetector_autonomous_general"
@@ -9,121 +9,123 @@ theory RoboChart_ChemicalDetector_autonomous
 begin
 
 subsection \<open> Module \<close>
-chantype Chan_mod0 =
-(* terminates of MainCtrl are mapped to it *)
-  terminate_mod0 :: unit 
-(* variable channels: set_x and get_x of Movement and stm1 are mapped to these channels *)
-  set_x_mod0 :: core_int
-  get_x_mod0 :: core_int
-(* shared variable channels *)
-  set_EXT_x_mod0_MainCtrl :: core_int
-(* e1 of Movement is mapped to it *)
-  e1_mod0 :: "InOut \<times> core_int"
-(* e2 of stm1 is mapped to it *)
-  e2_mod0 :: "InOut"
+chantype Chan_ChemicalDetector =
+  terminate_ChemicalDetector :: unit 
+  flag_ChemicalDetector :: "InOut"
+  gas_ChemicalDetector :: "InOut \<times> 2 Chemical_GasSensor[2]blist"
+  obstacle_ChemicalDetector :: "InOut \<times> Location_Loc"
+  odometer_ChemicalDetector :: "InOut \<times> core_real"
+  resume_ChemicalDetector :: "InOut"
+  turn_ChemicalDetector :: "InOut \<times> Chemical_Angle"
+  stop_ChemicalDetector :: "InOut"
+  randomeWalkCall_ChemicalDetector :: unit
+  moveCall_ChemicalDetector :: "core_real \<times> Chemical_Angle"
+  shortRandomWalkCall_ChemicalDetector :: unit
 
-definition Memory_mod0 where
-"Memory_mod0 = loop (\<lambda> id::integer.
-  ( do {x \<leftarrow> inp_in set_x_mod0 rc.core_int_set; 
-        outp set_EXT_x_mod0_MainCtrl x; Ret (id)}
-  )
-)"
+definition Memory_ChemicalDetector where
+"Memory_ChemicalDetector = skip"
 
-(*
-definition rename_mod0_MainCtrl_events where
-"rename_mod0_MainCtrl_events = 
-  [(terminate_MainCtrl_C (), terminate_mod0_C ())] @
-  [(set_x_MainCtrl_C n, set_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(get_x_MainCtrl_C n, get_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(e1_MainCtrl_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
-  [(e2_MainCtrl_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
-  [(set_EXT_x_MainCtrl_C n, set_EXT_x_mod0_MainCtrl_C n). n \<leftarrow> rc.core_int_list]
-"
-*)
-definition rename_mod0_MainCtrl_events where
-"rename_mod0_MainCtrl_events = 
-  (enumchanp2_1 (terminate_MainCtrl_C,terminate_mod0_C) [()]) @
-  (enumchansp2_1 [(set_x_MainCtrl_C, set_x_mod0_C), (get_x_MainCtrl_C, get_x_mod0_C), 
-      (set_EXT_x_MainCtrl_C, set_EXT_x_mod0_MainCtrl_C)] rc.core_int_list) @
-  (enumchanp2_1 (e2_MainCtrl_C, e2_mod0_C) InOut_list) @
-  (enumchanp2_2 (e1_MainCtrl_C, e1_mod0_C) InOut_list rc.core_int_list)
+definition rename_ChemicalDetector_D__MainController_events where
+"rename_ChemicalDetector_D__MainController_events = 
+  (enumchanp2_1 (terminate_MainController_C, terminate_ChemicalDetector_C) [()]) @
+  (enumchansp2_2 [(gas_MainController_C, gas_ChemicalDetector_C)] InOut_list lseq_gassensor_enum) @
+  (enumchansp2_2 [(turn_MainController_C, turn_ChemicalDetector_C)] InOut_list Chemical_Angle_list) @
+  (enumchansp2_1 [(stop_MainController_C, stop_ChemicalDetector_C), 
+      (resume_MainController_C, resume_ChemicalDetector_C)] InOut_list) 
 "
 
-definition rename_D__MainCtrl where
-"rename_D__MainCtrl idd = rename (set rename_mod0_MainCtrl_events) (D__MainCtrl idd)"
+definition rename_D__MainController where
+"rename_D__MainController idd = 
+  rename (set rename_ChemicalDetector_D__MainController_events) (D__MainController idd)"
 
-definition "mod0_set_x_events = set (
-  enumchan1 set_x_mod0_C  rc.core_int_list
+definition rename_ChemicalDetector_D__MicroController_events where
+"rename_ChemicalDetector_D__MicroController_events = 
+  (enumchanp2_1 (terminate_MicroController_C, terminate_ChemicalDetector_C) [()]) @
+  (enumchansp2_2 [(obstacle_MicroController_C, obstacle_ChemicalDetector_C)]  
+      InOut_list Location_Loc_list) @
+  (enumchansp2_2 [(odometer_MicroController_C, odometer_ChemicalDetector_C)]  
+      InOut_list rc.core_real_list) @
+  (enumchansp2_2 [(turn_MicroController_C, turn_ChemicalDetector_C)] 
+      InOut_list Chemical_Angle_list) @
+  (enumchansp2_1 [(flag_MicroController_C, flag_ChemicalDetector_C)] InOut_list) @
+  (enumchansp2_1 [(randomeWalkCall_MicroController_C, randomeWalkCall_ChemicalDetector_C),
+      (shortRandomWalkCall_MicroController_C, shortRandomWalkCall_ChemicalDetector_C)] [()]) @
+  (enumchansp2_2 [(moveCall_MicroController_C, moveCall_ChemicalDetector_C)]
+      rc.core_real_list Chemical_Angle_list) @
+  \<comment> \<open> stop.in of MicroController -> stop.out of ManController through stop_ChemicalDetector_C\<close>
+  [(stop_MicroController_C din, stop_ChemicalDetector_C dout),
+    (stop_MicroController_C dout, stop_ChemicalDetector_C din),
+    (resume_MicroController_C din, resume_ChemicalDetector_C dout),
+    (resume_MicroController_C dout, resume_ChemicalDetector_C din)
+  ]
+"
+
+definition rename_D__MicroController where
+"rename_D__MicroController idd = 
+  rename (set rename_ChemicalDetector_D__MicroController_events) (D__MicroController idd)"
+
+text \<open> The connection from MainController to MicroController on the event turn is asynchronous, 
+and so its CSP semantics has a buffer in between. The buffer is defined below.
+\<close>
+definition buffer0 :: "Chemical_Angle list \<Rightarrow> (Chan_ChemicalDetector, Chemical_Angle list) itree"  where
+"buffer0 = loop (\<lambda>la. 
+  do {guard(length la = 0); 
+      v \<leftarrow> inp_in turn_ChemicalDetector (set [(dout, a). a \<leftarrow> Chemical_Angle_list]); 
+      Ret [snd v]} \<box>
+  do {guard(length la > 0); 
+      x \<leftarrow> inp_in turn_ChemicalDetector (set [(dout, a). a \<leftarrow> Chemical_Angle_list]); 
+      Ret [snd x]}  \<box>
+  do {guard(length la > 0); outp turn_ChemicalDetector (din, hd la); Ret []}
 )"
 
-definition "mod0_get_x_events = set (
-  enumchan1 get_x_mod0_C  rc.core_int_list
-)"
+definition ChemicalDetector_controllers_sync_events where
+"ChemicalDetector_controllers_sync_events = (set (
+  [terminate_ChemicalDetector_C ()] @
+  (enumchans1 [resume_ChemicalDetector_C, stop_ChemicalDetector_C] InOut_list)
+))
+"
 
-definition "mod0_set_EXT_x_events = set (
-  enumchan1 set_EXT_x_mod0_MainCtrl_C  rc.core_int_list
-)"
+definition ChemicalDetector_controllers_buffer_events where
+"ChemicalDetector_controllers_buffer_events = (set (
+  (enumchans2 [turn_ChemicalDetector_C] InOut_list Chemical_Angle_list)
+))
+"
 
-definition D__ctr_mem where
-"D__ctr_mem (idd::integer) = (
-              (rename_D__MainCtrl idd) 
-              \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
-              (discard_state (Memory_mod0 idd))
-            )"
-
-definition D__mod0 where
-"D__mod0 (idd::integer) = 
+definition D__ChemicalDetector where
+"D__ChemicalDetector (idd::integer) = 
   (hide
     (
-      (skip \<parallel>\<^bsub> {} \<^esub> 
+      (par_hide 
+        (discard_state (buffer0 []))
+        ChemicalDetector_controllers_buffer_events
         (
-          hide 
-            (
-              (rename_D__MainCtrl idd) 
-              \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
-              (discard_state (Memory_mod0 idd))
-            )
-            ((mod0_set_x_events \<union> mod0_get_x_events) \<union> mod0_set_EXT_x_events)
+          (
+            hide 
+              (
+                (rename_D__MainController idd) 
+                \<parallel>\<^bsub> (ChemicalDetector_controllers_sync_events) \<^esub> 
+                (rename_D__MicroController idd)
+              )
+              (ChemicalDetector_controllers_sync_events - (set [terminate_ChemicalDetector_C ()]))
+          )
+          \<parallel>\<^bsub> (set []) \<^esub> 
+          Memory_ChemicalDetector
         )
-      )  \<lbrakk> set [terminate_mod0_C ()] \<Zrres> skip
+      ) \<lbrakk> set [terminate_ChemicalDetector_C ()] \<Zrres> skip
     )
-    (set [terminate_mod0_C ()])
+    (set [terminate_ChemicalDetector_C ()])
   )
 "
 
 subsection \<open> Export code \<close>
 export_code
-  Movement_Memory_opt_x
-  Movement_Memory_opt_l
-  Movement_MemoryTransitions_opt_0
-  Movement_MemoryTransitions_opt_1
-  I_Movement_i0
-  State_Movement_s0
-  State_Movement_s0_R
-  STM_Movement
-  MemorySTM_opt_Movement 
-  rename_MemorySTM_opt_Movement
-  D__Movement 
-  stm1_Memory_opt_x
-  stm1_MemoryTransitions_opt_0
-  I_stm1_i0
-  State_stm1_s0
-  State_stm1_s0_R
-  STM_stm1
-  MemorySTM_opt_stm1
-  D__stm1
-  rename_D__Movement
-  rename_D__stm1
-  D__MainCtrl
-  rename_D__MainCtrl
-  D__ctr_mem
-  D__mod0
+  D__ChemicalDetector
   in Haskell 
-  (* module_name RoboChart_basic *)
-  file_prefix RoboChart_basic 
-  (string_classes) 
+  (* module_name RoboChart_ChemicalDetector *)
+  file_prefix RoboChart_ChemicalDetector 
+  (string_classes)
 
-generate_file \<open>code/RoboChart_basic/Simulate.hs\<close> = 
+generate_file \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close> = 
 \<open>module Simulate (simulate) where
 import qualified Interaction_Trees;
 import qualified Partial_Fun;
@@ -163,6 +165,6 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interactio
 simulate = simulate_cnt 0;
 \<close>
 
-export_generated_files \<open>code/RoboChart_basic/Simulate.hs\<close>
+export_generated_files \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close>
 
 end
