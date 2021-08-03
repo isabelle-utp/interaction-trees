@@ -692,7 +692,7 @@ definition STM_GasAnalysis where
    (I_GasAnalysis_i1(idd))
     \<parallel>\<^bsub> flow_events_GasAnalysis_stm_to_nodes \<^esub> 
    (State_GasAnalysis_NoGas_R(idd)
-      \<parallel>\<^bsub> CS_GasAnalysis_Analysis_sync \<inter> (CS_GasAnalysis_Analysis_sync \<union> 
+      \<parallel>\<^bsub> CS_GasAnalysis_NoGas_sync \<inter> (CS_GasAnalysis_Analysis_sync \<union> 
           (CS_GasAnalysis_GasDetected_sync \<union> (CS_GasAnalysis_j1_sync \<union> CS_GasAnalysis_Reading_sync))) \<^esub>
       (State_GasAnalysis_Analysis_R(idd)
         \<parallel>\<^bsub> CS_GasAnalysis_Analysis_sync \<inter> (CS_GasAnalysis_GasDetected_sync \<union> 
@@ -724,7 +724,8 @@ definition GasAnalysis_opt_1_internal_set where
 
 definition GasAnalysis_opt_2_internal_set where
 "GasAnalysis_opt_2_internal_set = 
-  set ((enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t8, TID_GasAnalysis_t9a])
+  set ((enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t8, TID_GasAnalysis_t9a] @
+      (enumchans1 [set_i_GasAnalysis_C] Chemical_Intensity2_list))
 )"
 
 definition MemorySTM_opt_GasAnalysis where
@@ -732,36 +733,39 @@ definition MemorySTM_opt_GasAnalysis where
   (par_hide
     (discard_state (GasAnalysis_Memory_opt_i (Chemical_IntensityC (0::2))))
     GasAnalysis_i_events
-    (par_hide 
-      (par_hide
-        (discard_state (GasAnalysis_Memory_opt_st (Chemical_Status_noGas)))
-        GasAnalysis_st_events
-        (hide 
-          (
-            (hide
-              (
-                (par_hide
-                  (discard_state (GasAnalysis_Memory_opt_gs (bmake TYPE(2) [])))
-                  GasAnalysis_gs_events
-                  (par_hide 
-                    (discard_state (GasAnalysis_Memory_opt_a Chemical_Angle_Left)) 
-                    GasAnalysis_a_events 
-                    (STM_GasAnalysis idd)
+    (hide 
+      (
+        (par_hide
+          (discard_state (GasAnalysis_Memory_opt_st (Chemical_Status_noGas)))
+          GasAnalysis_st_events
+          (hide 
+            (
+              (hide
+                (
+                  (par_hide
+                    (discard_state (GasAnalysis_Memory_opt_gs (bmake TYPE(2) [])))
+                    GasAnalysis_gs_events
+                    (par_hide 
+                      (discard_state (GasAnalysis_Memory_opt_a Chemical_Angle_Left)) 
+                      GasAnalysis_a_events 
+                      (STM_GasAnalysis idd)
+                    )
                   )
+                  \<parallel>\<^bsub> GasAnalysis_opt_0_internal_set \<^esub>
+                  (discard_state (GasAnalysis_MemoryTransitions_opt_0 idd))
                 )
-                \<parallel>\<^bsub> GasAnalysis_opt_0_internal_set \<^esub>
-                (discard_state (GasAnalysis_MemoryTransitions_opt_0 idd))
+                ({internal_GasAnalysis_C TID_GasAnalysis_t1})
               )
-              ({internal_GasAnalysis_C TID_GasAnalysis_t1})
+              \<parallel>\<^bsub> GasAnalysis_opt_1_internal_set \<^esub> 
+              (discard_state (GasAnalysis_MemoryTransitions_opt_1 idd))
             )
-            \<parallel>\<^bsub> GasAnalysis_opt_1_internal_set \<^esub> 
-            (discard_state (GasAnalysis_MemoryTransitions_opt_1 idd))
+            (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t4, TID_GasAnalysis_t3]))
           )
-          (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t4, TID_GasAnalysis_t3]))
         )
+        \<parallel>\<^bsub> GasAnalysis_opt_2_internal_set \<^esub>
+        (discard_state (GasAnalysis_MemoryTransitions_opt_2 idd))
       )
-      GasAnalysis_opt_2_internal_set
-      (discard_state (GasAnalysis_MemoryTransitions_opt_2 idd))
+      (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t8, TID_GasAnalysis_t9a]))
     )
   )   
 "
@@ -854,6 +858,7 @@ definition D__MainController where
   )  \<lbrakk> set [terminate_MainController_C ()] \<Zrres> skip
 "
 
+subsubsection \<open> Export code \<close>
 export_code
   GasAnalysis_Memory_opt_gs
   GasAnalysis_MemoryTransitions_opt_0
@@ -866,9 +871,12 @@ export_code
   State_GasAnalysis_GasDetected_R
   State_GasAnalysis_j1_R
   State_GasAnalysis_Reading_R
+  STM_GasAnalysis
   MemorySTM_opt_GasAnalysis
+  rename_MemorySTM_opt_GasAnalysis
   AUX_opt_GasAnalysis
   D__GasAnalysis
+  D__MainController
 in Haskell 
   (* module_name GasAnalysis *)
   file_prefix RoboChart_ChemicalDetector 

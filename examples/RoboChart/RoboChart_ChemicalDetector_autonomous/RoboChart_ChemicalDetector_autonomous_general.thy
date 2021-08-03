@@ -5,7 +5,7 @@ theory RoboChart_ChemicalDetector_autonomous_general
 begin
 
 subsection \<open> General definitions \<close>
-interpretation rc: robochart_confs "-2" "2" "2" "-2" "2".
+interpretation rc: robochart_confs "-2" "2" "2" "0" "1".
 
 subsubsection \<open> Constants \<close>
 

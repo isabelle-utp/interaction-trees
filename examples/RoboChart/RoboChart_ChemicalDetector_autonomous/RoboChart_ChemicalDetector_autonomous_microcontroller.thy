@@ -1698,6 +1698,17 @@ definition STM_Movement_5 where
   STM_Movement_4(idd))
 "
 
+definition STM_Movement_5' where
+"STM_Movement_5' (idd::integer) =
+  (State_Movement_Going_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_Going_sync \<inter>
+      (CS_Movement_j1_sync \<union>
+        (CS_Movement_Avoiding_sync \<union>
+          (CS_Movement_TryingAgain_sync \<union> 
+            (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync)))) \<^esub> 
+  STM_Movement_4(idd))
+"
+
 definition STM_Movement_6 where
 "STM_Movement_6 (idd::integer) =
   (State_Movement_Going_R(idd)  
@@ -1706,7 +1717,21 @@ definition STM_Movement_6 where
         (CS_Movement_j1_sync \<union>
           (CS_Movement_Avoiding_sync \<union>
             (CS_Movement_TryingAgain_sync \<union> 
-              (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync))))) \<^esub> 
+              (CS_Movement_AvoidingAgain_sync \<union> 
+                CS_Movement_GettingOut_sync))))) \<^esub> 
+  STM_Movement_5(idd))
+"
+
+definition STM_Movement_6' where
+"STM_Movement_6' (idd::integer) =
+  (State_Movement_Waiting_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_Waiting_sync \<inter>
+      (CS_Movement_Found_sync \<union>
+        (CS_Movement_j1_sync \<union>
+          (CS_Movement_Avoiding_sync \<union>
+            (CS_Movement_TryingAgain_sync \<union> 
+              (CS_Movement_AvoidingAgain_sync \<union> 
+                CS_Movement_GettingOut_sync))))) \<^esub> 
   STM_Movement_5(idd))
 "
 
@@ -1728,6 +1753,55 @@ definition STM_Movement where
    (I_Movement_i1(idd))
     \<parallel>\<^bsub> flow_events_Movement_stm_to_nodes \<^esub> 
    STM_Movement_7(idd)
+"
+
+definition STM_Movement' where
+"STM_Movement' (idd::integer) = 
+   (I_Movement_i1(idd))
+    \<parallel>\<^bsub> flow_events_Movement_stm_to_nodes \<^esub> 
+   ((State_Movement_Waiting_R(idd)  
+    \<parallel>\<^bsub> CS_Movement_Waiting_sync \<inter>
+      (CS_Movement_Going_sync \<union>
+        (CS_Movement_Found_sync \<union>
+          (CS_Movement_j1_sync \<union>
+            (CS_Movement_Avoiding_sync \<union>
+              (CS_Movement_TryingAgain_sync \<union> 
+                (CS_Movement_AvoidingAgain_sync \<union> 
+                  CS_Movement_GettingOut_sync)))))) \<^esub> 
+      (State_Movement_Going_R(idd)  
+        \<parallel>\<^bsub> CS_Movement_Going_sync \<inter>
+          (CS_Movement_Found_sync \<union>
+            (CS_Movement_j1_sync \<union>
+              (CS_Movement_Avoiding_sync \<union>
+                (CS_Movement_TryingAgain_sync \<union> 
+                  (CS_Movement_AvoidingAgain_sync \<union> 
+                    CS_Movement_GettingOut_sync))))) \<^esub> 
+      (State_Movement_Found_R(idd)  
+        \<parallel>\<^bsub> CS_Movement_Found_sync \<inter>
+          (CS_Movement_j1_sync \<union>
+            (CS_Movement_Avoiding_sync \<union>
+              (CS_Movement_TryingAgain_sync \<union> 
+                (CS_Movement_AvoidingAgain_sync \<union> 
+                  CS_Movement_GettingOut_sync)))) \<^esub> 
+      (State_Movement_j1_R(idd)  
+        \<parallel>\<^bsub> CS_Movement_j1_sync \<inter>
+          (CS_Movement_Avoiding_sync \<union>
+            (CS_Movement_TryingAgain_sync \<union> 
+              (CS_Movement_AvoidingAgain_sync \<union> 
+                CS_Movement_GettingOut_sync))) \<^esub> 
+      (State_Movement_Avoiding_R(idd)  
+        \<parallel>\<^bsub> CS_Movement_Avoiding_sync \<inter> 
+          (CS_Movement_TryingAgain_sync \<union> 
+            (CS_Movement_AvoidingAgain_sync \<union> 
+              CS_Movement_GettingOut_sync)) \<^esub> 
+      (State_Movement_TryingAgain_R(idd)  
+        \<parallel>\<^bsub> CS_Movement_TryingAgain_sync \<inter> 
+          (CS_Movement_AvoidingAgain_sync \<union> 
+            CS_Movement_GettingOut_sync) \<^esub> 
+      (State_Movement_AvoidingAgain_R(idd)  
+        \<parallel>\<^bsub> CS_Movement_AvoidingAgain_sync \<inter> 
+          CS_Movement_GettingOut_sync \<^esub> 
+       State_Movement_GettingOut_R(idd)))))))))
 "
 
 definition Movement_opt_0_internal_set where
@@ -1921,14 +1995,26 @@ export_code
   changeDirection_MemoryTransitions_opt_1
   Movement_MemoryTransitions_opt_2
   I_Movement_i1
+  State_Movement_AvoidingAgain_R
+  State_Movement_Waiting_R
+  State_Movement_TryingAgain_R
+  State_Movement_Avoiding_R
+  State_Movement_j1_R
+  State_Movement_Found_R
+  State_Movement_Going_R
   STM_Movement_1
   STM_Movement_2
   STM_Movement_3
   STM_Movement_4
   STM_Movement_5
+  STM_Movement_5'
   STM_Movement_6
+  STM_Movement_6'
   STM_Movement_7
   STM_Movement
+  STM_Movement'
+  AUX_opt_Movement
+  D__Movement
   D__MicroController
 (*
   State_Movement_Waiting
