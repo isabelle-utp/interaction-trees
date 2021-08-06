@@ -952,7 +952,7 @@ definition State_Movement_Waiting where
                       Ret(True, fst (snd s), SID_Movement_Waiting)
                     } \<box>
                 \<comment> \<open> T_Movement_t15 \<close>
-                do {outp resume__Movement (TID_Movement_t15, din) ;
+                do {outp stop__Movement (TID_Movement_t15, din) ;
                       outp exit_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       outp exited_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       outp enter_Movement (SID_Movement_Waiting, SID_Movement_Found);
