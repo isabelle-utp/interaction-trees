@@ -7,6 +7,8 @@ begin
 subsection \<open> General definitions \<close>
 interpretation rc: robochart_confs "-2" "2" "2" "0" "1".
 
+declare pfun_entries_alist [code]
+
 subsubsection \<open> Constants \<close>
 
 subsubsection \<open> Types \<close>
@@ -16,6 +18,8 @@ subsubsection \<open> Types \<close>
 datatype ('a::finite) Chemical_Chem = Chemical_ChemC 'a
 
 abbreviation "Chemical_Chem2_list \<equiv> [Chemical_ChemC (0::2), Chemical_ChemC (1::2)]"
+\<comment> \<open> Use abbreviation (instead of definition) here, otherwise it cannot pattern match a list based 
+set\<close>
 abbreviation "Chemical_Chem2_set \<equiv> set Chemical_Chem2_list"
 
 definition Chemical_Chem_is_zero::"(2 Chemical_Chem) \<Rightarrow> bool" where
@@ -176,7 +180,7 @@ subsection \<open> Location package \<close>
 enumtype Location_Loc = 
   Location_Loc_left | Location_Loc_right | Location_Loc_front
 
-definition "Location_Loc_list = enum_Location_Loc_inst.enum_Location_Loc"
-definition "Location_Loc_set = set Location_Loc_list"
+abbreviation "Location_Loc_list \<equiv> enum_Location_Loc_inst.enum_Location_Loc"
+abbreviation "Location_Loc_set \<equiv> set Location_Loc_list"
 
 end

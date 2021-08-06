@@ -35,12 +35,12 @@ datatype SIDS_changeDirection = SID_changeDirection
 	              | SID_changeDirection_j0
 
 (* definition "SIDS_changeDirection_list = enum_SIDS_changeDirection_inst.enum_SIDS_changeDirection"*)
-definition "SIDS_changeDirection_list = [
+abbreviation "SIDS_changeDirection_list \<equiv> [
   SID_changeDirection, SID_changeDirection_From, SID_changeDirection_j0]"
-definition "SIDS_changeDirection_set = set SIDS_changeDirection_list"
-definition "SIDS_changeDirection_nodes = (removeAll SID_changeDirection SIDS_changeDirection_list)"
-definition "SIDS_changeDirection_no_From = (removeAll SID_changeDirection_From SIDS_changeDirection_list)"
-definition "SIDS_changeDirection_no_j0 = (removeAll SID_changeDirection_j0 SIDS_changeDirection_list)"
+abbreviation "SIDS_changeDirection_set \<equiv> set SIDS_changeDirection_list"
+abbreviation "SIDS_changeDirection_nodes \<equiv> (removeAll SID_changeDirection SIDS_changeDirection_list)"
+abbreviation "SIDS_changeDirection_no_From \<equiv> (removeAll SID_changeDirection_From SIDS_changeDirection_list)"
+abbreviation "SIDS_changeDirection_no_j0 \<equiv> (removeAll SID_changeDirection_j0 SIDS_changeDirection_list)"
 
 datatype TIDS_changeDirection = NULLTRANSITION__changeDirection
 	              | TID_changeDirection_t1
@@ -48,16 +48,16 @@ datatype TIDS_changeDirection = NULLTRANSITION__changeDirection
 	              | TID_changeDirection_t3
 	              | TID_changeDirection_t4
 
-definition "TIDS_changeDirection_list = [NULLTRANSITION__changeDirection,
+abbreviation "TIDS_changeDirection_list \<equiv> [NULLTRANSITION__changeDirection,
   TID_changeDirection_t1, TID_changeDirection_t2, TID_changeDirection_t3, 
   TID_changeDirection_t4]"
-definition "TIDS_changeDirection_set = set TIDS_changeDirection_list"
+abbreviation "TIDS_changeDirection_set \<equiv> set TIDS_changeDirection_list"
 
 text \<open> Identifiers of transitions that can interrupt a state, excluding transitions from junctions. \<close>
-definition "ITIDS_changeDirection_list = [
+abbreviation "ITIDS_changeDirection_list \<equiv> [
   TID_changeDirection_t1, TID_changeDirection_t3,	TID_changeDirection_t4
 ]"
-definition "ITIDS_changeDirection = set ITIDS_changeDirection_list"
+abbreviation "ITIDS_changeDirection \<equiv> set ITIDS_changeDirection_list"
 
 (**************************Movement************************************)
 datatype SIDS_Movement = SID_Movement
@@ -71,19 +71,19 @@ datatype SIDS_Movement = SID_Movement
 	              | SID_Movement_GettingOut
 
 (* definition "SIDS_Movement_list = enum_SIDS_Movement_inst.enum_SIDS_Movement"*)
-definition "SIDS_Movement_list = [SID_Movement, SID_Movement_Waiting, SID_Movement_Going, 
+abbreviation "SIDS_Movement_list \<equiv> [SID_Movement, SID_Movement_Waiting, SID_Movement_Going, 
   SID_Movement_Found, SID_Movement_j1, SID_Movement_Avoiding, SID_Movement_TryingAgain,
   SID_Movement_AvoidingAgain, SID_Movement_GettingOut]"
-definition "SIDS_Movement_set = set SIDS_Movement_list"
-definition "SIDS_Movement_nodes = (removeAll SID_Movement SIDS_Movement_list)"
-definition "SIDS_Movement_no_Waiting = (removeAll SID_Movement_Waiting SIDS_Movement_list)"
-definition "SIDS_Movement_no_Going = (removeAll SID_Movement_Going SIDS_Movement_list)"
-definition "SIDS_Movement_no_Found = (removeAll SID_Movement_Found SIDS_Movement_list)"
-definition "SIDS_Movement_no_Avoiding = (removeAll SID_Movement_Avoiding SIDS_Movement_list)"
-definition "SIDS_Movement_no_j1 = (removeAll SID_Movement_j1 SIDS_Movement_list)"
-definition "SIDS_Movement_no_TryingAgain = (removeAll SID_Movement_TryingAgain SIDS_Movement_list)"
-definition "SIDS_Movement_no_AvoidingAgain = (removeAll SID_Movement_AvoidingAgain SIDS_Movement_list)"
-definition "SIDS_Movement_no_GettingOut = (removeAll SID_Movement_GettingOut SIDS_Movement_list)"
+abbreviation "SIDS_Movement_set \<equiv> set SIDS_Movement_list"
+abbreviation "SIDS_Movement_nodes \<equiv> (removeAll SID_Movement SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_Waiting \<equiv> (removeAll SID_Movement_Waiting SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_Going \<equiv> (removeAll SID_Movement_Going SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_Found \<equiv> (removeAll SID_Movement_Found SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_Avoiding \<equiv> (removeAll SID_Movement_Avoiding SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_j1 \<equiv> (removeAll SID_Movement_j1 SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_TryingAgain \<equiv> (removeAll SID_Movement_TryingAgain SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_AvoidingAgain \<equiv> (removeAll SID_Movement_AvoidingAgain SIDS_Movement_list)"
+abbreviation "SIDS_Movement_no_GettingOut \<equiv> (removeAll SID_Movement_GettingOut SIDS_Movement_list)"
 
 (* Here we change enumtype to datatype as enumtype will take very long time to resolve 
 this definition (I mean Isabelle keeps running poly and high CPU usage.) *)
@@ -171,7 +171,7 @@ abbreviation TID_Movement_t22 :: "TIDS_Movement" where
 (*
 definition "TIDS_Movement_list = enum_TIDS_Movement_inst.enum_TIDS_Movement"
 *)
-definition "TIDS_Movement_list = [NULLTRANSITION__Movement, TID_Movement_t0,
+abbreviation "TIDS_Movement_list \<equiv> [NULLTRANSITION__Movement, TID_Movement_t0,
   TID_Movement_t1, TID_Movement_t2, TID_Movement_t3, TID_Movement_t4, TID_Movement_t5,
   TID_Movement_t6, TID_Movement_t7, TID_Movement_t8, TID_Movement_t9, TID_Movement_t10, 
   TID_Movement_t11, TID_Movement_t12, TID_Movement_t13, TID_Movement_t14, TID_Movement_t15, 
@@ -182,10 +182,10 @@ definition "TIDS_Movement_list = [NULLTRANSITION__Movement, TID_Movement_t0,
 definition "TIDS_Movement_list \<equiv> 
   map ((MkTrid TYPE(Movement)) \<circ> (\<lambda>i. (Abs_bit0' i)::(24))) (upt 0 (CARD(24)))"
 *)
-definition "TIDS_Movement_set = set TIDS_Movement_list"
+abbreviation "TIDS_Movement_set \<equiv> set TIDS_Movement_list"
 
 text \<open> Identifiers of transitions that can interrupt a state, excluding transitions from junctions. \<close>
-definition "ITIDS_Movement_list = [TID_Movement_t0,
+abbreviation "ITIDS_Movement_list \<equiv> [TID_Movement_t0,
   TID_Movement_t2, TID_Movement_t3,	TID_Movement_t4, TID_Movement_t5, TID_Movement_t6, 
   TID_Movement_t7, TID_Movement_t8,	TID_Movement_t9, TID_Movement_t10,	TID_Movement_t11,
   TID_Movement_t12,	TID_Movement_t13, TID_Movement_t14,	TID_Movement_t15, TID_Movement_t16,
@@ -193,7 +193,7 @@ definition "ITIDS_Movement_list = [TID_Movement_t0,
   TID_Movement_t22  
 ]"
 
-definition "ITIDS_Movement = set ITIDS_Movement_list"
+abbreviation "ITIDS_Movement \<equiv> set ITIDS_Movement_list"
 
 chantype Chan_Movement =
 (* flow channels *)
@@ -276,26 +276,26 @@ subsubsection \<open> Sets of events \<close>
 abbreviation "int_int_tids_changeDirection \<equiv> 
   [TID_changeDirection_t1, TID_changeDirection_t3,	TID_changeDirection_t4]"
 
-definition int_int_changeDirection where
-"int_int_changeDirection = set (
+abbreviation int_int_changeDirection where
+"int_int_changeDirection \<equiv> set (
   (enumchan1 internal_changeDirection_C int_int_tids_changeDirection)
 )"
 
 abbreviation "enter_exit_channels_changeDirection \<equiv>
   [enter_changeDirection_C, entered_changeDirection_C, exit_changeDirection_C, exited_changeDirection_C]"
 
-definition internal_events_changeDirection where
-"internal_events_changeDirection = set (
+abbreviation internal_events_changeDirection where
+"internal_events_changeDirection \<equiv> set (
   enumchans2 enter_exit_channels_changeDirection SIDS_changeDirection_list SIDS_changeDirection_list
 )"
 
-definition changeDirection_l_events where
-"changeDirection_l_events = 
+abbreviation changeDirection_l_events where
+"changeDirection_l_events \<equiv> 
     set (enumchans1 [get_l_changeDirection_C, set_l_changeDirection_C] Location_Loc_list)
 "
 
-definition changeDirection_MachineInternalEvents where
-"changeDirection_MachineInternalEvents = 
+abbreviation changeDirection_MachineInternalEvents where
+"changeDirection_MachineInternalEvents \<equiv> 
   set (enumchan1 internal_changeDirection_C TIDS_changeDirection_list)
 "
 
@@ -318,8 +318,8 @@ definition I_changeDirection_i0 where
 "
 
 paragraph \<open> From \<close>
-definition CS_changeDirection_From_sync where
-"CS_changeDirection_From_sync = 
+abbreviation CS_changeDirection_From_sync where
+"CS_changeDirection_From_sync \<equiv>
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_changeDirection 
@@ -329,8 +329,8 @@ definition CS_changeDirection_From_sync where
         SIDS_changeDirection_nodes [SID_changeDirection_From])
 )"
 
-definition changeDirection_From_triggers where
-"changeDirection_From_triggers = set (
+abbreviation changeDirection_From_triggers where
+"changeDirection_From_triggers \<equiv> set (
   (enumchan1 internal_changeDirection_C 
     [TID_changeDirection_t1, TID_changeDirection_t3, TID_changeDirection_t4])
 )
@@ -432,8 +432,8 @@ definition State_changeDirection_From_R where
 "
 
 paragraph \<open> j0 \<close>
-definition CS_changeDirection_j0_sync where
-"CS_changeDirection_j0_sync = 
+abbreviation CS_changeDirection_j0_sync where
+"CS_changeDirection_j0_sync \<equiv>
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_changeDirection [SID_changeDirection_j0] SIDS_changeDirection_nodes)@
@@ -441,8 +441,8 @@ definition CS_changeDirection_j0_sync where
       (enumchans2 enter_exit_channels_changeDirection SIDS_changeDirection_nodes [SID_changeDirection_j0])
 )"
 
-definition changeDirection_j0_triggers where
-"changeDirection_j0_triggers = set ([])
+abbreviation changeDirection_j0_triggers where
+"changeDirection_j0_triggers \<equiv> set ([])
 "
 
 abbreviation Other_SIDs_to_j0_changeDirection where
@@ -482,8 +482,8 @@ definition State_changeDirection_j0_R where
 "
 
 subsubsection \<open> State machine \<close>
-definition flow_events_changeDirection_stm_to_nodes where
-"flow_events_changeDirection_stm_to_nodes = (
+abbreviation flow_events_changeDirection_stm_to_nodes where
+"flow_events_changeDirection_stm_to_nodes \<equiv> (
  let nodes = [SID_changeDirection_From, SID_changeDirection_j0]
  in set (
       enumchans2 [enter_changeDirection_C, entered_changeDirection_C,
@@ -574,7 +574,10 @@ subsubsection \<open> State machine inside MicroController \<close>
 text \<open> This is the version inside the MicroController.csp. In this version, the memory of local 
 variables is with the state machine Movement, instead of inside this operation.
 \<close>
+(* This process will deadlock because there are three internal events enabled and hidden. 
+See the definition of hide. *)
 
+(*
 definition AUX_changeDirection where
 "AUX_changeDirection (idd::integer) = 
   (hide 
@@ -583,6 +586,16 @@ definition AUX_changeDirection where
     )
     changeDirection_MachineInternalEvents
   )
+"
+*)
+
+(* This version inside MicroController.csp actually won't hide internal__ events.
+These events are hidden later in AUX_opt_Movement.*)
+definition AUX_changeDirection where
+"AUX_changeDirection (idd::integer) = 
+    ( 
+      (STM_changeDirection idd) \<lbrakk> set [terminate_changeDirection_C ()] \<Zrres> skip
+    )
 "
 
 definition D__changeDirection where
@@ -593,7 +606,8 @@ definition D__changeDirection where
 
 subsection \<open> Movement state machine \<close>
 subsubsection \<open> Operation Calls \<close>
-definition CALL__changeDirection_Movement :: "integer \<Rightarrow> Location_Loc \<Rightarrow> (Chan_Movement, unit) itree" where
+definition CALL__changeDirection_Movement 
+  :: "integer \<Rightarrow> Location_Loc \<Rightarrow> (Chan_Movement, unit) itree" where
 "CALL__changeDirection_Movement idd l = do {outp set_l_changeDirection l; D__changeDirection idd}"
 
 subsubsection \<open> Sets of events \<close>
@@ -607,8 +621,8 @@ abbreviation "int_int_tids_Movement \<equiv>
   TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t19, TID_Movement_t20, 
   TID_Movement_t21, TID_Movement_t22]*)
 
-definition int_int_Movement where
-"int_int_Movement = set (
+abbreviation int_int_Movement where
+"int_int_Movement \<equiv> set (
   (enumchans3 [obstacle__Movement_C] int_int_tids_Movement InOut_list Location_Loc_list) @
   (enumchans3 [odometer__Movement_C] int_int_tids_Movement InOut_list rc.core_real_list) @
   (enumchans2 [resume__Movement_C, stop__Movement_C, flag__Movement_C] 
@@ -620,34 +634,34 @@ definition int_int_Movement where
 abbreviation "enter_exit_channels_Movement \<equiv>
   [enter_Movement_C, entered_Movement_C, exit_Movement_C, exited_Movement_C]"
 
-definition internal_events_Movement where
-"internal_events_Movement = set (
+abbreviation internal_events_Movement where
+"internal_events_Movement \<equiv> set (
   enumchans2 enter_exit_channels_Movement SIDS_Movement_list SIDS_Movement_list
 )"
 
 
-definition Movement_d0_events where
-"Movement_d0_events = 
+abbreviation Movement_d0_events where
+"Movement_d0_events \<equiv> 
     set (enumchans1 [get_d0_Movement_C, set_d0_Movement_C] rc.core_real_list)
 "
 
-definition Movement_d1_events where
-"Movement_d1_events = 
+abbreviation Movement_d1_events where
+"Movement_d1_events \<equiv> 
     set (enumchans1 [get_d1_Movement_C, set_d1_Movement_C] rc.core_real_list)
 "
 
-definition Movement_l_events where
-"Movement_l_events = 
+abbreviation Movement_l_events where
+"Movement_l_events \<equiv> 
     set (enumchans1 [get_l_Movement_C, set_l_Movement_C] Location_Loc_list)
 "
 
-definition Movement_a_events where
-"Movement_a_events = 
+abbreviation Movement_a_events where
+"Movement_a_events \<equiv> 
     set (enumchans1 [get_a_Movement_C, set_a_Movement_C] Chemical_Angle_list)
 "
 
-definition Movement_MachineInternalEvents where
-"Movement_MachineInternalEvents = 
+abbreviation Movement_MachineInternalEvents where
+"Movement_MachineInternalEvents \<equiv>
   set (enumchan1 internal_Movement_C TIDS_Movement_list)
 "
 
@@ -769,8 +783,8 @@ definition I_Movement_i1 where
 "
 
 paragraph \<open> Waiting \<close>
-definition CS_Movement_Waiting_sync where
-"CS_Movement_Waiting_sync = 
+abbreviation CS_Movement_Waiting_sync where
+"CS_Movement_Waiting_sync \<equiv> 
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_Waiting] SIDS_Movement_nodes)@
@@ -778,8 +792,8 @@ definition CS_Movement_Waiting_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Waiting])
 )"
 
-definition Movement_Waiting_triggers where
-"Movement_Waiting_triggers = set (
+abbreviation Movement_Waiting_triggers where
+"Movement_Waiting_triggers \<equiv> set (
   (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list) @
   (enumchans2 [resume__Movement_C] 
     [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10, 
@@ -966,8 +980,8 @@ definition State_Movement_Waiting_R where
 "
 
 paragraph \<open> Going \<close>
-definition CS_Movement_Going_sync where
-"CS_Movement_Going_sync = 
+abbreviation CS_Movement_Going_sync where
+"CS_Movement_Going_sync \<equiv> 
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_Going] SIDS_Movement_nodes)@
@@ -975,8 +989,8 @@ definition CS_Movement_Going_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Going])
 )"
 
-definition Movement_Going_triggers where
-"Movement_Going_triggers = set (
+abbreviation Movement_Going_triggers where
+"Movement_Going_triggers \<equiv> set (
   (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
     [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
@@ -1070,8 +1084,8 @@ definition State_Movement_Going_R where
 "
 
 paragraph \<open> Found \<close>
-definition CS_Movement_Found_sync where
-"CS_Movement_Found_sync = 
+abbreviation CS_Movement_Found_sync where
+"CS_Movement_Found_sync \<equiv> 
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_Found] SIDS_Movement_nodes)@
@@ -1079,8 +1093,8 @@ definition CS_Movement_Found_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Found])
 )"
 
-definition Movement_Found_triggers where
-"Movement_Found_triggers = set (
+abbreviation Movement_Found_triggers where
+"Movement_Found_triggers \<equiv> set (
   (enumchan1 internal_Movement_C [TID_Movement_t5]))
 "
 
@@ -1145,8 +1159,8 @@ definition State_Movement_Found_R where
    skip
 "
 paragraph \<open> j1 \<close>
-definition CS_Movement_j1_sync where
-"CS_Movement_j1_sync = 
+abbreviation CS_Movement_j1_sync where
+"CS_Movement_j1_sync \<equiv>
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_j1] SIDS_Movement_nodes)@
@@ -1154,8 +1168,8 @@ definition CS_Movement_j1_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_j1])
 )"
 
-definition Movement_j1_triggers where
-"Movement_j1_triggers = set ([])
+abbreviation Movement_j1_triggers where
+"Movement_j1_triggers \<equiv> set ([])
 "
 
 definition tids_Movement_j1 where
@@ -1205,8 +1219,8 @@ definition State_Movement_j1_R where
 "
 
 paragraph \<open> Avoiding \<close>
-definition CS_Movement_Avoiding_sync where
-"CS_Movement_Avoiding_sync = 
+abbreviation CS_Movement_Avoiding_sync where
+"CS_Movement_Avoiding_sync \<equiv> 
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_Avoiding] SIDS_Movement_nodes)@
@@ -1214,8 +1228,8 @@ definition CS_Movement_Avoiding_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_Avoiding])
 )"
 
-definition Movement_Avoiding_triggers where
-"Movement_Avoiding_triggers = set (
+abbreviation Movement_Avoiding_triggers where
+"Movement_Avoiding_triggers \<equiv> set (
     (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
     [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
@@ -1319,8 +1333,8 @@ definition State_Movement_Avoiding_R where
 "
 
 paragraph \<open> TryingAgain \<close>
-definition CS_Movement_TryingAgain_sync where
-"CS_Movement_TryingAgain_sync = 
+abbreviation CS_Movement_TryingAgain_sync where
+"CS_Movement_TryingAgain_sync \<equiv>
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_TryingAgain] SIDS_Movement_nodes)@
@@ -1328,8 +1342,8 @@ definition CS_Movement_TryingAgain_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_TryingAgain])
 )"
 
-definition Movement_TryingAgain_triggers where
-"Movement_TryingAgain_triggers = set (
+abbreviation Movement_TryingAgain_triggers where
+"Movement_TryingAgain_triggers \<equiv> set (
     (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
     [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
@@ -1433,8 +1447,8 @@ definition State_Movement_TryingAgain_R where
 "
 
 paragraph \<open> AvoidingAgain \<close>
-definition CS_Movement_AvoidingAgain_sync where
-"CS_Movement_AvoidingAgain_sync = 
+abbreviation CS_Movement_AvoidingAgain_sync where
+"CS_Movement_AvoidingAgain_sync \<equiv> 
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_AvoidingAgain] SIDS_Movement_nodes)@
@@ -1442,8 +1456,8 @@ definition CS_Movement_AvoidingAgain_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_AvoidingAgain])
 )"
 
-definition Movement_AvoidingAgain_triggers where
-"Movement_AvoidingAgain_triggers = set (
+abbreviation Movement_AvoidingAgain_triggers where
+"Movement_AvoidingAgain_triggers \<equiv> set (
     (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
     [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
@@ -1540,8 +1554,8 @@ definition State_Movement_AvoidingAgain_R where
 "
 
 paragraph \<open> GettingOut \<close>
-definition CS_Movement_GettingOut_sync where
-"CS_Movement_GettingOut_sync = 
+abbreviation CS_Movement_GettingOut_sync where
+"CS_Movement_GettingOut_sync \<equiv>
   set (
       \<comment> \<open> enter from x to y \<close>
       (enumchans2 enter_exit_channels_Movement [SID_Movement_GettingOut] SIDS_Movement_nodes)@
@@ -1549,8 +1563,8 @@ definition CS_Movement_GettingOut_sync where
       (enumchans2 enter_exit_channels_Movement SIDS_Movement_nodes [SID_Movement_GettingOut])
 )"
 
-definition Movement_GettingOut_triggers where
-"Movement_GettingOut_triggers = set (
+abbreviation Movement_GettingOut_triggers where
+"Movement_GettingOut_triggers \<equiv> set (
     (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
     [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
@@ -1642,8 +1656,8 @@ definition State_Movement_GettingOut_R where
 "
 
 subsubsection \<open> State machine \<close>
-definition flow_events_Movement_stm_to_nodes where
-"flow_events_Movement_stm_to_nodes = (
+abbreviation flow_events_Movement_stm_to_nodes where
+"flow_events_Movement_stm_to_nodes \<equiv> (
  let nodes = [SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,
     SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,
     SID_Movement_GettingOut]
@@ -1698,34 +1712,10 @@ definition STM_Movement_5 where
   STM_Movement_4(idd))
 "
 
-definition STM_Movement_5' where
-"STM_Movement_5' (idd::integer) =
-  (State_Movement_Going_R(idd)  
-    \<parallel>\<^bsub> CS_Movement_Going_sync \<inter>
-      (CS_Movement_j1_sync \<union>
-        (CS_Movement_Avoiding_sync \<union>
-          (CS_Movement_TryingAgain_sync \<union> 
-            (CS_Movement_AvoidingAgain_sync \<union> CS_Movement_GettingOut_sync)))) \<^esub> 
-  STM_Movement_4(idd))
-"
-
 definition STM_Movement_6 where
 "STM_Movement_6 (idd::integer) =
   (State_Movement_Going_R(idd)  
     \<parallel>\<^bsub> CS_Movement_Going_sync \<inter>
-      (CS_Movement_Found_sync \<union>
-        (CS_Movement_j1_sync \<union>
-          (CS_Movement_Avoiding_sync \<union>
-            (CS_Movement_TryingAgain_sync \<union> 
-              (CS_Movement_AvoidingAgain_sync \<union> 
-                CS_Movement_GettingOut_sync))))) \<^esub> 
-  STM_Movement_5(idd))
-"
-
-definition STM_Movement_6' where
-"STM_Movement_6' (idd::integer) =
-  (State_Movement_Waiting_R(idd)  
-    \<parallel>\<^bsub> CS_Movement_Waiting_sync \<inter>
       (CS_Movement_Found_sync \<union>
         (CS_Movement_j1_sync \<union>
           (CS_Movement_Avoiding_sync \<union>
@@ -1754,7 +1744,7 @@ definition STM_Movement where
     \<parallel>\<^bsub> flow_events_Movement_stm_to_nodes \<^esub> 
    STM_Movement_7(idd)
 "
-
+(*
 definition STM_Movement' where
 "STM_Movement' (idd::integer) = 
    (I_Movement_i1(idd))
@@ -1803,9 +1793,10 @@ definition STM_Movement' where
           CS_Movement_GettingOut_sync \<^esub> 
        State_Movement_GettingOut_R(idd)))))))))
 "
+*)
 
-definition Movement_opt_0_internal_set where
-"Movement_opt_0_internal_set = 
+abbreviation Movement_opt_0_internal_set where
+"Movement_opt_0_internal_set \<equiv> 
   set ((enumchans1 [internal_Movement_C] [TID_Movement_t1, TID_Movement_t5]) @ 
       (enumchans2 [stop__Movement_C] 
           [TID_Movement_t18, TID_Movement_t17, TID_Movement_t16, TID_Movement_t9, TID_Movement_t15,
@@ -1821,8 +1812,8 @@ definition Movement_opt_0_internal_set where
        (enumchans1 [internal_changeDirection_C] [TID_changeDirection_t2])
 )"
 
-definition Movement_opt_1_internal_set where
-"Movement_opt_1_internal_set = 
+abbreviation Movement_opt_2_internal_set where
+"Movement_opt_2_internal_set \<equiv> 
   set ((enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]) @
        (enumchans1 [set_d0_Movement_C, set_d1_Movement_C] rc.core_real_list)
 )"
@@ -1830,8 +1821,8 @@ definition Movement_opt_1_internal_set where
 abbreviation "changeDirection_opt_internal_set \<equiv> (enumchans1 [internal_changeDirection_C] 
           [TID_changeDirection_t3, TID_changeDirection_t4, TID_changeDirection_t1])"
 
-definition Movement_opt_2_internal_set where
-"Movement_opt_2_internal_set = 
+abbreviation Movement_opt_1_internal_set where
+"Movement_opt_1_internal_set \<equiv> 
   set (changeDirection_opt_internal_set @
        (enumchans1 [set_l_changeDirection_C] Location_Loc_list)
 )"
@@ -1868,14 +1859,14 @@ definition MemorySTM_opt_Movement where
                   (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1,
                        internal_changeDirection_C TID_changeDirection_t2])
                 )
-                \<parallel>\<^bsub> Movement_opt_1_internal_set \<^esub> 
+                \<parallel>\<^bsub> Movement_opt_2_internal_set \<^esub> 
                 (discard_state (Movement_MemoryTransitions_opt_2 idd))
               )
               (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
             )
           )
         )
-        \<parallel>\<^bsub> Movement_opt_2_internal_set \<^esub>
+        \<parallel>\<^bsub> Movement_opt_1_internal_set \<^esub>
         (discard_state (changeDirection_MemoryTransitions_opt_1 idd))
       )
       (set changeDirection_opt_internal_set)
@@ -2007,32 +1998,26 @@ export_code
   STM_Movement_3
   STM_Movement_4
   STM_Movement_5
-  STM_Movement_5'
   STM_Movement_6
-  STM_Movement_6'
   STM_Movement_7
   STM_Movement
-  STM_Movement'
+  MemorySTM_opt_Movement
+  changeDirection_MemoryTransitions_opt_1
+  rename_MemorySTM_opt_Movement
   AUX_opt_Movement
   D__Movement
   D__MicroController
-(*
-  State_Movement_Waiting
-  State_Movement_Waiting_R
-  State_Movement_Analysis_R
-  State_Movement_GasDetected_R
-  State_Movement_j1_R
-  State_Movement_Reading_R
-  MemorySTM_opt_Movement
-  AUX_opt_Movement
-  D__Movement
-*)
+  I_changeDirection_i0
+  STM_changeDirection_1
+  STM_changeDirection 
+  AUX_changeDirection
+  D__changeDirection
 in Haskell 
   (* module_name Movement *)
   file_prefix RoboChart_ChemicalDetector 
   (string_classes) 
 
-generate_file \<open>code/RoboChart_basic/Simulate.hs\<close> = 
+generate_file \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close> = 
 \<open>module Simulate (simulate) where
 import qualified Interaction_Trees;
 import qualified Partial_Fun;
@@ -2072,6 +2057,20 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interactio
 simulate = simulate_cnt 0;
 \<close>
 
-export_generated_files \<open>code/RoboChart_basic/Simulate.hs\<close>
+generate_file \<open>code/RoboChart_ChemicalDetector/Main.hs\<close> = 
+\<open>import qualified Interaction_Trees;
+import qualified Partial_Fun;
+import qualified Simulate;
+import qualified RoboChart_ChemicalDetector_autonomous_microcontroller;
+
+main :: IO ()
+main =
+  do
+    Simulate.simulate (RoboChart_ChemicalDetector_autonomous_microcontroller.d_MicroController 0);
+\<close>
+
+export_generated_files 
+  \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close>
+  \<open>code/RoboChart_ChemicalDetector/Main.hs\<close>
 
 end

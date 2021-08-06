@@ -165,6 +165,20 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interactio
 simulate = simulate_cnt 0;
 \<close>
 
-export_generated_files \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close>
+generate_file \<open>code/RoboChart_ChemicalDetector/Main.hs\<close> = 
+\<open>import qualified Interaction_Trees;
+import qualified Partial_Fun;
+import qualified Simulate;
+import qualified RoboChart_ChemicalDetector_autonomous;
+
+main :: IO ()
+main =
+  do
+    Simulate.simulate (RoboChart_ChemicalDetector_autonomous.d_ChemicalDetector 0);
+\<close>
+
+export_generated_files 
+  \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close>
+  \<open>code/RoboChart_ChemicalDetector/Main.hs\<close>
 
 end
