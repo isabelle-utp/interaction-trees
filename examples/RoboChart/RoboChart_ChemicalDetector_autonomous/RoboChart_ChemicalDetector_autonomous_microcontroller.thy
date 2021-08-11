@@ -762,9 +762,11 @@ definition Movement_MemoryTransitions_opt_2 where
   loop (\<lambda> id::integer.
     do {d1 \<leftarrow> inp_in get_d1_Movement rc.core_real_set ; 
         d0 \<leftarrow> inp_in get_d0_Movement rc.core_real_set ;
-        (
-          do {guard (True); outp internal_Movement TID_Movement_t12 ; Ret (id)} \<box>
-          do {guard (True); outp internal_Movement TID_Movement_t13 ; Ret (id)} \<box>
+        ( \<comment> \<open> In CSP semantics, the guard of both is true; We can manually discard 
+            time primitives, but not (d1-d0\<le>stuckDist) for t13, and 
+            (d1-d0>stuckDist) for t12\<close>
+          do {guard (d1-d0 > const_Movement_stuckDist); outp internal_Movement TID_Movement_t12 ; Ret (id)} \<box>
+          do {guard (d1-d0 \<le> const_Movement_stuckDist); outp internal_Movement TID_Movement_t13 ; Ret (id)} \<box>
           do {inp_in set_d1_Movement rc.core_real_set; Ret (id)} \<box>
           do {inp_in set_d0_Movement rc.core_real_set; Ret (id)}
         )
@@ -1827,6 +1829,36 @@ abbreviation Movement_opt_1_internal_set where
        (enumchans1 [set_l_changeDirection_C] Location_Loc_list)
 )"
 
+definition MemorySTM_opt_Movement' where
+"MemorySTM_opt_Movement' (idd::integer) = 
+         (
+            (hide 
+              (
+                (hide
+                  (
+                    (par_hide
+                      (discard_state (Movement_Memory_opt_l (Location_Loc_left)))
+                      Movement_l_events
+                      (par_hide 
+                        (discard_state (Movement_Memory_opt_a Chemical_Angle_Left)) 
+                        Movement_a_events 
+                        (STM_Movement idd)
+                      )
+                    )
+                    \<parallel>\<^bsub> Movement_opt_0_internal_set \<^esub>
+                    (discard_state (Movement_MemoryTransitions_opt_0 idd))
+                  )
+                  (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1,
+                       internal_changeDirection_C TID_changeDirection_t2])
+                )
+                \<parallel>\<^bsub> Movement_opt_2_internal_set \<^esub> 
+                (discard_state (Movement_MemoryTransitions_opt_2 idd))
+              )
+              (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
+            )
+          
+        )"
+
 definition MemorySTM_opt_Movement where
 "MemorySTM_opt_Movement (idd::integer) = 
   (par_hide
@@ -2002,6 +2034,7 @@ export_code
   STM_Movement_7
   STM_Movement
   MemorySTM_opt_Movement
+  MemorySTM_opt_Movement'
   changeDirection_MemoryTransitions_opt_1
   rename_MemorySTM_opt_Movement
   AUX_opt_Movement
