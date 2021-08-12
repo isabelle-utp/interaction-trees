@@ -1273,7 +1273,7 @@ definition State_Movement_Avoiding where
            (\<lambda> s.
             do {
               guard(True); r \<leftarrow> inp_in odometer_Movement (set 
-                  [(d, l). d \<leftarrow> InOut_list, l \<leftarrow> rc.core_real_list]);  
+                  [(din, l). l \<leftarrow> rc.core_real_list]);  
               outp set_d0_Movement (snd r);
               l \<leftarrow> inp_in get_l_Movement Location_Loc_set;
               guard(True); CALL__changeDirection_Movement id l;
@@ -1422,7 +1422,7 @@ definition State_Movement_TryingAgain where
                     outp exit_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
                     outp exited_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
                     guard(True); r \<leftarrow> inp_in odometer_Movement (set 
-                          [(d, l). d \<leftarrow> InOut_list, l \<leftarrow> rc.core_real_list]);
+                          [(din, l). l \<leftarrow> rc.core_real_list]);
                     outp set_d1_Movement (snd r);
                     outp enter_Movement (SID_Movement_TryingAgain, SID_Movement_AvoidingAgain);
                     outp entered_Movement (SID_Movement_TryingAgain, SID_Movement_AvoidingAgain);
@@ -1487,6 +1487,12 @@ abbreviation Other_SIDs_to_AvoidingAgain_Movement where
 "Other_SIDs_to_AvoidingAgain_Movement \<equiv>
   set [(s, SID_Movement_AvoidingAgain) . s \<leftarrow> (SIDS_Movement_no_AvoidingAgain)]"
 
+\<comment> \<open> At this state, there are four outgoing transitions: one with trigger resume, one with trigger 
+stop, and another two without triggers (with different exclusive guards and event internal__ here).
+Eventually, this process will synchronise with Movement_MemoryTransitions_opt_2 on 
+internal__.t12 and internal__.t13 events, and hide the events in MemorySTM_opt_Movement.
+Based on the maximal progress assumption, the transitions with resume and stop cannot be available.
+\<close>
 definition State_Movement_AvoidingAgain where 
 "State_Movement_AvoidingAgain = 
   loop (\<lambda> (id::integer).
