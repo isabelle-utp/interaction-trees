@@ -247,6 +247,10 @@ chantype Chan_Movement =
   get_l_changeDirection :: "Location_Loc"
   set_l_changeDirection :: "Location_Loc"
 
+(* timeout *)
+  stuck_timeout__Movement :: "TIDS_Movement \<times> InOut"
+  stuck_timeout_Movement :: "InOut"
+
 (* Call events for undefined operations. In the operation, use the channel (moveCall_Movement) 
   from Movement *)
   (* 
@@ -763,10 +767,12 @@ definition Movement_MemoryTransitions_opt_2 where
     do {d1 \<leftarrow> inp_in get_d1_Movement rc.core_real_set ; 
         d0 \<leftarrow> inp_in get_d0_Movement rc.core_real_set ;
         ( \<comment> \<open> In CSP semantics, the guard of both is true; We can manually discard 
-            time primitives, but not (d1-d0\<le>stuckDist) for t13, and 
-            (d1-d0>stuckDist) for t12\<close>
+            time primitives, but not (d1-d0\<le>stuckDist) for t13, and (d1-d0>stuckDist) for t12\<close>
           do {guard (d1-d0 > const_Movement_stuckDist); outp internal_Movement TID_Movement_t12 ; Ret (id)} \<box>
-          do {guard (d1-d0 \<le> const_Movement_stuckDist); outp internal_Movement TID_Movement_t13 ; Ret (id)} \<box>
+          \<comment> \<open> 
+          do {guard (d1-d0 \<le> const_Movement_stuckDist); outp internal_Movement TID_Movement_t13 ; Ret (id)} \<box> \<close>
+          do {guard (d1-d0 \<le> const_Movement_stuckDist); 
+            outp stuck_timeout__Movement (TID_Movement_t13, din) ; Ret (id)} \<box>
           do {inp_in set_d1_Movement rc.core_real_set; Ret (id)} \<box>
           do {inp_in set_d0_Movement rc.core_real_set; Ret (id)}
         )
@@ -1299,13 +1305,17 @@ definition State_Movement_Avoiding where
                     Ret(False, fst (snd s), SID_Movement_Avoiding)
                   } \<box>
                 \<comment> \<open> T_Movement_t19 \<close>
-                do {outp resume__Movement (TID_Movement_t19, din);
+                (do {outp resume__Movement (TID_Movement_t19, din);
                     outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp enter_Movement (SID_Movement_Avoiding, SID_Movement_Waiting);
                     outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Waiting);
                     Ret(False, fst (snd s), SID_Movement_Avoiding)
-                  } \<box>
+                  } \<^sub><\<box> \<comment> \<open>We use biased external choice to avoid deadlock, and give priority to 
+                resume to Waiting state. However, the biased operator cannot work at this level
+                because the resume__Movement events for t19 and t21 are different 
+                thanks to the transition id.
+                \<close>
                 \<comment> \<open> T_Movement_t21 \<close>
                 do {outp resume__Movement (TID_Movement_t21, din);
                     outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
@@ -1313,7 +1323,7 @@ definition State_Movement_Avoiding where
                     outp enter_Movement (SID_Movement_Avoiding, SID_Movement_Going);
                     outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Going);
                     Ret(False, fst (snd s), SID_Movement_Avoiding)
-                  } \<box>
+                  }) \<box>
                 (exit_events_Movement (fst (snd s)) SID_Movement_Avoiding 
                    tids_Movement_Avoiding Other_SIDs_to_Avoiding_Movement)
                 )
@@ -1470,6 +1480,8 @@ abbreviation Movement_AvoidingAgain_triggers where
     [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
     TID_Movement_t9] InOut_list) @
   (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list)
+  \<comment> \<open> an extra timeout event\<close>  
+  @ (enumchan2 stuck_timeout__Movement_C [TID_Movement_t13] InOut_list)
 )
 "
 
@@ -1492,6 +1504,7 @@ stop, and another two without triggers (with different exclusive guards and even
 Eventually, this process will synchronise with Movement_MemoryTransitions_opt_2 on 
 internal__.t12 and internal__.t13 events, and hide the events in MemorySTM_opt_Movement.
 Based on the maximal progress assumption, the transitions with resume and stop cannot be available.
+We, therefore, add an extra timeout event to introduce time in an abstract way to avoid this issue.
 \<close>
 definition State_Movement_AvoidingAgain where 
 "State_Movement_AvoidingAgain = 
@@ -1534,13 +1547,21 @@ definition State_Movement_AvoidingAgain where
                     Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
                   } \<box>
                 \<comment> \<open> T_Movement_t13 \<close>
+                \<comment> \<open>
                 do {outp internal_Movement TID_Movement_t13;
                       outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                       outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                       outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
                       outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
                       Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
-                    } \<box>
+                    }
+                \<close> do {outp stuck_timeout__Movement (TID_Movement_t13, din);
+                      outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                      outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
+                      outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
+                      outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
+                      Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
+                  } \<box>
                 (exit_events_Movement (fst (snd s)) SID_Movement_AvoidingAgain 
                    tids_Movement_AvoidingAgain Other_SIDs_to_AvoidingAgain_Movement)
                 )
@@ -1823,7 +1844,9 @@ abbreviation Movement_opt_0_internal_set where
 abbreviation Movement_opt_2_internal_set where
 "Movement_opt_2_internal_set \<equiv> 
   set ((enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]) @
-       (enumchans1 [set_d0_Movement_C, set_d1_Movement_C] rc.core_real_list)
+       (enumchans1 [set_d0_Movement_C, set_d1_Movement_C] rc.core_real_list) 
+    \<comment> \<open> timeout \<close>
+    @ (enumchan2 stuck_timeout__Movement_C [TID_Movement_t13] InOut_list)
 )"
 
 abbreviation "changeDirection_opt_internal_set \<equiv> (enumchans1 [internal_changeDirection_C] 
@@ -1927,6 +1950,8 @@ definition rename_Movement_events where
             InOut_list) @
     (enumchan1 (forget_first flag__Movement_C flag_Movement_C TIDS_Movement_list) 
             InOut_list)
+    @ (enumchan1 (forget_first stuck_timeout__Movement_C stuck_timeout_Movement_C TIDS_Movement_list) 
+            InOut_list)
   )
 "
 
@@ -1983,6 +2008,9 @@ chantype Chan_MicroCtrl =
   moveCall_MicroController :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall_MicroController :: unit
 
+(* timeout *)
+  stuck_timeout_MicroController :: "InOut"
+
 subsubsection \<open> Memory \<close>
 definition Memory_MicroController where
 "Memory_MicroController (idd::integer) = skip"
@@ -2002,6 +2030,8 @@ definition rename_MicroController_Movement_events where
       (shortRandomWalkCall_Movement_C, shortRandomWalkCall_MicroController_C)] [()]) @
   (enumchanp2_2 (moveCall_Movement_C, moveCall_MicroController_C) rc.core_int_list 
     Chemical_Angle_list)
+  \<comment> \<open> timeout \<close>
+  @ (enumchansp2_1 [(stuck_timeout_Movement_C, stuck_timeout_MicroController_C)] InOut_list)
 "
 
 definition rename_D__Movement where

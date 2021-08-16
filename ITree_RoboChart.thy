@@ -1,7 +1,7 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "ITree_Extraction" "HOL-Library.Numeral_Type"
+  imports "ITree_Extraction" "HOL-Library.Numeral_Type" "ITree_CSP_Biased"
 begin
 
 subsection \<open> CSP operators \<close>

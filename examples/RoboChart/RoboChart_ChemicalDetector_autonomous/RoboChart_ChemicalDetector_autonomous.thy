@@ -21,6 +21,8 @@ chantype Chan_ChemicalDetector =
   randomeWalkCall :: unit
   moveCall :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall :: unit
+  (* timeout *)
+  stuck_timeout :: "InOut"
 
 definition Memory_ChemicalDetector where
 "Memory_ChemicalDetector = skip"
@@ -58,6 +60,8 @@ definition rename_ChemicalDetector_D__MicroController_events where
     (resume_MicroController_C din, resume_C dout),
     (resume_MicroController_C dout, resume_C din)
   ]
+  \<comment> \<open> timeout \<close>
+  @ (enumchansp2_1 [(stuck_timeout_MicroController_C, stuck_timeout_C)] InOut_list)
 "
 
 definition rename_D__MicroController where
