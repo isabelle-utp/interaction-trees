@@ -705,7 +705,7 @@ definition Movement_MemoryTransitions_opt_0 where
     do {outp internal_Movement TID_Movement_t1 ; Ret (id)} \<box>
     do {l \<leftarrow> inp_in obstacle__Movement (set [(TID_Movement_t6, din, l). 
               l \<leftarrow> (Location_Loc_list)]) ; Ret (id)} \<box>
-    do {outp resume__Movement (TID_Movement_t21, din) ; Ret (id)} \<box>
+    do {outp internal_Movement (TID_Movement_t21) ; Ret (id)} \<box>
     do {outp stop__Movement (TID_Movement_t15, din) ; Ret (id)} \<box>
     do {outp internal_Movement TID_Movement_t5 ; Ret (id)} \<box>
     \<comment> \<open>This is for transition t2 in changeDirection.\<close>
@@ -804,14 +804,14 @@ abbreviation Movement_Waiting_triggers where
 "Movement_Waiting_triggers \<equiv> set (
   (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] InOut_list Location_Loc_list) @
   (enumchans2 [resume__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10, 
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t10, 
     TID_Movement_t19] InOut_list) @
   (enumchans2 [stop__Movement_C] 
     [TID_Movement_t16, TID_Movement_t17, TID_Movement_t18, TID_Movement_t15, TID_Movement_t4, 
     TID_Movement_t9] InOut_list) @
   (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, 
     TID_Movement_t8, TID_Movement_t2] InOut_list Chemical_Angle_list) @
-  (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13])
+  (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13, TID_Movement_t21])
 )
 "
 
@@ -999,9 +999,9 @@ abbreviation CS_Movement_Going_sync where
 
 abbreviation Movement_Going_triggers where
 "Movement_Going_triggers \<equiv> set (
-  (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+  (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t21, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t10,
      TID_Movement_t19] InOut_list) @
   (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
     TID_Movement_t2] InOut_list Chemical_Angle_list) @
@@ -1238,9 +1238,9 @@ abbreviation CS_Movement_Avoiding_sync where
 
 abbreviation Movement_Avoiding_triggers where
 "Movement_Avoiding_triggers \<equiv> set (
-    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13, TID_Movement_t21]) @
   (enumchans2 [resume__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t10,
      TID_Movement_t19] InOut_list) @
   (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
     TID_Movement_t2] InOut_list Chemical_Angle_list) @
@@ -1317,7 +1317,7 @@ definition State_Movement_Avoiding where
                 thanks to the transition id.
                 \<close>
                 \<comment> \<open> T_Movement_t21 \<close>
-                do {outp resume__Movement (TID_Movement_t21, din);
+                do {outp internal_Movement (TID_Movement_t21);
                     outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp enter_Movement (SID_Movement_Avoiding, SID_Movement_Going);
@@ -1356,9 +1356,9 @@ abbreviation CS_Movement_TryingAgain_sync where
 
 abbreviation Movement_TryingAgain_triggers where
 "Movement_TryingAgain_triggers \<equiv> set (
-    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t21, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t10,
      TID_Movement_t19] InOut_list) @
   (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
     TID_Movement_t2] InOut_list Chemical_Angle_list) @
@@ -1470,9 +1470,9 @@ abbreviation CS_Movement_AvoidingAgain_sync where
 
 abbreviation Movement_AvoidingAgain_triggers where
 "Movement_AvoidingAgain_triggers \<equiv> set (
-    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t21, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t10,
      TID_Movement_t19] InOut_list) @
   (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
     TID_Movement_t2] InOut_list Chemical_Angle_list) @
@@ -1594,9 +1594,9 @@ abbreviation CS_Movement_GettingOut_sync where
 
 abbreviation Movement_GettingOut_triggers where
 "Movement_GettingOut_triggers \<equiv> set (
-    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t13]) @
+    (enumchan1 internal_Movement_C [TID_Movement_t12, TID_Movement_t5, TID_Movement_t21, TID_Movement_t13]) @
   (enumchans2 [resume__Movement_C] 
-    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t21, TID_Movement_t10,
+    [TID_Movement_t0, TID_Movement_t22, TID_Movement_t20, TID_Movement_t10,
      TID_Movement_t19] InOut_list) @
   (enumchans3 [turn__Movement_C] [TID_Movement_t3, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8,
     TID_Movement_t2] InOut_list Chemical_Angle_list) @
@@ -1826,7 +1826,7 @@ definition STM_Movement' where
 
 abbreviation Movement_opt_0_internal_set where
 "Movement_opt_0_internal_set \<equiv> 
-  set ((enumchans1 [internal_Movement_C] [TID_Movement_t1, TID_Movement_t5]) @ 
+  set ((enumchans1 [internal_Movement_C] [TID_Movement_t1, TID_Movement_t5, TID_Movement_t21]) @ 
       (enumchans2 [stop__Movement_C] 
           [TID_Movement_t18, TID_Movement_t17, TID_Movement_t16, TID_Movement_t9, TID_Movement_t15,
           TID_Movement_t4] InOut_list) @
@@ -1834,7 +1834,7 @@ abbreviation Movement_opt_0_internal_set where
           [TID_Movement_t3, TID_Movement_t2, TID_Movement_t14, TID_Movement_t7, TID_Movement_t8] 
           InOut_list Chemical_Angle_list) @
        (enumchans2 [resume__Movement_C] 
-          [TID_Movement_t21, TID_Movement_t10, TID_Movement_t22, TID_Movement_t20, TID_Movement_t0,
+          [TID_Movement_t10, TID_Movement_t22, TID_Movement_t20, TID_Movement_t0,
           TID_Movement_t19] InOut_list) @
        (enumchans3 [obstacle__Movement_C] [TID_Movement_t6, TID_Movement_t11] 
           InOut_list Location_Loc_list) @
@@ -1918,6 +1918,7 @@ definition MemorySTM_opt_Movement where
                     (discard_state (Movement_MemoryTransitions_opt_0 idd))
                   )
                   (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1,
+                        internal_Movement_C TID_Movement_t21,
                        internal_changeDirection_C TID_changeDirection_t2])
                 )
                 \<parallel>\<^bsub> Movement_opt_2_internal_set \<^esub> 
