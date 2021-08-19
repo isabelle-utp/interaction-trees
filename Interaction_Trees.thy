@@ -14,7 +14,7 @@ abbreviation ndres (infixr "\<Zndres>" 66) where "ndres A P \<equiv> (- A) \<Zdr
 declare [[coercion pfun_app]]
 declare [[coercion_enabled]]
 
-consts tick :: "'a \<Rightarrow> 'b" ("\<cmark>")
+consts tick :: "'a \<Rightarrow> 'b" ("\<checkmark>")
 
 subsection \<open> Interaction Tree Type \<close>
 
@@ -616,7 +616,7 @@ abbreviation "nonterminates P \<equiv> (\<^bold>R(P) = {})"
 
 abbreviation "terminates P \<equiv> (\<^bold>R(P) \<noteq> {})"
 
-lemma nonterminates_iff: "nonterminates P \<longleftrightarrow> (\<forall> es x. \<not> P \<midarrow>es\<leadsto> \<cmark> x)"
+lemma nonterminates_iff: "nonterminates P \<longleftrightarrow> (\<forall> es x. \<not> P \<midarrow>es\<leadsto> \<checkmark> x)"
   by (auto simp add: retvals_def)
 
 lemma retvals_Ret [simp]: "\<^bold>R(Ret x) = {x}"

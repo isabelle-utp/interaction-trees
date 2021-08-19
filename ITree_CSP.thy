@@ -51,7 +51,7 @@ definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
 definition inp_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_in_where c A P = Vis (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
+"inp_in_where c A P = Vis (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<checkmark> (the (match\<^bsub>c\<^esub> e)))"
 
 abbreviation "inp_in c A \<equiv> inp_in_where c A (\<lambda> s. True)"
 
@@ -68,10 +68,10 @@ abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('
 "inp c \<equiv> inp_in c UNIV"
 
 definition inp_list :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('e, 'a) itree" where
-"inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> ) B)))"
+"inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<checkmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> ) B)))"
 
 definition inp_list_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_list_where c B P = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> x)) (filter P B)))"
+"inp_list_where c B P = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<checkmark> x)) (filter P B)))"
 
 definition inp_map_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
 "inp_map_in_where c B P = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of 
@@ -110,7 +110,7 @@ lemma build_in_dom_match [simp]: "wb_prism c \<Longrightarrow> build\<^bsub>c\<^
 
 text \<open> Is there a way to use this optimise the above definition when applied to a well-behaved prism? \<close>
 
-lemma inp_list_wb_prism: "wb_prism c \<Longrightarrow> inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> x)) B))"
+lemma inp_list_wb_prism: "wb_prism c \<Longrightarrow> inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<checkmark> x)) B))"
   by (simp add: inp_list_def)
 
 lemma inp_where_enum [code_unfold]:
@@ -344,7 +344,7 @@ lemma skip_stable_genchoice_right:
   by (metis (mono_tags, hide_lams) assms genchoice.disc_iff(1) is_Ret_def itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
 
 lemma genchoice_RetE [elim]:
-  assumes "genchoice \<M> P Q = \<cmark> x" 
+  assumes "genchoice \<M> P Q = \<checkmark> x" 
     "\<lbrakk> P = Ret x; Q = Ret x\<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> P = Ret x; is_Vis Q \<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> Q = Ret x; is_Vis P \<rbrakk> \<Longrightarrow> R"
@@ -496,7 +496,7 @@ lemma skip_stable_choice:
   by (simp add: assms extchoice_itree_def skip_stable_genchoice_left)
 
 lemma choice_RetE [elim]:
-  assumes "P \<box> Q = \<cmark> x" 
+  assumes "P \<box> Q = \<checkmark> x" 
     "\<lbrakk> P = Ret x; Q = Ret x\<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> P = Ret x; is_Vis Q \<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> Q = Ret x; is_Vis P \<rbrakk> \<Longrightarrow> R"

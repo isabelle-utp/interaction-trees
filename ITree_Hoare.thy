@@ -12,10 +12,10 @@ definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree
 syntax "_hoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>}/ _/ \<^bold>{_\<^bold>}")
 translations "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
 
-lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<cmark> s' \<longrightarrow> Q s')"
+lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s')"
   by (auto simp add: hoare_triple_def spec_def itree_rel_def retvals_def subset_iff)
 
-lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<cmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
+lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<checkmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (auto simp add: hoare_alt_def)
 
 lemma hoare_conseq:
@@ -51,7 +51,7 @@ lemma hoare_while_partial [hoare_safe]:
   shows "\<^bold>{P\<^bold>}while B do S od\<^bold>{\<not> B \<and> P\<^bold>}"
 proof (rule hoareI)
   fix s s' tr
-  assume while: "P s" "while B do S od s \<midarrow>tr\<leadsto> \<cmark> s'"
+  assume while: "P s" "while B do S od s \<midarrow>tr\<leadsto> \<checkmark> s'"
   show "\<not> B s' \<and> P s'"
   proof (cases "B s")
     case True
@@ -66,13 +66,13 @@ proof (rule hoareI)
       thus "P (snd (chn ! i))"
       proof (induct i)
         case 0
-        hence "S s \<midarrow>fst (chn ! 0)\<leadsto> \<cmark> (snd (chn ! 0))"
+        hence "S s \<midarrow>fst (chn ! 0)\<leadsto> \<checkmark> (snd (chn ! 0))"
           by (metis gr_implies_not0 hd_conv_nth i ichain.chain_start length_0_conv)   
         with assms while(1) B show ?case
           by (auto simp add: hoare_alt_def)
       next
         case (Suc i)
-        hence "S (snd (chn ! i)) \<midarrow>fst (chn ! Suc i)\<leadsto> \<cmark> (snd (chn ! Suc i))"
+        hence "S (snd (chn ! i)) \<midarrow>fst (chn ! Suc i)\<leadsto> \<checkmark> (snd (chn ! Suc i))"
           by (metis Suc_eq_plus1 ichain.chain_iter less_diff_conv)
         moreover have "B (snd (chn ! i))"
           by (metis Suc.prems Suc_lessE chn(3) diff_Suc_1)
