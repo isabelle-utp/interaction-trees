@@ -94,7 +94,7 @@ theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induc
   by (coinduct rule: itree.coinduct_strong, auto elim!: is_VisE simp add: relt_pfun_iff)
 
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
- cf. "Coinduction all the way up". Davide Sangiorgi. Replace R \<subseteq> F(R) prove R \<subseteq> C(F(R)). \<close>
+ cf. "Coinduction all the way up". Davide Sangiorgi. Replace @{term "R \<subseteq> F(R)"} prove @{term "R \<subseteq> C(F(R))"}. \<close>
 
 subsection \<open> Kleisli Trees and Monads \<close>
 
