@@ -10,5 +10,8 @@ session "Interaction_Trees" = "Shallow-Expressions" +
     ITree_CSP
     ITree_FDSem
     ITree_Circus
+    ITree_Extraction
+    ITree_Simulation
+    ITree_Eval
   document_files
     "root.tex"
