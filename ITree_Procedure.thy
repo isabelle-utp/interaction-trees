@@ -38,6 +38,9 @@ definition procedure :: "('inp \<Rightarrow> 'st \<Rightarrow> ('e, ('outp, 'st)
 definition proc_call :: "('o \<Longrightarrow> 's) \<Rightarrow> ('e, 'i, 'o, 'ls::default) procedure \<Rightarrow> ('i, 's) expr \<Rightarrow> ('e, 's) htree" 
   where "proc_call x P e = (\<lambda> s. P \<lparr> vval = e s, vst = default \<rparr> \<bind> (\<lambda> vs. Ret (put\<^bsub>x\<^esub> s (vval vs))))"
 
+definition exec_proc :: "(unit, 'inp, 'out, 'st::default) procedure \<Rightarrow> 'inp \<Rightarrow> (unit, 'out) itree" where
+"exec_proc P i = P \<lparr> vval = i, vst = default \<rparr> \<bind> (\<lambda> x. Ret (vval x))"
+
 syntax 
   "_procedure" :: "pttrn \<Rightarrow> logic \<Rightarrow> logic" ("proc _. _" [0, 20] 20)
   "_call" :: "svid \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ := call _ _" [61, 0, 61] 61)
