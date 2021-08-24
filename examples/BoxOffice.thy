@@ -1,5 +1,5 @@
 theory BoxOffice
-  imports "../ITree_Extraction"
+  imports "Interaction_Trees.ITree_Simulation"
 begin lit_vars
 
 type_synonym SEAT = integer
@@ -31,6 +31,8 @@ definition "BoxOfficeProc initalloc SEAT CUSTOMER
   = process 
       (BoxOfficeInit initalloc)
       (loop (Purchase0 SEAT CUSTOMER \<box> Return0 SEAT CUSTOMER))"
+
+simulate BoxOfficeProc
 
 export_code BoxOfficeProc in Haskell module_name BoxOffice (string_classes)
 

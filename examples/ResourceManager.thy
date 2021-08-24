@@ -1,5 +1,5 @@
 theory ResourceManager
-  imports "../ITree_Extraction"
+  imports "Interaction_Trees.ITree_Simulation"
 begin 
 
 lit_vars
@@ -35,7 +35,9 @@ definition Deallocate :: "(chan, ResourceManager) htree" where
 "Deallocate = dealloc?(r):(res - free) \<rightarrow> free := free \<union> {r}"
 
 definition "ResourceManagerProc R
-  = process [res \<leadsto> R, free \<leadsto> R] (loop (Allocate\<^sub>1 \<box> Deallocate))"
+  = process [res \<leadsto> set R, free \<leadsto> set R] (loop (Allocate \<box> Deallocate))"
+
+simulate ResourceManagerProc
 
 export_code ResourceManagerProc in Haskell module_name ResourceManager (string_classes)
 

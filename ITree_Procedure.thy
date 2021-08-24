@@ -42,7 +42,7 @@ definition exec_proc :: "(unit, 'inp, 'out, 'st::default) procedure \<Rightarrow
 "exec_proc P i = P \<lparr> vval = i, vst = default \<rparr> \<bind> (\<lambda> x. Ret (vval x))"
 
 syntax 
-  "_procedure" :: "pttrn \<Rightarrow> logic \<Rightarrow> logic" ("proc _. _" [0, 20] 20)
+  "_procedure" :: "pttrn \<Rightarrow> logic \<Rightarrow> logic" ("proc _./ _" [0, 20] 20)
   "_call" :: "svid \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ := call _ _" [61, 0, 61] 61)
   "_return" :: "logic \<Rightarrow> logic" ("return")
 

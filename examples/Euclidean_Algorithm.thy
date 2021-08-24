@@ -32,6 +32,8 @@ lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a
 
 definition eucl_gcd where "eucl_gcd = procproc eucl_proc"
 
+value "exec_proc eucl_proc (6, 33)"
+
 export_code eucl_gcd in Haskell module_name Euclidean_Algorithm (string_classes)
 
 end
