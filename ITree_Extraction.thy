@@ -1,7 +1,7 @@
 subsection \<open> ITree Code Generation Support \<close>
 
 theory ITree_Extraction
-  imports ITree_Circus ITree_Operations ITree_Procedure ITree_Hoare Record_Default_Instance Enum_Type "HOL-Library.Code_Lazy"
+  imports ITree_Circus ITree_Operations ITree_Procedure ITree_Hoare "HOL-Library.Code_Lazy"
 begin
 
 text \<open> Necessary to deal with SML value restriction \<close>
