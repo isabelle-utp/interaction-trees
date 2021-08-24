@@ -1,7 +1,7 @@
 section \<open> Dwarf Signal \<close>
 
 theory DwarfSignal
-  imports "../ITree_Simulation" "../ITree_Eval" "../ITree_Circus"
+  imports "Interaction_Trees.ITree_Simulation" "Interaction_Trees.ITree_Eval"
 begin                
 
 subsection \<open> State Space \<close>

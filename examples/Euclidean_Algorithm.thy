@@ -1,5 +1,5 @@
 theory Euclidean_Algorithm
-  imports "../ITree_Extraction"
+  imports "Interaction_Trees.ITree_Simulation"
 begin lit_vars
 
 alphabet gcd = 
@@ -20,7 +20,7 @@ definition eucl :: "integer \<times> integer \<Rightarrow> ('e, gcd) htree" wher
     od)"
 
 definition eucl_proc :: "('e, (integer \<times> integer), integer, gcd) procedure" where
-"eucl_proc = (proc (A, B). eucl(A, B) \<Zcomp> return a)"
+"eucl_proc = (proc (A, B). (eucl(A, B) \<Zcomp> return a) \<box> Stop)"
 
 lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a = gcd A B\<^bold>}"
   unfolding eucl_def
