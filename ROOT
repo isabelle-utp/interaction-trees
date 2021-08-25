@@ -1,7 +1,5 @@
-session "Interaction_Trees" = "Shallow-Expressions" +
+session "Interaction_Trees" = "Shallow-Expressions-Z" +
   options [timeout = 600, document = pdf, document_output = "output"]
-  sessions
-    Z_Toolkit
   theories
     Interaction_Trees
     ITree_Divergence

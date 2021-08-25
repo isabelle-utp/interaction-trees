@@ -47,6 +47,12 @@ definition "default_pfun = ({}\<^sub>p :: ('a, 'b) pfun)"
 instance ..
 end
 
+instantiation ffun :: (type, type) default
+begin
+definition "default_ffun = ({}\<^sub>f :: ('a, 'b) ffun)"
+instance ..
+end
+
 lit_vars
 
 end
