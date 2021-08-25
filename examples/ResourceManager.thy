@@ -2,6 +2,8 @@ theory ResourceManager
   imports "Interaction_Trees.ITree_Simulation"
 begin 
 
+unbundle Circus_Syntax
+
 lit_vars
 
 schema ResourceManager =

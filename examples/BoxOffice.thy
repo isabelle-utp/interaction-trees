@@ -29,8 +29,8 @@ definition Return0 :: "_ \<Rightarrow> _ \<Rightarrow> (chan, BoxOffice) action"
 
 definition "BoxOfficeProc initalloc SEAT CUSTOMER
   = process 
-      (BoxOfficeInit initalloc)
-      (loop (Purchase0 SEAT CUSTOMER \<box> Return0 SEAT CUSTOMER))"
+      (BoxOfficeInit (set initalloc))
+      (loop (Purchase0 (set SEAT) (set CUSTOMER) \<box> Return0 (set SEAT) (set CUSTOMER)))"
 
 simulate BoxOfficeProc
 

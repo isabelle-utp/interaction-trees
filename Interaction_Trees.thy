@@ -7,7 +7,6 @@ begin
 
 subsection \<open> Preliminaries \<close>
 
-type_notation pfun (infixr "\<Zpfun>" 0)
 notation pdom_res (infixr "\<Zdres>" 66)
 abbreviation ndres (infixr "\<Zndres>" 66) where "ndres A P \<equiv> (- A) \<Zdres> P"
 

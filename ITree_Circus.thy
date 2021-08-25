@@ -1,7 +1,7 @@
 section \<open> Circus Interaction Tree Semantics \<close>
 
 theory ITree_Circus                          
-  imports "ITree_FDSem" "Shallow-Expressions.Shallow_Expressions"
+  imports "ITree_FDSem" "Shallow-Expressions-Z.Shallow_Expressions_Z"
 begin
 
 subsection \<open> Main Operators \<close>
@@ -117,7 +117,15 @@ term inp_list
 lemma "wb_prism c \<Longrightarrow> input_where c P = (\<lambda>s. inp_list_where c enum_class.enum (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
 *)
 
+bundle Circus_Syntax
+begin
+
 no_notation disj (infixr "|" 30)
+no_notation conj (infixr "&" 35)
+
+end
+
+unbundle Circus_Syntax
 
 syntax 
   "_input"          :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
