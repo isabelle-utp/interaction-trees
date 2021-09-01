@@ -358,11 +358,11 @@ lemma genchoice_RetE [elim]:
 subsection \<open> External Choice \<close>
 
 definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
-"map_prod f g = (pdom(g) \<Zndres> f) + (pdom(f) \<Zndres> g)"
+"map_prod f g = (pdom(g) \<Zndres> f) \<oplus> (pdom(f) \<Zndres> g)"
 
 lemma map_prod_commute: "x \<odot> y = y \<odot> x"
   apply (auto simp add: fun_eq_iff map_prod_def option.case_eq_if)
-  apply (metis Compl_iff IntD1 IntD2 pdom_pdom_res pfun_plus_commute_weak)
+  apply (metis Compl_iff IntD1 IntD2 pdom_pdom_res pfun_override_commute_weak)
   done
 
 lemma map_prod_empty [simp]: "x \<odot> {}\<^sub>p = x" "{}\<^sub>p \<odot> x = x"
@@ -381,7 +381,7 @@ lemma map_prod_merge:
 
 lemma map_prod_as_ovrd:
   assumes "pdom(f) \<inter> pdom(g) = {}"
-  shows "f \<odot> g = f + g"
+  shows "f \<odot> g = f \<oplus> g"
   by (simp add: map_prod_def assms inf.commute pdom_nres_disjoint)
 
 lemma map_prod_pfun_of_map [code]:
@@ -391,7 +391,7 @@ lemma map_prod_pfun_of_map [code]:
                        (Some y, None) \<Rightarrow> Some y |
                        (None, Some y) \<Rightarrow> Some y |
                        (None, None) \<Rightarrow> None)"
-  by (auto simp add: map_prod_def pdom_def pdom_res_def restrict_map_def plus_pfun_def map_add_def 
+  by (auto simp add: map_prod_def pdom_def pdom_res_def restrict_map_def oplus_pfun_def map_add_def 
       pfun_of_map_inject fun_eq_iff option.case_eq_if)
 
 lemma map_prod_pfun_of_alist [code]:
@@ -679,13 +679,13 @@ text \<open> The following function combines two choice functions for parallel c
 
 definition emerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
 "emerge f A g = 
-  map_pfun Both (A \<Zdres> pfuse f g) + map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) + map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
+  map_pfun Both (A \<Zdres> pfuse f g) \<oplus> map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) \<oplus> map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
 
 lemma emerge_alt_def:
   "emerge F E G =
      (\<lambda> e \<in> pdom(F) \<inter> pdom(G) \<inter> E \<bullet> Both(F(e), G(e)))
-     + (\<lambda> x \<in> pdom(F) - (E \<union> pdom(G)) \<bullet> Left(F x))
-     + (\<lambda> x \<in> pdom(G) - (E \<union> pdom(F)) \<bullet> Right(G x))"
+     \<oplus> (\<lambda> x \<in> pdom(F) - (E \<union> pdom(G)) \<bullet> Left(F x))
+     \<oplus> (\<lambda> x \<in> pdom(G) - (E \<union> pdom(F)) \<bullet> Right(G x))"
 proof -
   have 1: "map_pfun Both (E \<Zdres> pfuse F G) = (\<lambda> e \<in> pdom(F) \<inter> pdom(G) \<inter> E \<bullet> Both(F(e), G(e)))"
     by (auto intro!: pabs_cong simp add: map_pfun_as_pabs pfuse_def)
