@@ -4,7 +4,7 @@ theory ITree_CSP
   imports ITree_Deadlock ITree_Iteration ITree_Weak_Bisim "Optics.Optics"
 begin
 
-subsection \<open> Event Set Syntax\<close>
+subsection \<open> Event Trace and Set Syntax\<close>
 
 definition evinsert :: "'e \<Rightarrow> 'e set \<Rightarrow> 'e set" where
 "evinsert e E = insert e E"
@@ -30,6 +30,7 @@ syntax
   "_evt_set"   :: "evts \<Rightarrow> logic" ("\<lbrace>_\<rbrace>")
   "_evt_collect" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_/ _ \<in> _./ _\<rbrace>")
   "_evt_collect_ns" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_/ _./ _\<rbrace>")
+  "_evt_trace"   :: "evts \<Rightarrow> logic" ("\<langle>_\<rangle>")
 
 translations 
   "_evt e" => "CONST evinsert e \<lbrace>\<rbrace>"
@@ -41,6 +42,8 @@ translations
   "_evt_collect_ns e x P" == "_evt_collect e x (CONST UNIV) P"
   "\<lbrace>e\<rbrace>" <= "CONST evinsert e \<lbrace>\<rbrace>"
   "\<lbrace>e, es\<rbrace>" <= "CONST evinsert e (_evt_set es)"
+  "_evt_trace (_evt e)" => "[e]"
+  "_evt_trace (_evts e tr)" => "e # _evt_trace tr"
 
 subsection \<open> Basic Constructs \<close>
 
@@ -938,7 +941,6 @@ translations
   "_rncollect (_evt_param c\<^sub>1 v\<^sub>1) (_evt_id c\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. ((v\<^sub>1, ()), P))"
   "_rncollect (_evt_id c\<^sub>1) (_evt_id c\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. (((), ()), P))"
   "_rncollect_ns e\<^sub>1 e\<^sub>2 x P" == "_rncollect e\<^sub>1 e\<^sub>2 x (CONST UNIV) P"
-
 
 primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
 "rename \<rho> P = 
