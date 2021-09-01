@@ -120,6 +120,8 @@ lemma "wb_prism c \<Longrightarrow> input_where c P = (\<lambda>s. inp_list_wher
 bundle Circus_Syntax
 begin
 
+unbundle Expression_Syntax
+
 no_notation disj (infixr "|" 30)
 no_notation conj (infixr "&" 35)
 
