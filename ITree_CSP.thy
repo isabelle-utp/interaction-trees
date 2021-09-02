@@ -952,4 +952,13 @@ primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
   by (simp add: deadlock_def rename.code)
 
+subsection \<open> Restriction \<close>
+
+text \<open> Restrict the events that an ITree can perform to a subset \<close>
+
+primcorec evres :: "'e set \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
+"evres E P = 
+  (case P of
+     Ret x \<Rightarrow> Ret x | Sil P' \<Rightarrow> Sil (evres E P') | Vis F \<Rightarrow> Vis (map_pfun (evres E) (E \<Zdres> F)))"
+
 end
