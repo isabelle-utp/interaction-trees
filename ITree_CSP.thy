@@ -399,6 +399,18 @@ lemma map_prod_pfun_of_alist [code]:
     pfun_of_alist (AList.restrict (- fst ` set xs) ys @ AList.restrict (- fst ` set ys) xs)"
   by (simp add: map_prod_def pdom_res_alist plus_pfun_alist)
 
+lemma map_prod_pfun_of_map_alist [code]: "(pfun_of_map f) \<odot> (pfun_of_alist xs) 
+  = pfun_of_map
+     (\<lambda>x. case f x of None \<Rightarrow> (case map_of xs x of None \<Rightarrow> None | Some x \<Rightarrow> Some x) 
+        | Some xa \<Rightarrow> (case map_of xs x of None \<Rightarrow> Some xa | Some x \<Rightarrow> Map.empty x))"
+  by (simp add: pfun_of_alist.abs_eq map_prod_pfun_of_map)
+
+lemma map_prod_pfun_of_alist_map [code]: "(pfun_of_alist xs) \<odot> (pfun_of_map p)
+  = pfun_of_map
+     (\<lambda>x. case map_of xs x of None \<Rightarrow> (case p x of None \<Rightarrow> None | Some x \<Rightarrow> Some x)
+        | Some xa \<Rightarrow> (case p x of None \<Rightarrow> Some xa | Some x \<Rightarrow> Map.empty x))"
+  by (simp add: pfun_of_alist.abs_eq map_prod_pfun_of_map)
+
 text \<open> This is like race-free behaviour \<close>
 
 class extchoice = 

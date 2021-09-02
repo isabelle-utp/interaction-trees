@@ -34,6 +34,12 @@ definition "default_bool = False"
 instance ..
 end
 
+instantiation int :: default
+begin
+definition "default_int = (0 :: int)"
+instance ..
+end
+
 instantiation integer :: default
 begin
 definition "default_integer = (0 :: integer)"
@@ -52,6 +58,14 @@ begin
 definition "default_ffun = ({}\<^sub>f :: ('a, 'b) ffun)"
 instance ..
 end
+
+declare evcollect_def [code_unfold]
+
+declare UNIV_I [code_unfold]
+declare bool_simps [code_unfold]
+
+lemma Collect_List_member [code_unfold]: "Collect (List.member xs) = set xs"
+  using in_set_member by fastforce
 
 lit_vars
 

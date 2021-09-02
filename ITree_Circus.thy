@@ -102,6 +102,10 @@ abbreviation input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarr
 lemma input_in_where_enum [code_unfold]: "wb_prism c \<Longrightarrow> input_in_where c (UNIV)\<^sub>e P = input_list_where c (enum_class.enum)\<^sub>e P"
   by (simp add: input_in_where_def input_list_where_def inp_in_where_list_code inp_where_enum)
 
+lemma input_in_where_map_code [code_unfold]:
+  "wb_prism c \<Longrightarrow> input_in_where c A P = input_map_in_where c A P"
+  by (simp add: input_in_where_def inp_in_where_map_code input_map_in_where_def)
+
 abbreviation input_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input_where c P \<equiv> input_in_where c (UNIV)\<^sub>e P"
 
