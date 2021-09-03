@@ -3,7 +3,7 @@ text \<open> This theory aims for simulation of a trivial RoboChart model based 
  semantics. We use the @{term "rename"} operator for renaming.
 \<close>
 theory RoboChart_basic
-  imports "../../../ITree_RoboChart" "../../../RC_Channel_Type"
+  imports "../../../ITree_RoboChart"
 begin
 
 subsection \<open> General definitions \<close>
