@@ -3,7 +3,7 @@ text \<open> This theory aims for simulation of a trivial RoboChart model based 
  semantics. We use the @{term "rename"} operator for renaming.
 \<close>
 theory RoboChart_basic
-  imports "../../ITree_RoboChart" "../../RC_Channel_Type"
+  imports "../../../ITree_RoboChart" "../../../RC_Channel_Type"
 begin
 
 subsection \<open> General definitions \<close>
@@ -11,16 +11,16 @@ interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
 subsection \<open> stm0 \<close>
 enumtype SIDS_stm0 = SID_stm0
-  | SID_stm0_s0
+                   | SID_stm0_s0
 
 definition "SIDS_stm0_list = enum_SIDS_stm0_inst.enum_SIDS_stm0"
 definition "SIDS_stm0_set = set SIDS_stm0_list"
 definition "SIDS_stm0_without_s0 = (removeAll SID_stm0_s0 SIDS_stm0_list)"
 
 enumtype TIDS_stm0 = NULLTRANSITION_stm0
-	              | TID_stm0_t0
-	              | TID_stm0_t1
-	              | TID_stm0_t2
+                   | TID_stm0_t0
+                   | TID_stm0_t1
+                   | TID_stm0_t2
 
 definition "TIDS_stm0_list = enum_TIDS_stm0_inst.enum_TIDS_stm0"
 definition "TIDS_stm0_set = set TIDS_stm0_list"
@@ -57,6 +57,8 @@ chantype Chan_stm0 =
   (* will be renamed to e3_ctr0.out *)
   e3__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e3_stm0 :: "InOut \<times> core_int"
+
+term "e3_stm0"
 
 subsubsection \<open> Sets of events \<close>
 definition int_int_stm0 where
@@ -359,7 +361,8 @@ definition rename_stm0_events_others' where
 
 definition rename_MemorySTM_opt_stm0 where
 "rename_MemorySTM_opt_stm0 idd = 
-  rename (set (rename_stm0_events @ rename_stm0_events_others)) (MemorySTM_opt_stm0 idd)
+  rename (set (rename_stm0_events @ rename_stm0_events_others)) 
+    (MemorySTM_opt_stm0 idd)
 "
 
 definition AUX_opt_stm0 where
@@ -521,7 +524,8 @@ definition State_stm1_s0 where
                       outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                       outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
                       x \<leftarrow> inp_in get_x_stm1 rc.core_int_set ; 
-                        outp set_x_stm1 (x+1);
+                        \<comment> \<open>outp set_x_stm1 (x+1);\<close>
+                        outp set_x_stm1 (rc.Plus x 1 rc.core_int_set);
                         outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
                         Ret(True, fst (snd s), SID_stm1_s0)
                     } \<box>
@@ -810,6 +814,7 @@ chantype Chan_mod0 =
 (* e2 of stm1 is mapped to it *)
   e2_mod0 :: "InOut"
 
+subsubsection \<open> Memory \<close>
 definition Memory_mod0 where
 "Memory_mod0 = loop (\<lambda> id::integer.
   ( do {x \<leftarrow> inp_in set_x_mod0 rc.core_int_set; 
@@ -828,6 +833,8 @@ definition rename_mod0_ctr0_events where
   [(set_EXT_x_ctr0_C n, set_EXT_x_mod0_ctr0_C n). n \<leftarrow> rc.core_int_list]
 "
 *)
+
+subsubsection \<open> Module \<close>
 definition rename_mod0_ctr0_events where
 "rename_mod0_ctr0_events = 
   (enumchanp2_1 (terminate_ctr0_C,terminate_mod0_C) [()]) @
@@ -951,6 +958,20 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interactio
 simulate = simulate_cnt 0;
 \<close>
 
-export_generated_files \<open>code/RoboChart_basic/Simulate.hs\<close>
+generate_file \<open>code/RoboChart_basic/Main.hs\<close> = 
+\<open>import qualified Interaction_Trees;
+import qualified Partial_Fun;
+import qualified Simulate;
+import qualified RoboChart_basic;
+
+main :: IO ()
+main =
+  do
+    Simulate.simulate (RoboChart_basic.d_mod0 0);
+\<close>
+
+export_generated_files 
+  \<open>code/RoboChart_basic/Simulate.hs\<close>
+  \<open>code/RoboChart_basic/Main.hs\<close>
 
 end

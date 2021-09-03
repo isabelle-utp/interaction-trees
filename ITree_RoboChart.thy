@@ -26,8 +26,8 @@ type_synonym core_real = integer
 type_synonym core_string = String.literal
 
 text \<open> A locale for reuse of RoboChart configurations (corresponding to instantiation.csp). 
-This will be interpreted in each RoboChart theory.
-We can also add common definitions here.
+This will be extended and interpreted in theories for each RoboChart model. 
+We add common types and definitions here.
 \<close>
 locale robochart_confs = 
   fixes min_int::"integer" 
@@ -50,6 +50,24 @@ abbreviation "core_real_list \<equiv>
 
 abbreviation "core_real_set \<equiv> set core_real_list"
 
+definition Plus where
+"Plus e1 e2 T = (if (e1+e2) \<in> T then (e1+e2) else e1)"
+
+definition Minus where
+"Minus e1 e2 T = (if (e1-e2) \<in> T then (e1-e2) else e1)"
+
+definition Mult where
+"Mult e1 e2 T = (if (e1*e2) \<in> T then (e1*e2) else e1)"
+
+definition Div where
+"Div e1 e2 T = (if (e1/e2) \<in> T then (e1/e2) else e1)"
+
+definition Neg where
+"Neg e1 T = (if (-e1) \<in> T then (-e1) else e1)"
+
+definition Modulus where
+"Modulus e1 e2 T = (if (e1 mod e2) \<in> T then (e1 mod e2) else e1)"
+
 end
 
 print_locale! robochart_confs
@@ -71,6 +89,12 @@ definition mapfc :: "('c \<times> 'a \<Rightarrow> 'b) list \<Rightarrow> 'c lis
 definition mapf  :: "('b \<Rightarrow> 'a) list \<Rightarrow> 'b list \<Rightarrow> 'a list" where
 "mapf fs xs = concat (map (\<lambda> f. map f xs) (fs))"
 
+text \<open> The @{text "enumchan1 ch a"} enumerates events for a channel @{text "ch"}, whose type is 
+single (not tuple), based on the list of values @{text "a"}. 
+The @{text "enumchans1 chs a"} supports enumerations of multiple channels.
+Other definitions with suffix 2, 3, and 4 are similar, but for the channels whose types are pairs, 
+triples, and quadruples.
+\<close>
 abbreviation "enumchan1 ch a \<equiv> mapf [ch] a"
 abbreviation "enumchan2 ch a b \<equiv> mapf (mapfc [ch] a) b"
 abbreviation "enumchan3 ch a b c \<equiv> mapf (mapfc (mapfc [ch] a) b) c"

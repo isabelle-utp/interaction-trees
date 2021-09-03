@@ -773,11 +773,12 @@ definition Movement_MemoryTransitions_opt_2 where
         d0 \<leftarrow> inp_in get_d0_Movement rc.core_real_set ;
         ( \<comment> \<open> In CSP semantics, the guard of both is true; We can manually discard 
             time primitives, but not (d1-d0\<le>stuckDist) for t13, and (d1-d0>stuckDist) for t12\<close>
-          do {guard (d1-d0 > const_Movement_stuckDist); outp internal_Movement TID_Movement_t12 ; Ret (id)} \<box>
+          do {guard ((rc.Minus d1 d0 rc.core_real_set) > const_Movement_stuckDist); 
+              outp internal_Movement TID_Movement_t12 ; Ret (id)} \<box>
           \<comment> \<open> 
           do {guard (d1-d0 \<le> const_Movement_stuckDist); outp internal_Movement TID_Movement_t13 ; Ret (id)} \<box> \<close>
-          do {guard (d1-d0 \<le> const_Movement_stuckDist); 
-            outp stuck_timeout__Movement (TID_Movement_t13, din) ; Ret (id)} \<box>
+          do {guard ((rc.Minus d1 d0 rc.core_real_set) \<le> const_Movement_stuckDist); 
+              outp stuck_timeout__Movement (TID_Movement_t13, din) ; Ret (id)} \<box>
           do {inp_in set_d1_Movement rc.core_real_set; Ret (id)} \<box>
           do {inp_in set_d0_Movement rc.core_real_set; Ret (id)}
         )
