@@ -365,6 +365,8 @@ definition rename_MemorySTM_opt_stm0 where
     (MemorySTM_opt_stm0 idd)
 "
 
+term "(MemorySTM_opt_stm0 idd) \<lbrakk> set [(terminate_stm0_C (), terminate_stm0_C ())] \<rbrakk>"
+
 definition AUX_opt_stm0 where
 "AUX_opt_stm0 (idd::integer) = 
   (hide 

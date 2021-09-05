@@ -949,6 +949,9 @@ primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e
     Sil P \<Rightarrow> Sil (rename \<rho> P) |
     Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p graph_pfun ((pdom F \<lhd>\<^sub>r \<rho>)\<inverse>))))"
 
+abbreviation rename':: "('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>2, 'a) itree" ("_\<lbrakk>_\<rbrakk>" 59) where
+"rename' P \<rho> \<equiv> rename \<rho> P"
+
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
   by (simp add: deadlock_def rename.code)
 

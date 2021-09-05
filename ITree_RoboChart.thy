@@ -45,6 +45,8 @@ abbreviation "core_int_set \<equiv> set core_int_list"
 abbreviation "core_nat_list \<equiv> 
   map (natural_of_nat \<circ> nat) [(of_nat 0)..(of_nat (nat_of_natural max_nat))]"
 
+abbreviation "core_nat_set \<equiv> set core_nat_list"
+
 abbreviation "core_real_list \<equiv> 
   map (integer_of_int) [(int_of_integer min_real)..(int_of_integer max_real)]"
 
