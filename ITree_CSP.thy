@@ -368,11 +368,6 @@ lemma map_prod_commute: "x \<odot> y = y \<odot> x"
 lemma map_prod_empty [simp]: "x \<odot> {}\<^sub>p = x" "{}\<^sub>p \<odot> x = x"
   by (simp_all add: map_prod_def)
 
-lemma map_prod_Nil_alist [code]: 
-  "(pfun_of_alist []) \<odot> P = P"
-  "P \<odot> (pfun_of_alist []) = P"
-  by simp_all
-
 lemma map_prod_merge: 
   "f(x \<mapsto> v)\<^sub>p \<odot> g = 
   (if (x \<notin> pdom(g)) then (f \<odot> g)(x \<mapsto> v)\<^sub>p else {x} \<Zndres> (f \<odot> g))"
@@ -410,6 +405,11 @@ lemma map_prod_pfun_of_alist_map [code]: "(pfun_of_alist xs) \<odot> (pfun_of_ma
      (\<lambda>x. case map_of xs x of None \<Rightarrow> (case p x of None \<Rightarrow> None | Some x \<Rightarrow> Some x)
         | Some xa \<Rightarrow> (case p x of None \<Rightarrow> Some xa | Some x \<Rightarrow> Map.empty x))"
   by (simp add: pfun_of_alist.abs_eq map_prod_pfun_of_map)
+
+lemma map_prod_Nil_alist [code]: 
+  "(pfun_of_alist []) \<odot> P = P"
+  "P \<odot> (pfun_of_alist []) = P"
+  by simp_all
 
 text \<open> This is like race-free behaviour \<close>
 

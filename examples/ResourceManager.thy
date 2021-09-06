@@ -36,8 +36,12 @@ lemma Allocate\<^sub>1_refines_Allocate: "Allocate \<sqsubseteq> Allocate\<^sub>
 definition Deallocate :: "(chan, ResourceManager) htree" where
 "Deallocate = dealloc?(r):(res - free) \<rightarrow> free := free \<union> {r}"
 
-definition "ResourceManagerProc R
-  = process [res \<leadsto> set R, free \<leadsto> set R] (loop (Allocate \<box> Deallocate))"
+consts RES :: "integer list"
+
+definition "ResourceManagerProc
+  = process [res \<leadsto> set RES, free \<leadsto> set RES] (loop (Allocate \<box> Deallocate))"
+
+def_const RES "[0,1,2]"
 
 simulate ResourceManagerProc
 

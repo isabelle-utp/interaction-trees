@@ -2,8 +2,16 @@ theory BoxOffice
   imports "Interaction_Trees.ITree_Simulation"
 begin lit_vars
 
+unbundle Circus_Syntax
+
 type_synonym SEAT = integer
 type_synonym CUSTOMER = String.literal
+
+consts initalloc :: "SEAT set"
+
+consts SEAT :: "SEAT set"
+
+consts CUSTOMER :: "CUSTOMER set"
 
 schema BoxOffice = 
   seating :: "SEAT set"
@@ -12,25 +20,30 @@ schema BoxOffice =
 
 record_default BoxOffice
 
-definition BoxOfficeInit :: "integer set \<Rightarrow> BoxOffice subst" where
-"BoxOfficeInit initalloc = [seating \<leadsto> initalloc, sold \<leadsto> {}\<^sub>p]"
+definition BoxOfficeInit :: "BoxOffice subst" where
+"BoxOfficeInit = [seating \<leadsto> initalloc, sold \<leadsto> {}\<^sub>p]"
 
 chantype chan =
   purchase :: "SEAT \<times> CUSTOMER"
   ret :: "SEAT \<times> CUSTOMER"
 
-definition Purchase0 :: "_ \<Rightarrow> _ \<Rightarrow> (chan, BoxOffice) action" where
-"Purchase0 SEAT CUSTOMER = 
-  purchase?(s, c):({s \<in> SEAT. s \<notin> pdom(sold)} \<times> CUSTOMER) \<rightarrow> sold := sold + {s \<mapsto> c}\<^sub>p"
+definition Purchase0 :: "(chan, BoxOffice) action" where
+"Purchase0 = 
+  purchase?(s, c):((SEAT - pdom(sold)) \<times> CUSTOMER) \<rightarrow> sold := sold \<oplus> {s \<mapsto> c}\<^sub>p"
 
-definition Return0 :: "_ \<Rightarrow> _ \<Rightarrow> (chan, BoxOffice) action" where
-"Return0 SEAT CUSTOMER =
+definition Return0 :: "(chan, BoxOffice) action" where
+"Return0 =
   ret?(s, c):pfun_graph(sold) \<rightarrow> sold := {s} \<Zndres> sold"
 
-definition "BoxOfficeProc initalloc SEAT CUSTOMER
+
+definition "BoxOfficeProc
   = process 
-      (BoxOfficeInit (set initalloc))
-      (loop (Purchase0 (set SEAT) (set CUSTOMER) \<box> Return0 (set SEAT) (set CUSTOMER)))"
+      BoxOfficeInit
+      (loop (Purchase0 \<box> Return0 ))"
+
+def_const initalloc "SEAT"
+def_const SEAT "set [0,1,2,3]"
+def_const CUSTOMER "set [STR ''Simon'', STR ''Jim'', STR ''Christian'']"
 
 simulate BoxOfficeProc
 
