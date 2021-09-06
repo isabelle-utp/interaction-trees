@@ -32,6 +32,9 @@ simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
 simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
   do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
        e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
        case (Prelude.reads e) of
          []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
          [(v, _)] -> if (v > Prelude.length m)
@@ -41,6 +44,9 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
 simulate_cnt n t@(Vis (Pfun_of_map f)) = 
   do { Prelude.putStr ("Enter an event:");
        e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
        case (Prelude.reads e) of
          []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t } 
          [(v, _)] -> case f v of
