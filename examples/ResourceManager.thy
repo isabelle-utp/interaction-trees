@@ -41,7 +41,9 @@ consts RES :: "integer list"
 definition "ResourceManagerProc
   = process [res \<leadsto> set RES, free \<leadsto> set RES] (loop (Allocate \<box> Deallocate))"
 
-def_const RES "[0,1,2]"
+term integer_of_int
+
+def_const RES "map integer_of_int [0..5]"
 
 simulate ResourceManagerProc
 

@@ -67,6 +67,8 @@ declare bool_simps [code_unfold]
 lemma Collect_List_member [code_unfold]: "Collect (List.member xs) = set xs"
   using in_set_member by fastforce
 
+declare image_ident [code_unfold]
+
 lit_vars
 
 end

@@ -35,7 +35,6 @@ definition Return0 :: "(chan, BoxOffice) action" where
 "Return0 =
   ret?(s, c):pfun_graph(sold) \<rightarrow> sold := {s} \<Zndres> sold"
 
-
 definition "BoxOfficeProc
   = process 
       BoxOfficeInit
