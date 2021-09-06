@@ -8,6 +8,7 @@ session "Interaction_Trees" = "Shallow-Expressions-Z" +
     ITree_CSP
     ITree_FDSem
     ITree_Circus
+    ITree_Machine
     ITree_Extraction
     ITree_Simulation
     ITree_Eval
