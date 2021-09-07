@@ -24,6 +24,24 @@ fun params_typ ctx ps =
 fun firstLower s =
   case String.explode s of [] => "" | c :: cs => String.implode (Char.toLower c :: cs);
 
+fun operation_sem' (Operation {name = n, params = ps, guard = g, update = upd, post = post}) ctx =
+  let open Syntax; open Library; open HOLogic;
+      val set = params_set ctx ps
+      val ppat = mk_tuple (map (free o fst) ps)
+  in snd (Local_Theory.define 
+           ((Binding.name n, NoSyn)
+         , ((Binding.name (n ^ "_def")
+           , [Attrib.check_src @{context} (Token.make_src ("code", Position.none) [])])
+           , check_term ctx 
+              (const @{const_name "zop.make"} 
+                $ set
+                $ tupled_lambda ppat (Lift_Expr.mk_lift_expr ctx (Syntax.parse_term ctx g))
+                $ tupled_lambda ppat (Syntax.parse_term ctx upd)
+                $ tupled_lambda ppat (Lift_Expr.mk_lift_expr ctx (Syntax.parse_term ctx post))
+                ))) ctx)
+  end;
+
+
 (* For each operation, we assign a channel in the overall channel type. The type of each channel
   is given by a Z set, which allows us to bound the number of transitions for simulation. *)
 
@@ -96,8 +114,4 @@ val parse_zmachine =
   >> (fn (((n, st), init), ops) => ZMachine {name = n, state = st, init = init, operations = ops})
   end;
  
-end;
-
-Outer_Syntax.command @{command_keyword zmachine} "define a declared constant"
-    (Z_Machine.parse_zmachine >> (Toplevel.local_theory NONE NONE o Z_Machine.zmachine_sem));
-  
+end  
