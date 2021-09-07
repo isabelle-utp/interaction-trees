@@ -7,11 +7,10 @@ unbundle Circus_Syntax
 type_synonym SEAT = integer
 type_synonym CUSTOMER = String.literal
 
-consts initalloc :: "SEAT set"
-
-consts SEAT :: "SEAT set"
-
-consts CUSTOMER :: "CUSTOMER set"
+consts 
+  initalloc :: "SEAT set"
+  SEAT      :: "SEAT set"
+  CUSTOMER  :: "CUSTOMER set"
 
 schema BoxOffice = 
   seating :: "SEAT set"
@@ -21,7 +20,7 @@ schema BoxOffice =
 record_default BoxOffice
 
 definition BoxOfficeInit :: "BoxOffice subst" where
-"BoxOfficeInit = [seating \<leadsto> initalloc, sold \<leadsto> {}\<^sub>p]"
+"BoxOfficeInit = [seating \<leadsto> initalloc, sold \<leadsto> {\<mapsto>}]"
 
 chantype chan =
   purchase :: "SEAT \<times> CUSTOMER"
@@ -29,7 +28,7 @@ chantype chan =
 
 definition Purchase0 :: "(chan, BoxOffice) action" where
 "Purchase0 = 
-  purchase?(s, c):((SEAT - pdom(sold)) \<times> CUSTOMER) \<rightarrow> sold := sold \<oplus> {s \<mapsto> c}\<^sub>p"
+  purchase?(s, c):((SEAT - pdom(sold)) \<times> CUSTOMER) \<rightarrow> sold := sold \<oplus> {s \<mapsto> c}"
 
 definition Return0 :: "(chan, BoxOffice) action" where
 "Return0 =
@@ -40,9 +39,10 @@ definition "BoxOfficeProc
       BoxOfficeInit
       (loop (Purchase0 \<box> Return0 ))"
 
-def_const initalloc "SEAT"
-def_const SEAT "set [0,1,2,3]"
-def_const CUSTOMER "set [STR ''Simon'', STR ''Jim'', STR ''Christian'']"
+def_consts 
+  initalloc = "SEAT"
+  SEAT = "set [0,1,2,3]"
+  CUSTOMER = "set [STR ''Simon'', STR ''Jim'', STR ''Christian'']"
 
 simulate BoxOfficeProc
 

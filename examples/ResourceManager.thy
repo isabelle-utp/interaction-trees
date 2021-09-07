@@ -43,7 +43,7 @@ definition "ResourceManagerProc
 
 term integer_of_int
 
-def_const RES "map integer_of_int [0..5]"
+def_consts RES = "map integer_of_int [0..5]"
 
 simulate ResourceManagerProc
 

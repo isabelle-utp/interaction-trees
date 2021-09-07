@@ -7,8 +7,12 @@ begin
 
 subsection \<open> Preliminaries \<close>
 
-notation pdom_res (infixr "\<Zdres>" 66)
-abbreviation ndres (infixr "\<Zndres>" 66) where "ndres A P \<equiv> (- A) \<Zdres> P"
+unbundle Z_Type_Syntax
+unbundle Z_Pfun_Notation
+
+text \<open> Allow partial functions to be written with braces \<close>
+
+syntax "_Pfun"     :: "maplets => ('a, 'b) pfun"            ("(1{_})")
 
 declare [[coercion pfun_app]]
 declare [[coercion_enabled]]
