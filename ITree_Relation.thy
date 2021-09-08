@@ -15,7 +15,13 @@ definition spec :: "'s scene \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow>
 "spec a pre post = {(s, s'). s \<approx>\<^sub>S s' on (- a) \<and> pre s \<longrightarrow> post s'}"
 
 
-lemma test_rel: "itree_rel \<questiondown>P? = {(s, s'). s' = s \<and> P s}"
+lemma assert_rel: "itree_rel (assert P) = {(s, s'). s' = s \<and> P s}"
+  apply (auto simp add: itree_rel_def retvals_def assert_def)
+  apply (metis (full_types) Ret_trns diverge_no_Ret_trans itree.inject(1))
+  using diverge_no_Ret_trans apply fastforce
+  done
+
+lemma test_rel: "itree_rel (test P) = {(s, s'). s' = s \<and> P s}"
   apply (auto simp add: itree_rel_def retvals_def test_def)
   apply (metis (full_types) empty_iff insert_iff retvals_Ret retvals_deadlock retvals_traceI)
   using nonterminates_iff apply force

@@ -4,32 +4,29 @@ theory ITree_Machine
     and "over" "init" "operations" "params" "guard" "update" "post" "\<in>"
 begin
 
-record ('a, 's) zop =
-  ztype :: "'a set"
-  zpre :: "'a \<Rightarrow> 's \<Rightarrow> bool"
-  zupdate :: "'a \<Rightarrow> 's \<Rightarrow> 's"
-  zpost :: "'a \<Rightarrow> 's \<Rightarrow> bool"
+text \<open> An operation is constructed from a precondition, update, and postcondition, all of which
+  are parameterised. \<close>
 
-lemma zop_unfolds [simp, code_unfold]: 
-  "ztype (zop.make t p \<sigma> q) = t"
-  "zpre (zop.make t p \<sigma> q) = p"
-  "zupdate (zop.make t p \<sigma> q) = \<sigma>"
-  "zpost (zop.make t p \<sigma> q) = q"
-  by (simp_all add: zop.defs)
+definition mk_zop :: "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 's subst) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree)" where
+"mk_zop P \<sigma> Q = (\<lambda> v. assert (P v) \<Zcomp> \<langle>\<sigma> v\<rangle>\<^sub>a \<Zcomp> assume (Q v))"
 
-definition zop_sem :: "('a, 's) zop \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree)" where
-[code_unfold]: "zop_sem zop = (\<lambda> v. assert (zpre zop v) \<Zcomp> \<langle>zupdate zop v\<rangle>\<^sub>a \<Zcomp> assert (zpost zop v))"
+text \<open> An operation requires that precondition holds, and that following the update the postcondition(s)
+  also hold. \<close>
 
-definition zop_event :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a, 's) zop \<Rightarrow> ('e, 's) htree" where
-[code_unfold]: "zop_event c zop = input_in_where c 
-                                  (\<guillemotleft>ztype zop\<guillemotright>)\<^sub>e 
-                                  (\<lambda> v. ((\<lambda> s. zpre zop v s \<and> zpost zop v (zupdate zop v s)), zop_sem zop v))"
+lemma wp_zop [wp, code_unfold]: "wp (mk_zop P \<sigma> Q v) b = [\<lambda> \<s>. P v \<s> \<and> (\<sigma> v \<dagger> [\<lambda> \<s>. Q v \<s> \<and> b \<s>]\<^sub>e) \<s>]\<^sub>e"
+  by (simp add: mk_zop_def wp)
 
-lemma
-  "zop_event c zop = input_in_where c 
-                                  (\<guillemotleft>ztype zop\<guillemotright>)\<^sub>e 
-                                  (\<lambda> v. ((\<lambda> s. zpre zop v s \<and> zpost zop v (zupdate zop v s)), \<langle>zupdate zop v\<rangle>\<^sub>a))"
-  oops
+lemma wlp_zop [wp, code_unfold]: "wlp (mk_zop P \<sigma> Q v) b = [\<lambda> \<s>. P v \<s> \<longrightarrow> (\<sigma> v \<dagger> [\<lambda> \<s>. Q v \<s> \<longrightarrow> b \<s>]\<^sub>e) \<s>]\<^sub>e"
+  by (simp add: mk_zop_def wp)
+
+text \<open> An operation can have its parameters supplied by an event, using the construct below. \<close>
+
+definition zop_event :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+[code_unfold]: "zop_event c A zop = input_in_where c 
+                                    (\<guillemotleft>A\<guillemotright>)\<^sub>e 
+                                    (\<lambda> v. (wp (zop v) True, zop v))"
+
+text \<open> A machine has an initialisation and a list of operations. \<close>
 
 definition machine :: "('s::default) subst \<Rightarrow> ('e, 's) htree list \<Rightarrow> 'e process" where
 [code_unfold]: "machine Init Ops = process Init (loop (foldr (\<box>) Ops Stop))"

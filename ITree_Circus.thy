@@ -41,6 +41,8 @@ lemma assert_false: "\<exclamdown>False! = Div"
 definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
+abbreviation (input) "assume b \<equiv> test b"
+
 syntax "_test" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
 translations "_test b" == "CONST test (b)\<^sub>e"
 

@@ -24,12 +24,19 @@ fun params_typ ctx ps =
 fun firstLower s =
   case String.explode s of [] => "" | c :: cs => String.implode (Char.toLower c :: cs);
 
+fun zop_type n = n ^ "_type"
+
 fun mk_zop (Operation {name = n, state = s, params = ps, guard = g, update = upd, post = post}) ctx =
   let open Syntax; open Library; open HOLogic;
       val set = params_set ctx ps
       val st = read_typ ctx s
       val ppat = mk_tuple (map (free o fst) ps)
   in snd (Local_Theory.define 
+           ((Binding.name (zop_type n), NoSyn)
+         , ((Binding.name (zop_type n ^ "_def")
+           , [Attrib.check_src @{context} (Token.make_src ("code_unfold", Position.none) [])])
+           , check_term ctx set)) ctx) |>
+     snd o Local_Theory.define 
            ((Binding.name n, NoSyn)
          , ((Binding.name (n ^ "_def")
            (* It would be better if we could mark these as "code" rather than "code_unfold" to retain
@@ -37,17 +44,17 @@ fun mk_zop (Operation {name = n, state = s, params = ps, guard = g, update = upd
               the semantics of enumerated inputs is correctly calculated *)
            , [Attrib.check_src @{context} (Token.make_src ("code_unfold", Position.none) [])])
            , check_term ctx 
-              (const @{const_name "zop.make"} 
-                $ set
-                $ tupled_lambda ppat (Lift_Expr.mk_lift_expr ctx (Syntax.parse_term ctx g))
-                $ tupled_lambda ppat (Type.constraint (st --> st) (Syntax.parse_term ctx upd))
-                $ tupled_lambda ppat (Lift_Expr.mk_lift_expr ctx (Syntax.parse_term ctx post))
-                ))) ctx)
+              (const @{const_name "mk_zop"} 
+                $ tupled_lambda ppat (const @{const_name SEXP} $ Lift_Expr.mk_lift_expr ctx (parse_term ctx g))
+                $ tupled_lambda ppat (const @{const_name SEXP} $ Type.constraint (st --> st) (parse_term ctx upd))
+                $ tupled_lambda ppat (const @{const_name SEXP} $ Lift_Expr.mk_lift_expr ctx (parse_term ctx post))
+                )))
   end;
 
 fun get_zop_ptype n ctx =
   case Proof_Context.read_const {proper = false, strict = false} ctx n of
-    Const (_, Type (@{type_name zop_ext}, [a, _, @{typ "unit"}])) => a |
+(*    Const (_, Type (@{type_name zop_ext}, [a, _, @{typ "unit"}])) => a | *)
+    Const (_, Type (@{type_name fun}, [a, _])) => a |
     _ => raise Match;
       
 fun mk_zmachine_chantype ops ctx =
@@ -65,7 +72,7 @@ fun zmachine_body_sem n st init ops ctx =
   let open Syntax; open HOLogic; open Proof_Context
       val oplist = 
             mk_list dummyT 
-              (map (fn n => const @{const_name zop_event} $ free (firstLower n) $ const (read_const_name ctx n)) ops)
+              (map (fn n => const @{const_name zop_event} $ free (firstLower n) $ const (read_const_name ctx (zop_type n)) $ const (read_const_name ctx n)) ops)
   in snd (Local_Theory.define 
            ((Binding.name n, NoSyn)
          , ((Binding.name (n ^ "_def")
