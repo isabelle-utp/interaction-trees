@@ -55,11 +55,6 @@ fun get_zop_ptype n ctx =
     Const (_, Type (@{type_name fun}, [a, _])) => a |
     _ => raise Match;
       
-fun mk_zmachine_chantype ops ctx =
-  let val cs = map (fn n => (firstLower n, YXML.content_of (Syntax.string_of_typ ctx (get_zop_ptype n ctx)))) ops
-  in Channel_Type.compile_chantype ("chan", cs) ctx
-  end
-
 fun read_const_name ctx n =
   case Proof_Context.read_const {proper = false, strict = false} ctx n of
     Const (n', _) => n' |
@@ -78,12 +73,14 @@ fun zmachine_body_sem n st init ops ctx =
            , check_term ctx 
               (const @{const_name "machine"} $ Type.constraint (st --> st) init $ oplist))) ctx) end
 
+fun chantype_name n = n ^ "_chan"
+
 fun zmachine_sem (ZMachine {name = n, state = s, init = i, operations = ops}) ctx =
   let open Syntax; open HOLogic
     val cs = map (fn n => (firstLower n, YXML.content_of (string_of_typ ctx (get_zop_ptype n ctx)))) ops
     val st = read_typ ctx s
     val init = parse_term ctx i
-  in Channel_Type.compile_chantype ("chan", cs) ctx |>
+  in Channel_Type.compile_chantype (chantype_name n, cs) ctx |>
      zmachine_body_sem n st init ops end
 
 val parse_param = 

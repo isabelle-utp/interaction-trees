@@ -24,9 +24,6 @@ schema IncubatorMonitor =
 
 record_default IncubatorMonitor
 
-expr_ctr IncubatorMonitor_inv
-expr_ctr IncubatorMonitor
-
 zoperation Increment =
   over IncubatorMonitor
   pre "temp < MAX_TEMP"

@@ -26,7 +26,7 @@ zoperation Purchase0 =
   params s\<in>SEAT c\<in>CUSTOMER
   pre "s \<notin> pdom(sold)"
   update "[sold \<leadsto> sold \<oplus> {s \<mapsto> c}]"
-  
+
 zoperation Return0 =
   over BoxOffice
   params s\<in>SEAT c\<in>CUSTOMER
