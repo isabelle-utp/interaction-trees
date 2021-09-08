@@ -22,62 +22,25 @@ schema IncubatorMonitor =
 
 record_default IncubatorMonitor
 
-zmachine Incubator =
+zoperation Increment =
   over IncubatorMonitor
+  guard "temp < MAX_TEMP"
+  update "[temp \<leadsto> temp + 1]"
+
+zoperation Decrement =
+  over IncubatorMonitor
+  guard "temp > MIN_TEMP"
+  update "[temp \<leadsto> temp - 1]"
+
+zoperation GetTemp =
+  over IncubatorMonitor
+  params currentTemp \<in> TEMP
+  post "temp = currentTemp"
+
+zmachine Incubator =
   init "[temp \<leadsto> 20]"
-  operations
+  operations Increment Decrement GetTemp
 
-    Increment =
-      guard "temp < MAX_TEMP"
-      update "[temp \<leadsto> temp + 1]"
-
-    Decrement =
-      guard "temp > MIN_TEMP"
-      update "[temp \<leadsto> temp - 1]"
-
-    GetTemp =
-      params currentTemp \<in> TEMP
-      post "temp = currentTemp"
-
-(*
-chantype chan = 
-  increment :: unit
-  decrement :: unit
-  currentTemp :: int
-
-definition Increment :: "(chan, IncubatorMonitor) htree" where
-"Increment = moperation increment UNIV (\<lambda> _. (temp < MAX_TEMP)\<^sub>e) (\<lambda> _. (True)\<^sub>e) (\<lambda> _. [temp \<leadsto> temp + 1])"
-
-(* (temp < MAX_TEMP & increment?() \<rightarrow> temp := temp + 1) *)
-
-definition Decrement :: "(chan, IncubatorMonitor) htree" where
-"Decrement = moperation decrement UNIV (\<lambda> _. (temp > MIN_TEMP)\<^sub>e) (\<lambda> _. (True)\<^sub>e) (\<lambda> _. [temp \<leadsto> temp - 1])"
-
-(*
-definition Decrement :: "(chan, IncubatorMonitor) htree" where
-"Decrement = (temp > MIN_TEMP & decrement?() \<rightarrow> temp := temp - 1)"
-*)
-
-
-(*
-operation Decrement where
-  guard ...
-  update ...
-  post ...
-*)
-
-definition GetTemp :: "(chan, IncubatorMonitor) htree" where
-"GetTemp = moperation currentTemp TEMP (\<lambda> t. (temp = t)\<^sub>e) (\<lambda> _. (True)\<^sub>e) (\<lambda> _. [\<leadsto>])"
-
-(*
-definition GetTemp :: "(chan, IncubatorMonitor) htree" where
-"GetTemp = currentTemp!(temp) \<rightarrow> Skip"
-*)
-
-
-
-definition "Incubator = process [temp \<leadsto> 20] (loop (Increment \<box> Decrement \<box> GetTemp))"
-*)
 
 code_datatype pfun_of_alist pfun_of_map
 

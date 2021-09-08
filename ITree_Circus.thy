@@ -26,6 +26,18 @@ lemma traces_deadlock: "traces(deadlock) = {[]}"
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
+definition assert :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
+"assert b = (\<lambda> s. if (b s) then Ret s else diverge)"
+
+syntax "_assert" :: "logic \<Rightarrow> logic" ("\<exclamdown>_!")
+translations "_assert b" == "CONST assert (b)\<^sub>e"
+
+lemma assert_true: "\<exclamdown>True! = Skip"
+  by (simp add: assert_def Skip_def)
+
+lemma assert_false: "\<exclamdown>False! = Div"
+  by (simp add: assert_def)
+
 definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
