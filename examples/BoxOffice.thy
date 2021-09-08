@@ -1,5 +1,7 @@
+subsection \<open> Theatre Box Office \<close>
+
 theory BoxOffice
-  imports "Interaction_Trees.ITree_Simulation"
+  imports "Interaction_Trees.ITree_Simulation" "Interaction_Trees.ITree_Machine"
 begin lit_vars
 
 unbundle Circus_Syntax
@@ -19,25 +21,21 @@ schema BoxOffice =
 
 record_default BoxOffice
 
-definition BoxOfficeInit :: "BoxOffice subst" where
-"BoxOfficeInit = [seating \<leadsto> initalloc, sold \<leadsto> {\<mapsto>}]"
+zoperation Purchase0 =
+  over BoxOffice
+  params s\<in>SEAT c\<in>CUSTOMER
+  pre "s \<notin> pdom(sold)"
+  update "[sold \<leadsto> sold \<oplus> {s \<mapsto> c}]"
+  
+zoperation Return0 =
+  over BoxOffice
+  params s\<in>SEAT c\<in>CUSTOMER
+  pre "s \<in> pdom(sold) \<and> c = sold s"
+  update "[sold \<leadsto> {s} \<Zndres> sold]" 
 
-chantype chan =
-  purchase :: "SEAT \<times> CUSTOMER"
-  ret :: "SEAT \<times> CUSTOMER"
-
-definition Purchase0 :: "(chan, BoxOffice) action" where
-"Purchase0 = 
-  purchase?(s, c):((SEAT - pdom(sold)) \<times> CUSTOMER) \<rightarrow> sold := sold \<oplus> {s \<mapsto> c}"
-
-definition Return0 :: "(chan, BoxOffice) action" where
-"Return0 =
-  ret?(s, c):pfun_graph(sold) \<rightarrow> sold := {s} \<Zndres> sold"
-
-definition "BoxOfficeProc
-  = process 
-      BoxOfficeInit
-      (loop (Purchase0 \<box> Return0 ))"
+zmachine BoxOfficeProc =
+  init "[seating \<leadsto> initalloc, sold \<leadsto> {\<mapsto>}]"
+  operations Purchase0 Return0
 
 def_consts 
   initalloc = "SEAT"

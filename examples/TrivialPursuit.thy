@@ -1,5 +1,5 @@
 theory TrivialPursuit
-  imports "../ITree_Extraction" "../ITree_Operations"
+  imports "Interaction_Trees.ITree_Extraction" "Interaction_Trees.ITree_Machine"
 begin
 
 lit_vars
@@ -7,6 +7,9 @@ lit_vars
 enumtype Player = one | two | three | four | five | six
 
 enumtype Colour = blue | pink | yellow | brown | green | orange
+
+definition Colour :: "Colour set" where
+"Colour = UNIV"
 
 alphabet LocalScore =
   s :: "Colour set"
@@ -18,8 +21,10 @@ alphabet GlobalScore =
 
 record_default GlobalScore
 
-definition AnswerLocal :: "Colour \<Rightarrow> ('e, LocalScore) htree" where
-[code_unfold]: "AnswerLocal c = \<questiondown>c \<notin> s? \<Zcomp> s := s \<union> {c}"
+zoperation AnswerLocal =
+  params c \<in> Colour
+  pre "c \<in> s"
+  update "[s \<leadsto> s \<union> {c}]"
 
 chantype chan1 =
   answer1 :: "Colour"

@@ -29,7 +29,7 @@ expr_ctr IncubatorMonitor
 
 zoperation Increment =
   over IncubatorMonitor
-  guard "temp < MAX_TEMP"
+  pre "temp < MAX_TEMP"
   update "[temp \<leadsto> temp + 1]"
 
 lemma Increment_correct: "\<^bold>{IncubatorMonitor\<^bold>} Increment() \<^bold>{IncubatorMonitor\<^bold>}"
@@ -37,7 +37,7 @@ lemma Increment_correct: "\<^bold>{IncubatorMonitor\<^bold>} Increment() \<^bold
 
 zoperation Decrement =
   over IncubatorMonitor
-  guard "temp > MIN_TEMP" \<comment> \<open> Change to @{term "(temp \<ge> MIN_TEMP)\<^sub>e"} to break the invariant \<close>
+  pre "temp > MIN_TEMP" \<comment> \<open> Change to @{term "(temp \<ge> MIN_TEMP)\<^sub>e"} to break the invariant \<close>
   update "[temp \<leadsto> temp - 1]"
 
 lemma Decrement_correct: "\<^bold>{IncubatorMonitor\<^bold>} Decrement() \<^bold>{IncubatorMonitor\<^bold>}"

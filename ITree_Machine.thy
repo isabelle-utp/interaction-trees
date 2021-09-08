@@ -1,7 +1,7 @@
 theory ITree_Machine
   imports ITree_Operations
   keywords "zmachine" "zoperation" :: "thy_decl_block"
-    and "over" "init" "operations" "params" "guard" "update" "post" "\<in>"
+    and "over" "init" "operations" "params" "pre" "update" "post" "\<in>"
 begin
 
 text \<open> An operation is constructed from a precondition, update, and postcondition, all of which
