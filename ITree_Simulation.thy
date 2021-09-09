@@ -99,7 +99,8 @@ fun prep_simulation model thy ctx =
   (fn ctx' => 
     let val _ = compile_generated_files 
                  ctx'
-                 [([], (Local_Theory.exit_global ctx')), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
+                 [([], (Local_Theory.exit_global ctx')), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] 
+                 [] [([Path.binding0 (Path.make ["code", "simulate", "Simulation"])], SOME true)]
                  (Path.binding0 (Path.make []))
                  (Input.string (sim_files_cp (Path.implode tmp)))
     in ctx' end)
