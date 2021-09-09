@@ -6,28 +6,29 @@ type param = string * string
 datatype operation = Operation of {name: string, state: string, params: param list, guard: string, update: string, post: string}
 datatype zmachine = ZMachine of {name: string, state: string, init: string, operations: string list}
 
+val SEXP = Const (@{const_name SEXP}, dummyT --> dummyT)
+
 (* Calculate the types (i.e. maximal sets) of each parameter from the given sets *)
 
 fun params_set pss =
   let 
-    open Syntax; open Library
-  in if pss = [] 
+    open Syntax; open Library               
+  in SEXP $ lambda (Syntax.free Lift_Expr.state_id) 
+      (if pss = [] 
        then @{term "UNIV :: unit set"} 
-       else foldr1 (fn (x, y) => const @{const_abbrev "Product_Type.Times"} $ x $ y) pss
-  end
+       else foldr1 (fn (x, y) => const @{const_abbrev "Product_Type.Times"} $ x $ y) pss)
+  end                                                                                     
 
 fun firstLower s =
   case String.explode s of [] => "" | c :: cs => String.implode (Char.toLower c :: cs);
 
 fun zop_type n = n ^ "_type"
 
-val SEXP = Const (@{const_name SEXP}, dummyT --> dummyT)
-
 fun mk_zop (Operation {name = n, state = s, params = ps, guard = g, update = upd, post = post}) ctx =
-  let open Syntax; open Library; open HOLogic;
-      val pss = map (fn (p, t) => (p, read_term ctx t)) ps
-      val set = params_set (map snd pss)
-      val parm = dest_setT (Term.type_of (check_term ctx set))
+  let open Syntax; open Library; open Logic; open HOLogic;
+      val pss = (map (fn (p, t) => (p, Lift_Expr.lift_expr ctx ((parse_term ctx t)))) ps)
+      val set = (params_set (map snd pss))
+      val parm = dest_setT (range_type (Term.type_of (check_term ctx set)))
       val st = read_typ ctx s
       val ppat = mk_tuple (map (free o fst) pss)
   in snd (Local_Theory.define 

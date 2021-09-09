@@ -21,9 +21,9 @@ lemma wlp_zop [wp, code_unfold]: "wlp (mk_zop P \<sigma> Q v) b = [\<lambda> \<s
 
 text \<open> An operation can have its parameters supplied by an event, using the construct below. \<close>
 
-definition zop_event :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+definition zop_event :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "zop_event c A zop = input_in_where c 
-                                    (\<guillemotleft>A\<guillemotright>)\<^sub>e 
+                                    A 
                                     (\<lambda> v. (wp (zop v) True, zop v))"
 
 text \<open> A machine has an initialisation and a list of operations. \<close>
@@ -40,6 +40,5 @@ Outer_Syntax.command @{command_keyword zmachine} "define a Z machine"
 Outer_Syntax.command @{command_keyword zoperation} "define a Z operation"
     (Z_Machine.parse_operation >> (Toplevel.local_theory NONE NONE o Z_Machine.mk_zop));
 \<close>
-
 
 end
