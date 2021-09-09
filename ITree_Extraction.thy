@@ -46,6 +46,11 @@ definition "default_integer = (0 :: integer)"
 instance ..
 end
 
+instantiation String.literal :: default
+begin
+definition "default_literal = STR ''''"
+instance ..
+end
 
 instantiation pfun :: (type, type) default
 begin
