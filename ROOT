@@ -6,14 +6,7 @@ session "Interaction_Trees" = "Shallow-Expressions-Z" +
     "root.tex"
 
 session "ITree_UTP" in "UTP" = "Interaction_Trees" +
-  options [timeout = 600, document = none]
+  options [timeout = 600, document = false]
   theories
-    ITree_CSP
-    ITree_FDSem
-    ITree_Circus
-    ITree_Relation
-    ITree_Procedure
-    ITree_Hoare
-    ITree_WP
-    ITree_Designs
+    ITree_UTP
   
