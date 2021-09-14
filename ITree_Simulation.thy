@@ -1,3 +1,5 @@
+subsection \<open> Simulation Harness \<close>
+
 theory ITree_Simulation
   imports ITree_Extraction
   keywords "simulate" :: "thy_defn"
@@ -129,7 +131,5 @@ ML \<open>
   Outer_Syntax.command @{command_keyword simulate} "simulate an ITree"
   (Parse.name >> (fn model => Toplevel.theory (ITree_Simulator.simulate model)))
 \<close>
-
-ML \<open> Isabelle_System.bash "cd /; ls"\<close>
 
 end

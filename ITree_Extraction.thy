@@ -1,7 +1,7 @@
 subsection \<open> ITree Code Generation Support \<close>
 
 theory ITree_Extraction
-  imports ITree_Circus ITree_Operations ITree_Procedure ITree_Hoare "HOL-Library.Code_Lazy"
+  imports ITree_Deadlock "HOL-Library.Code_Lazy"
 begin
 
 text \<open> Necessary to deal with SML value restriction \<close>
@@ -64,8 +64,6 @@ definition "default_ffun = ({}\<^sub>f :: ('a, 'b) ffun)"
 instance ..
 end
 
-declare evcollect_def [code_unfold]
-
 declare UNIV_I [code_unfold]
 declare bool_simps [code_unfold]
 
@@ -73,7 +71,5 @@ lemma Collect_List_member [code_unfold]: "Collect (List.member xs) = set xs"
   using in_set_member by fastforce
 
 declare image_ident [code_unfold]
-
-lit_vars
 
 end

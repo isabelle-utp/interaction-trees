@@ -14,7 +14,6 @@ definition itree_rel :: "('e, 'a, 'b) ktree \<Rightarrow> ('a \<times> 'b) set" 
 definition spec :: "'s scene \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> 's rel" where
 "spec a pre post = {(s, s'). s \<approx>\<^sub>S s' on (- a) \<and> pre s \<longrightarrow> post s'}"
 
-
 lemma assert_rel: "itree_rel (assert P) = {(s, s'). s' = s \<and> P s}"
   apply (auto simp add: itree_rel_def retvals_def assert_def)
   apply (metis (full_types) Ret_trns diverge_no_Ret_trans itree.inject(1))

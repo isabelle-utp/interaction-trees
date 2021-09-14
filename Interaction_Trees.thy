@@ -2,20 +2,19 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Relation_Lib"
+  "Z_Toolkit.Relation_Toolkit"
 begin
 
 subsection \<open> Preliminaries \<close>
 
 unbundle Z_Type_Syntax
-unbundle Z_Pfun_Notation
+unbundle Z_Relation_Syntax
 
 text \<open> Allow partial functions to be written with braces \<close>
 
 syntax "_Pfun"     :: "maplets => ('a, 'b) pfun"            ("(1{_})")
 
-declare [[coercion pfun_app]]
-declare [[coercion_enabled]]
+notation pempty ("{\<mapsto>}")
 
 consts tick :: "'a \<Rightarrow> 'b" ("\<checkmark>")
 

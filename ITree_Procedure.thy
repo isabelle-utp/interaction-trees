@@ -16,11 +16,6 @@ type_synonym ('e, 'inp, 'outp, 'st) procedure = "('e, ('inp, 'st) valst, ('outp,
 translations
   (type) "('e, 'inp, 'outp, 'st) procedure" <= (type) "('inp, 'st) valst \<Rightarrow> ('e, ('outp, 'st') valst) itree" 
 
-(*
-definition operation :: "('inp \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('outp \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'inp, 'outp, 'st) procedure \<Rightarrow> ('e, 'st) htree" where
-"operation ci co P = (\<lambda> s. inp ci \<bind> (\<lambda> inp. P \<lparr> vval = inp, vst = s \<rparr> \<bind> (\<lambda> v. outp co (vval v) \<bind> (\<lambda> _. Ret (vst v)))))"
-*)
-
 definition procproc :: "(_, 'inp, 'outp, 'st::default) procedure \<Rightarrow> ('inp, 'outp) methop process" where
 "procproc P = process [\<leadsto>] (\<lambda> s. inp Call \<bind> (\<lambda> inp. P \<lparr> vval = inp, vst = s \<rparr> \<bind> (\<lambda> vst. outp Return (vval vst) \<bind> Ret)))"
 

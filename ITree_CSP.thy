@@ -7,18 +7,18 @@ begin
 subsection \<open> Event Trace and Set Syntax\<close>
 
 definition evinsert :: "'e \<Rightarrow> 'e set \<Rightarrow> 'e set" where
-"evinsert e E = insert e E"
+[code_unfold]: "evinsert e E = insert e E"
 
 definition evsimple :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e" where
-"evsimple c = build\<^bsub>c\<^esub> ()"
+[code_unfold]: "evsimple c = build\<^bsub>c\<^esub> ()"
 
 definition evparam :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> 'e" where
-"evparam c v = build\<^bsub>c\<^esub> v"
+[code_unfold]: "evparam c v = build\<^bsub>c\<^esub> v"
 
 definition evcollect :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'e set" where
-"evcollect c A P = {build\<^bsub>c\<^esub> v | v. v \<in> A \<and> P v}"
+[code_unfold]: "evcollect c A P = {build\<^bsub>c\<^esub> v | v. v \<in> A \<and> P v}"
 
-definition empty_evset ("\<lbrace>\<rbrace>") where "\<lbrace>\<rbrace> = {}"
+definition empty_evset ("\<lbrace>\<rbrace>") where [code_unfold]: "\<lbrace>\<rbrace> = {}"
 
 nonterminal evt and evts
 
@@ -59,7 +59,7 @@ abbreviation "inp_where c P \<equiv> inp_in_where c UNIV P"
 
 lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
   by (auto simp add: inp_in_where_def)
-     (metis imageI insertCI option.sel rangeI retvals_Ret wb_prism.range_build wb_prism_def)
+     (metis imageI insertCI option.sel retvals_Ret wb_prism_def)
 
 lemma div_free_inp_in: "div_free (inp_in c A)"
   by (auto simp add: inp_in_where_def div_free_Vis)

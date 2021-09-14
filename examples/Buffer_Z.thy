@@ -2,6 +2,7 @@ section \<open> Buffer in Z \<close>
 
 theory Buffer_Z
   imports "Interaction_Trees.ITree_Simulation" "Interaction_Trees.ITree_Machine"
+    "Interaction_Trees.ITree_Eval" "HOL-Library.Code_Test"
 begin lit_vars
 
 consts VAL :: "integer set"
@@ -31,6 +32,8 @@ zmachine Buffer =
   operations Input Output State
 
 def_consts VAL = "{0,1,2,3}"
+
+ML \<open> open Export \<close>
 
 simulate Buffer
 

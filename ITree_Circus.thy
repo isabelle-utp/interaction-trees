@@ -4,6 +4,8 @@ theory ITree_Circus
   imports "ITree_FDSem" "Shallow-Expressions-Z.Shallow_Expressions_Z"
 begin
 
+unbundle Z_Relation_Syntax
+
 subsection \<open> Main Operators \<close>
 
 type_synonym ('e, 's) action = "('e, 's) htree"

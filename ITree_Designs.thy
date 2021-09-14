@@ -1,3 +1,5 @@
+section \<open> Designs \<close>
+
 theory ITree_Designs
   imports ITree_WP
 begin

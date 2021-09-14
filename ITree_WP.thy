@@ -1,5 +1,7 @@
+section \<open> Weakest Preconditions \<close>
+
 theory ITree_WP
-  imports  ITree_Hoare
+  imports ITree_Hoare
 begin
 
 named_theorems wp
