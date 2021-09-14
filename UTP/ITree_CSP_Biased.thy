@@ -9,10 +9,10 @@ subsection \<open> Biased External Choice \<close>
 text \<open> Almost identical to external choice, except we resolve non-determinism by biasing the left or right branch. \<close>
 
 definition bextchoicel :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<^sub><\<box>" 59) where
-"bextchoicel = genchoice (\<lambda> F G. G + F)"
+"bextchoicel = genchoice (\<lambda> F G. G \<oplus> F)"
 
 definition bextchoicer :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<box>\<^sub>>" 59) where
-"bextchoicer = genchoice (+)"
+"bextchoicer = genchoice (\<oplus>)"
 
 lemma extchoice_eq_bextchoice_iff:
   assumes "\<^bold>I(P) \<inter> \<^bold>I(Q) = {}" 
@@ -25,7 +25,7 @@ proof (cases P rule: itree_cases)
     case (Vis n G)
     with Vis' assms show ?thesis
       by (simp add: extchoice_itree_def bextchoicel_def genchoice_Sils genchoice_Sils')
-         (metis empty_iff map_prod_as_ovrd pfun_plus_commute_weak)
+         (metis empty_iff map_prod_as_ovrd pfun_override_commute_weak)
   next
     case (Ret n x)
     with assms Vis' show ?thesis 
@@ -74,7 +74,7 @@ text \<open> The biased merge function is almost the same as @{const emerge}, ex
 
 definition bemerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
 "bemerge f A g = 
-  map_pfun Both (A \<Zdres> pfuse f g) + map_pfun Left f + map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
+  map_pfun Both (A \<Zdres> pfuse f g) \<oplus> map_pfun Left f \<oplus> map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
 
 abbreviation "bparl \<equiv> genpar bemerge"
 

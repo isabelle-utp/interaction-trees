@@ -5,7 +5,7 @@ session "Interaction_Trees" = "Shallow-Expressions-Z" +
   document_files
     "root.tex"
 
-session "ITree_UTP" = "Interaction_Trees" +
+session "ITree_UTP" in "UTP" = "Interaction_Trees" +
   options [timeout = 600, document = none]
   theories
     ITree_CSP

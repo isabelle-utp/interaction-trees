@@ -1,7 +1,7 @@
 section \<open> CSP Operators \<close>
 
 theory ITree_CSP
-  imports ITree_Deadlock ITree_Iteration ITree_Weak_Bisim "Optics.Optics"
+  imports "Interaction_Trees.ITrees" "Optics.Optics"
 begin
 
 subsection \<open> Event Trace and Set Syntax\<close>
