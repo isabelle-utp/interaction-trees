@@ -2,7 +2,7 @@ subsection \<open> Simulation Harness \<close>
 
 theory ITree_Simulation
   imports ITree_Extraction
-  keywords "simulate" :: "thy_defn"
+  keywords "animate" :: "thy_defn"
 begin
 
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
@@ -79,7 +79,7 @@ fun simulator_setup thy =
 
 fun sim_files_cp tmp = 
   "(fn path => let open Isabelle_System; val path' = Path.append path (Path.make [\"code\", \"simulate\"])" ^
-  " in writeln \"Compiling Simulation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; ghc Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
+  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; ghc Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
 
 open Named_Target
 
@@ -113,8 +113,8 @@ fun prep_simulation model thy ctx =
 
 fun run_simulation thy =
   case ISim_Path.get thy of
-    NONE => error "No simulation" |
-    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./Simulation") "Start Simulation")
+    NONE => error "No animation" |
+    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./Simulation") "Start animation")
 
 fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
@@ -128,7 +128,7 @@ end;
 \<close>
 
 ML \<open>
-  Outer_Syntax.command @{command_keyword simulate} "simulate an ITree"
+  Outer_Syntax.command @{command_keyword animate} "animate an ITree"
   (Parse.name >> (fn model => Toplevel.theory (ITree_Simulator.simulate model)))
 \<close>
 
