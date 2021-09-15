@@ -212,6 +212,11 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
   apply transfer_prover
   done
 
+lemma kcomp_assoc: 
+  fixes P :: "('e, 'r, 's) ktree" 
+  shows "(P \<Zcomp> Q) \<Zcomp> R = P \<Zcomp> (Q \<Zcomp> R)"
+  by (simp add: kleisli_comp_def fun_eq_iff bind_itree_assoc)
+
 subsection \<open> Run \<close>
 
 primcorec run :: "'e set \<Rightarrow> ('e, 's) itree" where

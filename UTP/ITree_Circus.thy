@@ -71,11 +71,17 @@ definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1
 lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
   by (simp add: assigns_def Skip_def)
 
-lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ> \<sigma>\<rangle>\<^sub>a"
+lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<Zcomp> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P) \<Zcomp> Q"
   by (simp add: kleisli_comp_def assigns_def)
+
+lemma assigns_seq_comp: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
+  by (simp add: kleisli_comp_def assigns_def subst_comp_def)
 
 lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
+
+lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
+  by (simp add: kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
 
 text \<open> Hide the state of an action to produce a process \<close>
 
