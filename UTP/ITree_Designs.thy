@@ -49,4 +49,7 @@ lemma input_in_pre [dpre]:
   "wb_prism c \<Longrightarrow> itree_pre (input_in c A P) = (\<forall> v \<in> A. itree_pre (P v))\<^sub>e"
   by (expr_simp add: itree_pre_div_free input_in_where_def div_free_bind div_free_inp_in retvals_inp_in)
 
+method refine = (auto simp add: refined_by_def dpre wp usubst_eval unrest rel relcomp_unfold)
+method refine_auto = (refine ; expr_auto)
+
 end
