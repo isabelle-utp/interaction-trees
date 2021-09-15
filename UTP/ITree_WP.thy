@@ -32,11 +32,11 @@ lemma wp_assigns [wp]: "wp \<langle>\<sigma>\<rangle>\<^sub>a P = (\<sigma> \<da
 lemma wlp_assigns [wp]: "wlp \<langle>\<sigma>\<rangle>\<^sub>a P = (\<sigma> \<dagger> (P)\<^sub>e)"
   by (expr_simp add: wlp_itree_def assigns_rel)
 
-lemma wp_assert [wp]: "wp (assert S) P = (S \<and> P)\<^sub>e"
-  by (simp add: wp_itree_def assert_rel, expr_auto)
+lemma wp_assume [wp]: "wp (assume S) P = (S \<and> P)\<^sub>e"
+  by (simp add: wp_itree_def assume_rel, expr_auto)
 
-lemma wlp_assert [wp]: "wlp (assert S) P = (S \<longrightarrow> P)\<^sub>e"
-  by (simp add: wlp_itree_def assert_rel, expr_simp)
+lemma wlp_assert [wp]: "wlp (assume S) P = (S \<longrightarrow> P)\<^sub>e"
+  by (simp add: wlp_itree_def assume_rel, expr_simp)
 
 lemma wp_test [wp]: "wp (test S) P = (S \<and> P)\<^sub>e"
   by (simp add: wp_itree_def test_rel, expr_simp)

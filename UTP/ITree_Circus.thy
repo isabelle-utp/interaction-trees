@@ -28,30 +28,30 @@ lemma traces_deadlock: "traces(deadlock) = {[]}"
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
-definition assert :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
-"assert b = (\<lambda> s. if (b s) then Ret s else diverge)"
+definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
+"assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
 
-syntax "_assert" :: "logic \<Rightarrow> logic" ("\<exclamdown>_!")
-translations "_assert b" == "CONST assert (b)\<^sub>e"
+syntax "_assume" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
+translations "_assume b" == "CONST assume (b)\<^sub>e"
 
-lemma assert_true: "\<exclamdown>True! = Skip"
-  by (simp add: assert_def Skip_def)
+lemma assume_true: "\<questiondown>True? = Skip"
+  by (simp add: assume_def Skip_def)
 
-lemma assert_false: "\<exclamdown>False! = Div"
-  by (simp add: assert_def)
+lemma assert_false: "\<questiondown>False? = Div"
+  by (simp add: assume_def)
 
 definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
-abbreviation (input) "assume b \<equiv> test b"
+abbreviation (input) "assert b \<equiv> test b"
 
-syntax "_test" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
+syntax "_test" :: "logic \<Rightarrow> logic" ("\<exclamdown>_!")
 translations "_test b" == "CONST test (b)\<^sub>e"
 
-lemma test_true: "\<questiondown>True? = Skip"
+lemma test_true: "\<exclamdown>True! = Skip"
   by (simp add: test_def Skip_def)
 
-lemma test_false: "\<questiondown>False? = Stop"
+lemma test_false: "\<exclamdown>False! = Stop"
   by (simp add: test_def)
 
 definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
@@ -74,7 +74,7 @@ lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
 lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ> \<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def)
 
-lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
+lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
 
 text \<open> Hide the state of an action to produce a process \<close>
@@ -209,7 +209,7 @@ definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow>
 "frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
 
 definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
-[code_unfold]: "promote P a = \<questiondown>\<^bold>D(a)? \<Zcomp> frame_ext a P"
+[code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! \<Zcomp> frame_ext a P"
 
 syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
 translations "_promote P a" == "CONST promote P a"

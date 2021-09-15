@@ -19,10 +19,10 @@ expr_ctr itree_pre
 definition refined_by :: "('e, 'r, 's) ktree \<Rightarrow> ('e, 'r, 's) ktree \<Rightarrow> bool" (infix "\<sqsubseteq>" 50) where
 "refined_by P Q = (`itree_pre P \<longrightarrow> itree_pre Q` \<and> {(s, s') \<in> itree_rel Q. itree_pre P s} \<subseteq> itree_rel P)"
 
-lemma assert_pre [dpre]: "itree_pre (assert b) = b"
-  by (auto simp add: itree_pre_def assert_def fun_eq_iff)
+lemma assume_pre [dpre]: "itree_pre (assume b) = b"
+  by (auto simp add: itree_pre_def assume_def fun_eq_iff)
 
-lemma assume_pre [dpre]: "itree_pre (assume b) = (True)\<^sub>e"
+lemma assert_pre [dpre]: "itree_pre (assert b) = (True)\<^sub>e"
   by (auto simp add: itree_pre_def test_def fun_eq_iff)
      (metis deadlock_def deadlock_trace_to diverge_not_Vis)
 
