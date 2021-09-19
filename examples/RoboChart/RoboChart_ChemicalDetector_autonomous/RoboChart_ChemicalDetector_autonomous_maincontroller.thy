@@ -6,14 +6,16 @@ begin
 subsection \<open> GasAnalysis \<close>
 definition "const_GasAnalysis_thr \<equiv> Chemical_IntensityC (1::2)"
 
-enumtype SIDS_GasAnalysis = SID_GasAnalysis
+datatype SIDS_GasAnalysis = SID_GasAnalysis
 	              | SID_GasAnalysis_NoGas
 	              | SID_GasAnalysis_Analysis
 	              | SID_GasAnalysis_GasDetected
 	              | SID_GasAnalysis_j1
 	              | SID_GasAnalysis_Reading
 
-definition "SIDS_GasAnalysis_list = enum_SIDS_GasAnalysis_inst.enum_SIDS_GasAnalysis"
+definition "SIDS_GasAnalysis_list = [SID_GasAnalysis, SID_GasAnalysis_NoGas,
+  SID_GasAnalysis_Analysis, SID_GasAnalysis_GasDetected, SID_GasAnalysis_j1
+	, SID_GasAnalysis_Reading]"
 definition "SIDS_GasAnalysis_set = set SIDS_GasAnalysis_list"
 definition "SIDS_GasAnalysis_nodes = (removeAll SID_GasAnalysis SIDS_GasAnalysis_list)"
 definition "SIDS_GasAnalysis_no_NoGas = (removeAll SID_GasAnalysis_NoGas SIDS_GasAnalysis_list)"
@@ -22,7 +24,7 @@ definition "SIDS_GasAnalysis_no_GasDetected = (removeAll SID_GasAnalysis_GasDete
 definition "SIDS_GasAnalysis_no_Reading = (removeAll SID_GasAnalysis_Reading SIDS_GasAnalysis_list)"
 definition "SIDS_GasAnalysis_no_j1 = (removeAll SID_GasAnalysis_j1 SIDS_GasAnalysis_list)"
 
-enumtype TIDS_GasAnalysis = NULLTRANSITION__GasAnalysis
+datatype TIDS_GasAnalysis = NULLTRANSITION__GasAnalysis
 	              | TID_GasAnalysis_t1
 	              | TID_GasAnalysis_t2
 	              | TID_GasAnalysis_t3
@@ -31,7 +33,9 @@ enumtype TIDS_GasAnalysis = NULLTRANSITION__GasAnalysis
 	              | TID_GasAnalysis_t9a
 	              | TID_GasAnalysis_t0
 
-definition "TIDS_GasAnalysis_list = enum_TIDS_GasAnalysis_inst.enum_TIDS_GasAnalysis"
+definition "TIDS_GasAnalysis_list = [NULLTRANSITION__GasAnalysis, TID_GasAnalysis_t1,
+  TID_GasAnalysis_t2, TID_GasAnalysis_t3, TID_GasAnalysis_t4, TID_GasAnalysis_t8,
+  TID_GasAnalysis_t9a, TID_GasAnalysis_t0]"
 definition "TIDS_GasAnalysis_set = set TIDS_GasAnalysis_list"
 
 text \<open> Identifiers of transitions that can interrupt a state, excluding transitions from junctions. \<close>

@@ -10,19 +10,19 @@ subsection \<open> General definitions \<close>
 interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
 subsection \<open> stm0 \<close>
-enumtype SIDS_stm0 = SID_stm0
+datatype SIDS_stm0 = SID_stm0
                    | SID_stm0_s0
 
-definition "SIDS_stm0_list = enum_SIDS_stm0_inst.enum_SIDS_stm0"
+definition "SIDS_stm0_list = [SID_stm0, SID_stm0_s0]"
 definition "SIDS_stm0_set = set SIDS_stm0_list"
 definition "SIDS_stm0_without_s0 = (removeAll SID_stm0_s0 SIDS_stm0_list)"
 
-enumtype TIDS_stm0 = NULLTRANSITION_stm0
+datatype TIDS_stm0 = NULLTRANSITION_stm0
                    | TID_stm0_t0
                    | TID_stm0_t1
                    | TID_stm0_t2
 
-definition "TIDS_stm0_list = enum_TIDS_stm0_inst.enum_TIDS_stm0"
+definition "TIDS_stm0_list = [NULLTRANSITION_stm0, TID_stm0_t0, TID_stm0_t1, TID_stm0_t2]"
 definition "TIDS_stm0_set = set TIDS_stm0_list"
 
 definition "ITIDS_stm0_list = [TID_stm0_t1, TID_stm0_t2]"
@@ -384,19 +384,18 @@ definition D__stm0 where
 
 subsection \<open> stm1 \<close>
 
-enumtype SIDS_stm1 = SID_stm1
-  | SID_stm1_s0
+datatype SIDS_stm1 = SID_stm1 | SID_stm1_s0
 
-definition "SIDS_stm1_list = enum_SIDS_stm1_inst.enum_SIDS_stm1"
+definition "SIDS_stm1_list = [SID_stm1, SID_stm1_s0]"
 definition "SIDS_stm1_set = set SIDS_stm1_list"
 definition "SIDS_stm1_without_s0 = (removeAll SID_stm1_s0 SIDS_stm1_list)"
 
-enumtype TIDS_stm1 = NULLTRANSITION_stm1
+datatype TIDS_stm1 = NULLTRANSITION_stm1
 	              | TID_stm1_t0
 	              | TID_stm1_t1
 	              | TID_stm1_t2
 
-definition "TIDS_stm1_list = enum_TIDS_stm1_inst.enum_TIDS_stm1"
+definition "TIDS_stm1_list = [NULLTRANSITION_stm1, TID_stm1_t0, TID_stm1_t1, TID_stm1_t2]"
 definition "TIDS_stm1_set = set TIDS_stm1_list"
 
 definition "ITIDS_stm1_list = [TID_stm1_t1, TID_stm1_t2]"

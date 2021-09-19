@@ -1,6 +1,6 @@
 
 theory RoboChart_ChemicalDetector_autonomous_general
-  imports "../../../ITree_RoboChart" "../../../RC_Channel_Type" 
+  imports "../../../ITree_RoboChart" 
           "../../../Bounded_List"
 begin
 
@@ -57,17 +57,18 @@ definition mk_blist :: "'n itself \<Rightarrow> 'a list \<Rightarrow> ('a['n::fi
 "mk_blist _ xs = map (bmake TYPE('n)) (lseqn xs CARD('n))"
 
 subsection \<open> Chemical package \<close>
-enumtype Chemical_Status = 
+datatype Chemical_Status = 
   Chemical_Status_noGas | Chemical_Status_gasD
 
-abbreviation "Chemical_Status_list \<equiv> enum_Chemical_Status_inst.enum_Chemical_Status"
+abbreviation "Chemical_Status_list \<equiv> [Chemical_Status_noGas, Chemical_Status_gasD]"
 abbreviation "Chemical_Status_set \<equiv> set Chemical_Status_list"
 
-enumtype Chemical_Angle = 
+datatype Chemical_Angle = 
   Chemical_Angle_Left | Chemical_Angle_Right | 
   Chemical_Angle_Back | Chemical_Angle_Front
 
-abbreviation "Chemical_Angle_list \<equiv> enum_Chemical_Angle_inst.enum_Chemical_Angle"
+abbreviation "Chemical_Angle_list \<equiv> [Chemical_Angle_Left, Chemical_Angle_Right,
+  Chemical_Angle_Back, Chemical_Angle_Front]"
 abbreviation "Chemical_Angle_set \<equiv> set Chemical_Angle_list"
 
 text \<open> The angle function \<close>
@@ -177,10 +178,10 @@ value "Chemical_location (bmake TYPE(2)
    \<lparr>c = Chemical_ChemC (1::2), i = Chemical_IntensityC (1::2)\<rparr>])"
 
 subsection \<open> Location package \<close>
-enumtype Location_Loc = 
+datatype Location_Loc = 
   Location_Loc_left | Location_Loc_right | Location_Loc_front
 
-abbreviation "Location_Loc_list \<equiv> enum_Location_Loc_inst.enum_Location_Loc"
+abbreviation "Location_Loc_list \<equiv> [Location_Loc_left, Location_Loc_right, Location_Loc_front]"
 abbreviation "Location_Loc_set \<equiv> set Location_Loc_list"
 
 end
