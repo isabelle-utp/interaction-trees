@@ -1,7 +1,7 @@
 subsection \<open> ITree Code Generation Support \<close>
 
 theory ITree_Extraction
-  imports ITree_Circus ITree_Operations ITree_Procedure ITree_Hoare Record_Default_Instance Enum_Type "HOL-Library.Code_Lazy"
+  imports ITree_Deadlock "HOL-Library.Code_Lazy"
 begin
 
 text \<open> Necessary to deal with SML value restriction \<close>
@@ -34,12 +34,23 @@ definition "default_bool = False"
 instance ..
 end
 
+instantiation int :: default
+begin
+definition "default_int = (0 :: int)"
+instance ..
+end
+
 instantiation integer :: default
 begin
 definition "default_integer = (0 :: integer)"
 instance ..
 end
 
+instantiation String.literal :: default
+begin
+definition "default_literal = STR ''''"
+instance ..
+end
 
 instantiation pfun :: (type, type) default
 begin
@@ -47,6 +58,18 @@ definition "default_pfun = ({}\<^sub>p :: ('a, 'b) pfun)"
 instance ..
 end
 
-lit_vars
+instantiation ffun :: (type, type) default
+begin
+definition "default_ffun = ({}\<^sub>f :: ('a, 'b) ffun)"
+instance ..
+end
+
+declare UNIV_I [code_unfold]
+declare bool_simps [code_unfold]
+
+lemma Collect_List_member [code_unfold]: "Collect (List.member xs) = set xs"
+  using in_set_member by fastforce
+
+declare image_ident [code_unfold]
 
 end

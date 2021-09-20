@@ -1,14 +1,12 @@
-session "Interaction_Trees" = "Shallow-Expressions" +
+session "Interaction_Trees" = "Shallow-Expressions-Z" +
   options [timeout = 600, document = pdf, document_output = "output"]
-  sessions
-    Z_Toolkit
   theories
-    Interaction_Trees
-    ITree_Divergence
-    ITree_Deadlock
-    ITree_Weak_Bisim
-    ITree_CSP
-    ITree_FDSem
-    ITree_Circus
+    ITrees
   document_files
     "root.tex"
+
+session "ITree_UTP" in "UTP" = "Interaction_Trees" +
+  options [timeout = 600, document = false]
+  theories
+    ITree_UTP
+  

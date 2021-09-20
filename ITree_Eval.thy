@@ -1,8 +1,18 @@
+subsection \<open> Evaluating ITrees \<close>
+
 theory ITree_Eval
   imports Interaction_Trees
 begin
 
-datatype ('e, 'r) itres = VisR "'e set" | RetR 'r | RejR
+text \<open> The following type encodes the possible results obtained from a given event trace. \<close>
+
+datatype ('e, 'r) itres = 
+  VisR "'e set" \<comment> \<open> Accept trace, present a choice \<close>
+  | RetR 'r \<comment> \<open> Accept trace, return a value \<close>
+  | RejR \<comment> \<open> Reject trace \<close>
+
+text \<open> The next function allows to calculate the result of a given trace. The number of permitted
+  internal events is bounded to ensure that the function terminates. \<close>
 
 fun trres' :: "'e list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itres" where
 "trres' tr n mx (Ret x) = RetR x" |

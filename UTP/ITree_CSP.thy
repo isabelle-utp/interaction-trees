@@ -1,24 +1,24 @@
 section \<open> CSP Operators \<close>
 
 theory ITree_CSP
-  imports ITree_Deadlock ITree_Iteration ITree_Weak_Bisim "Optics.Optics"
+  imports "Interaction_Trees.ITrees" "Optics.Optics"
 begin
 
 subsection \<open> Event Trace and Set Syntax\<close>
 
 definition evinsert :: "'e \<Rightarrow> 'e set \<Rightarrow> 'e set" where
-"evinsert e E = insert e E"
+[code_unfold]: "evinsert e E = insert e E"
 
 definition evsimple :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e" where
-"evsimple c = build\<^bsub>c\<^esub> ()"
+[code_unfold]: "evsimple c = build\<^bsub>c\<^esub> ()"
 
 definition evparam :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> 'e" where
-"evparam c v = build\<^bsub>c\<^esub> v"
+[code_unfold]: "evparam c v = build\<^bsub>c\<^esub> v"
 
 definition evcollect :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'e set" where
-"evcollect c A P = {build\<^bsub>c\<^esub> v | v. v \<in> A \<and> P v}"
+[code_unfold]: "evcollect c A P = {build\<^bsub>c\<^esub> v | v. v \<in> A \<and> P v}"
 
-definition empty_evset ("\<lbrace>\<rbrace>") where "\<lbrace>\<rbrace> = {}"
+definition empty_evset ("\<lbrace>\<rbrace>") where [code_unfold]: "\<lbrace>\<rbrace> = {}"
 
 nonterminal evt and evts
 
@@ -51,7 +51,7 @@ definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
 definition inp_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_in_where c A P = Vis (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<cmark> (the (match\<^bsub>c\<^esub> e)))"
+"inp_in_where c A P = Vis (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<checkmark> (the (match\<^bsub>c\<^esub> e)))"
 
 abbreviation "inp_in c A \<equiv> inp_in_where c A (\<lambda> s. True)"
 
@@ -59,7 +59,7 @@ abbreviation "inp_where c P \<equiv> inp_in_where c UNIV P"
 
 lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
   by (auto simp add: inp_in_where_def)
-     (metis imageI insertCI option.sel rangeI retvals_Ret wb_prism.range_build wb_prism_def)
+     (metis imageI insertCI option.sel retvals_Ret wb_prism_def)
 
 lemma div_free_inp_in: "div_free (inp_in c A)"
   by (auto simp add: inp_in_where_def div_free_Vis)
@@ -68,10 +68,10 @@ abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('
 "inp c \<equiv> inp_in c UNIV"
 
 definition inp_list :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('e, 'a) itree" where
-"inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> ) B)))"
+"inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<checkmark> (the (match\<^bsub>c\<^esub> (build\<^bsub>c\<^esub> x))))) (filter (\<lambda>x. build\<^bsub>c\<^esub> x \<in> dom match\<^bsub>c\<^esub> ) B)))"
 
 definition inp_list_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a list \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_list_where c B P = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> x)) (filter P B)))"
+"inp_list_where c B P = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<checkmark> x)) (filter P B)))"
 
 definition inp_map_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
 "inp_map_in_where c B P = Vis (pfun_of_map (\<lambda> e. case match\<^bsub>c\<^esub> e of 
@@ -110,7 +110,7 @@ lemma build_in_dom_match [simp]: "wb_prism c \<Longrightarrow> build\<^bsub>c\<^
 
 text \<open> Is there a way to use this optimise the above definition when applied to a well-behaved prism? \<close>
 
-lemma inp_list_wb_prism: "wb_prism c \<Longrightarrow> inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<cmark> x)) B))"
+lemma inp_list_wb_prism: "wb_prism c \<Longrightarrow> inp_list c B = Vis (pfun_of_alist (map (\<lambda>x. (build\<^bsub>c\<^esub> x, \<checkmark> x)) B))"
   by (simp add: inp_list_def)
 
 lemma inp_where_enum [code_unfold]:
@@ -344,7 +344,7 @@ lemma skip_stable_genchoice_right:
   by (metis (mono_tags, hide_lams) assms genchoice.disc_iff(1) is_Ret_def itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
 
 lemma genchoice_RetE [elim]:
-  assumes "genchoice \<M> P Q = \<cmark> x" 
+  assumes "genchoice \<M> P Q = \<checkmark> x" 
     "\<lbrakk> P = Ret x; Q = Ret x\<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> P = Ret x; is_Vis Q \<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> Q = Ret x; is_Vis P \<rbrakk> \<Longrightarrow> R"
@@ -358,20 +358,15 @@ lemma genchoice_RetE [elim]:
 subsection \<open> External Choice \<close>
 
 definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
-"map_prod f g = (pdom(g) \<Zndres> f) + (pdom(f) \<Zndres> g)"
+"map_prod f g = (pdom(g) \<Zndres> f) \<oplus> (pdom(f) \<Zndres> g)"
 
 lemma map_prod_commute: "x \<odot> y = y \<odot> x"
   apply (auto simp add: fun_eq_iff map_prod_def option.case_eq_if)
-  apply (metis Compl_iff IntD1 IntD2 pdom_pdom_res pfun_plus_commute_weak)
+  apply (metis Compl_iff IntD1 IntD2 pdom_pdom_res pfun_override_commute_weak)
   done
 
 lemma map_prod_empty [simp]: "x \<odot> {}\<^sub>p = x" "{}\<^sub>p \<odot> x = x"
   by (simp_all add: map_prod_def)
-
-lemma map_prod_Nil_alist [code]: 
-  "(pfun_of_alist []) \<odot> P = P"
-  "P \<odot> (pfun_of_alist []) = P"
-  by simp_all
 
 lemma map_prod_merge: 
   "f(x \<mapsto> v)\<^sub>p \<odot> g = 
@@ -381,7 +376,7 @@ lemma map_prod_merge:
 
 lemma map_prod_as_ovrd:
   assumes "pdom(f) \<inter> pdom(g) = {}"
-  shows "f \<odot> g = f + g"
+  shows "f \<odot> g = f \<oplus> g"
   by (simp add: map_prod_def assms inf.commute pdom_nres_disjoint)
 
 lemma map_prod_pfun_of_map [code]:
@@ -391,13 +386,30 @@ lemma map_prod_pfun_of_map [code]:
                        (Some y, None) \<Rightarrow> Some y |
                        (None, Some y) \<Rightarrow> Some y |
                        (None, None) \<Rightarrow> None)"
-  by (auto simp add: map_prod_def pdom_def pdom_res_def restrict_map_def plus_pfun_def map_add_def 
+  by (auto simp add: map_prod_def pdom_def pdom_res_def restrict_map_def oplus_pfun_def map_add_def 
       pfun_of_map_inject fun_eq_iff option.case_eq_if)
 
 lemma map_prod_pfun_of_alist [code]:
   "map_prod (pfun_of_alist xs) (pfun_of_alist ys) =
     pfun_of_alist (AList.restrict (- fst ` set xs) ys @ AList.restrict (- fst ` set ys) xs)"
   by (simp add: map_prod_def pdom_res_alist plus_pfun_alist)
+
+lemma map_prod_pfun_of_map_alist [code]: "(pfun_of_map f) \<odot> (pfun_of_alist xs) 
+  = pfun_of_map
+     (\<lambda>x. case f x of None \<Rightarrow> (case map_of xs x of None \<Rightarrow> None | Some x \<Rightarrow> Some x) 
+        | Some xa \<Rightarrow> (case map_of xs x of None \<Rightarrow> Some xa | Some x \<Rightarrow> Map.empty x))"
+  by (simp add: pfun_of_alist.abs_eq map_prod_pfun_of_map)
+
+lemma map_prod_pfun_of_alist_map [code]: "(pfun_of_alist xs) \<odot> (pfun_of_map p)
+  = pfun_of_map
+     (\<lambda>x. case map_of xs x of None \<Rightarrow> (case p x of None \<Rightarrow> None | Some x \<Rightarrow> Some x)
+        | Some xa \<Rightarrow> (case p x of None \<Rightarrow> Some xa | Some x \<Rightarrow> Map.empty x))"
+  by (simp add: pfun_of_alist.abs_eq map_prod_pfun_of_map)
+
+lemma map_prod_Nil_alist [code]: 
+  "(pfun_of_alist []) \<odot> P = P"
+  "P \<odot> (pfun_of_alist []) = P"
+  by simp_all
 
 text \<open> This is like race-free behaviour \<close>
 
@@ -496,7 +508,7 @@ lemma skip_stable_choice:
   by (simp add: assms extchoice_itree_def skip_stable_genchoice_left)
 
 lemma choice_RetE [elim]:
-  assumes "P \<box> Q = \<cmark> x" 
+  assumes "P \<box> Q = \<checkmark> x" 
     "\<lbrakk> P = Ret x; Q = Ret x\<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> P = Ret x; is_Vis Q \<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> Q = Ret x; is_Vis P \<rbrakk> \<Longrightarrow> R"
@@ -679,13 +691,13 @@ text \<open> The following function combines two choice functions for parallel c
 
 definition emerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
 "emerge f A g = 
-  map_pfun Both (A \<Zdres> pfuse f g) + map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) + map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
+  map_pfun Both (A \<Zdres> pfuse f g) \<oplus> map_pfun Left ((A \<union> pdom(g)) \<Zndres> f) \<oplus> map_pfun Right ((A \<union> pdom(f)) \<Zndres> g)"
 
 lemma emerge_alt_def:
   "emerge F E G =
      (\<lambda> e \<in> pdom(F) \<inter> pdom(G) \<inter> E \<bullet> Both(F(e), G(e)))
-     + (\<lambda> x \<in> pdom(F) - (E \<union> pdom(G)) \<bullet> Left(F x))
-     + (\<lambda> x \<in> pdom(G) - (E \<union> pdom(F)) \<bullet> Right(G x))"
+     \<oplus> (\<lambda> x \<in> pdom(F) - (E \<union> pdom(G)) \<bullet> Left(F x))
+     \<oplus> (\<lambda> x \<in> pdom(G) - (E \<union> pdom(F)) \<bullet> Right(G x))"
 proof -
   have 1: "map_pfun Both (E \<Zdres> pfuse F G) = (\<lambda> e \<in> pdom(F) \<inter> pdom(G) \<inter> E \<bullet> Both(F(e), G(e)))"
     by (auto intro!: pabs_cong simp add: map_pfun_as_pabs pfuse_def)
@@ -954,5 +966,14 @@ abbreviation rename':: "('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>1 \<leftr
 
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
   by (simp add: deadlock_def rename.code)
+
+subsection \<open> Restriction \<close>
+
+text \<open> Restrict the events that an ITree can perform to a subset \<close>
+
+primcorec evres :: "'e set \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
+"evres E P = 
+  (case P of
+     Ret x \<Rightarrow> Ret x | Sil P' \<Rightarrow> Sil (evres E P') | Vis F \<Rightarrow> Vis (map_pfun (evres E) (E \<Zdres> F)))"
 
 end

@@ -1,8 +1,10 @@
 section \<open> Circus Interaction Tree Semantics \<close>
 
 theory ITree_Circus                          
-  imports "ITree_FDSem" "Shallow-Expressions.Shallow_Expressions"
+  imports "ITree_FDSem" "Shallow-Expressions-Z.Shallow_Expressions_Z"
 begin
+
+unbundle Z_Relation_Syntax
 
 subsection \<open> Main Operators \<close>
 
@@ -14,7 +16,7 @@ definition Skip :: "('e, 'r) htree" where
 
 expr_ctr subst_id
 
-lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<cmark> [\<leadsto>]]})\<^sub>e"
+lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<checkmark> [\<leadsto>]]})\<^sub>e"
   by (simp add: Skip_def straces_def traces_Ret, expr_simp)
 
 abbreviation Div :: "('e, 'r) htree" where
@@ -26,16 +28,30 @@ lemma traces_deadlock: "traces(deadlock) = {[]}"
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
+definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
+"assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
+
+syntax "_assume" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
+translations "_assume b" == "CONST assume (b)\<^sub>e"
+
+lemma assume_true: "\<questiondown>True? = Skip"
+  by (simp add: assume_def Skip_def)
+
+lemma assert_false: "\<questiondown>False? = Div"
+  by (simp add: assume_def)
+
 definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
-syntax "_test" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
+abbreviation (input) "assert b \<equiv> test b"
+
+syntax "_test" :: "logic \<Rightarrow> logic" ("\<exclamdown>_!")
 translations "_test b" == "CONST test (b)\<^sub>e"
 
-lemma test_true: "\<questiondown>True? = Skip"
+lemma test_true: "\<exclamdown>True! = Skip"
   by (simp add: test_def Skip_def)
 
-lemma test_false: "\<questiondown>False? = Stop"
+lemma test_false: "\<exclamdown>False! = Stop"
   by (simp add: test_def)
 
 definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
@@ -55,11 +71,17 @@ definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1
 lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
   by (simp add: assigns_def Skip_def)
 
-lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ> \<sigma>\<rangle>\<^sub>a"
+lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<Zcomp> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P) \<Zcomp> Q"
   by (simp add: kleisli_comp_def assigns_def)
 
-lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
+lemma assigns_seq_comp: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
+  by (simp add: kleisli_comp_def assigns_def subst_comp_def)
+
+lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
+
+lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
+  by (simp add: kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
 
 text \<open> Hide the state of an action to produce a process \<close>
 
@@ -75,7 +97,7 @@ translations
   "_assignment x e" == "CONST assigns (CONST subst_upd (CONST subst_id) x (e)\<^sub>e)"
   "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
 
-lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<cmark> v] | v. True}" 
+lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<checkmark> v] | v. True}" 
   apply (simp add: inp_in_where_def traces_Vis traces_Ret)
   apply (auto simp add: inp_in_where_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
   done 
@@ -99,6 +121,10 @@ definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> (
 abbreviation input_in :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input_in c A P \<equiv> input_in_where c A (\<lambda> e. ((True)\<^sub>e, P e))"
 
+lemma input_in_where_map_code:
+  "wb_prism c \<Longrightarrow> input_in_where c A P = input_map_in_where c A P"
+  by (simp add: input_in_where_def inp_in_where_map_code input_map_in_where_def)
+
 lemma input_in_where_enum [code_unfold]: "wb_prism c \<Longrightarrow> input_in_where c (UNIV)\<^sub>e P = input_list_where c (enum_class.enum)\<^sub>e P"
   by (simp add: input_in_where_def input_list_where_def inp_in_where_list_code inp_where_enum)
 
@@ -117,7 +143,17 @@ term inp_list
 lemma "wb_prism c \<Longrightarrow> input_where c P = (\<lambda>s. inp_list_where c enum_class.enum (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
 *)
 
+bundle Circus_Syntax
+begin
+
+unbundle Expression_Syntax
+
 no_notation disj (infixr "|" 30)
+no_notation conj (infixr "&" 35)
+
+end
+
+unbundle Circus_Syntax
 
 syntax 
   "_input"          :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("_?_ \<rightarrow> _" [60, 0, 61] 61)
@@ -179,7 +215,7 @@ definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow>
 "frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
 
 definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
-[code_unfold]: "promote P a = \<questiondown>\<^bold>D(a)? \<Zcomp> frame_ext a P"
+[code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! \<Zcomp> frame_ext a P"
 
 syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
 translations "_promote P a" == "CONST promote P a"

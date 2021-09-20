@@ -1,8 +1,10 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "ITree_Extraction" "HOL-Library.Numeral_Type" "ITree_CSP_Biased"
+  imports "Interaction_Trees.ITree_Extraction" "HOL-Library.Numeral_Type" "ITree_UTP.ITree_CSP_Biased"
 begin
+
+unbundle Z_Relation_Syntax
 
 subsection \<open> CSP operators \<close>
 definition stop where "stop = deadlock"

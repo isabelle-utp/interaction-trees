@@ -1,11 +1,15 @@
+subsection \<open> Simulation Harness \<close>
+
 theory ITree_Simulation
   imports ITree_Extraction
+  keywords "animate" :: "thy_defn"
 begin
 
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
 module Simulate (simulate) where
 import Interaction_Trees;
 import Partial_Fun;
+import System.IO;
 
 -- These library functions help us to trim the "_C" strings from pretty printed events
 
@@ -31,6 +35,9 @@ simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
 simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
   do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
        e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
        case (Prelude.reads e) of
          []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
          [(v, _)] -> if (v > Prelude.length m)
@@ -40,15 +47,18 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
 simulate_cnt n t@(Vis (Pfun_of_map f)) = 
   do { Prelude.putStr ("Enter an event:");
        e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
        case (Prelude.reads e) of
          []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t } 
          [(v, _)] -> case f v of
                        Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        Just t' -> simulate_cnt 0 t'
-     };
+     };                                                                
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
-simulate = simulate_cnt 0;
+simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
 \<close>
 
 ML \<open> 
@@ -62,26 +72,64 @@ structure ISim_Path = Theory_Data
    val merge = fn (_, y) => y);
 
 fun simulator_setup thy = 
-  let open Isabelle_System; val tmp = create_tmp_path "itree-simulate" ""
-  in case @{print}(ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
-    mkdir tmp; ISim_Path.put (SOME tmp) thy; tmp
+  let open Isabelle_System; val tmp = Path.expand (create_tmp_path "itree-simulate" "")
+  in case (ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
+    mkdir tmp; (tmp, ISim_Path.put (SOME tmp) thy)
   end
 
-val sim_files_cp = 
-  "(fn path => let open Isabelle_System;" ^
-  " val tmp = ITree_Simulator.simulator_setup @{theory}" ^ 
-  " in copy_dir (Path.append path (Path.make [\"code\", \"simulate\"])) tmp end)"
+fun sim_files_cp tmp = 
+  "(fn path => let open Isabelle_System; val path' = Path.append path (Path.make [\"code\", \"simulate\"])" ^
+  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; ghc Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
 
 open Named_Target
 
-fun prep_simulation thy =
-  Generated_Files.compile_generated_files 
-    (Named_Target.theory_init thy) 
-    [([], thy), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] [] []
-    (Path.binding0 (Path.make []))
-  (Input.string sim_files_cp);
+fun firstLower s =
+  case String.explode s of [] => "" | c :: cs => String.implode (Char.toLower c :: cs);
+
+fun simulation_file model thy =
+  "module Main where \n" ^
+  "import Simulate; \n" ^
+  "import " ^ thy ^ "; \n" ^
+  "main = simulate " ^ firstLower model
+
+fun prep_simulation model thy ctx =
+  let open Generated_Files; 
+      val (tmp, thy') = simulator_setup (Local_Theory.exit_global ctx);
+      val ctx' = Named_Target.theory_init thy'
+  in
+  generate_file (Path.binding0 (Path.make ["code", "simulate", "Simulation.hs"]), (Input.string (simulation_file model thy))) ctx' |>
+  (fn ctx' => 
+    let val _ = compile_generated_files 
+                 ctx'
+                 [([], (Local_Theory.exit_global ctx')), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] 
+                 [] [([Path.binding0 (Path.make ["code", "simulate", "Simulation"])], SOME true)]
+                 (Path.binding0 (Path.make []))
+                 (Input.string (sim_files_cp (Path.implode tmp)))
+    in ctx' end)
+
+
+(*  (fn ctx => let val _ = export_generated_files ctx [([], Local_Theory.exit_global ctx), ([], @{theory})] in ctx end) *)
+  end
+
+fun run_simulation thy =
+  case ISim_Path.get thy of
+    NONE => error "No animation" |
+    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./Simulation") "Start animation")
+
+fun simulate model thy =
+  let val ctx = Named_Target.theory_init thy
+      val ctx' =
+        (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), (Token.explode (Thy_Header.get_keywords' @{context}) Position.none "string_classes"))] ctx)
+        |> prep_simulation model (Context.theory_name thy)
+  in run_simulation (Local_Theory.exit_global ctx'); (Local_Theory.exit_global ctx')
+  end 
 
 end;
+\<close>
+
+ML \<open>
+  Outer_Syntax.command @{command_keyword animate} "animate an ITree"
+  (Parse.name >> (fn model => Toplevel.theory (ITree_Simulator.simulate model)))
 \<close>
 
 end
