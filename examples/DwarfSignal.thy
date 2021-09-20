@@ -1,8 +1,8 @@
 section \<open> Dwarf Signal \<close>
 
 theory DwarfSignal
-  imports "../ITree_Extraction" "../ITree_Circus"
-begin lit_vars
+  imports "Interaction_Trees.ITree_Simulation" "Interaction_Trees.ITree_Eval"
+begin                
 
 subsection \<open> State Space \<close>
 
@@ -85,6 +85,13 @@ definition "CheckReq =
   (\<questiondown>\<not> @DarkOnlyToStop? \<Zcomp> violation!(STR ''DarkOnlyToStop'') \<rightarrow> Skip) \<box>
   (\<questiondown>\<not> @DarkOnlyFromStop? \<Zcomp> violation!(STR ''DarkOnlyFromStop'') \<rightarrow> Skip)"
 
+term "setNewProperState?(st):(ProperState - {desired_proper_state}) \<rightarrow> 
+      (last_proper_state := desired_proper_state \<Zcomp>
+       turn_off := current_state - signalLamps st \<Zcomp>
+       turn_on := signalLamps st - current_state \<Zcomp>
+       last_state := current_state \<Zcomp>
+       desired_proper_state := st)"
+
 definition 
   "SetNewProperState = 
     \<questiondown>current_state = signalLamps desired_proper_state? \<Zcomp> 
@@ -116,6 +123,16 @@ definition "Shine = shine!(current_state) \<rightarrow> Skip"
 definition "DwarfSignal
   = process Init (loop (CheckReq \<box> SetNewProperState \<box> TurnOn \<box> TurnOff \<box> Shine))"
 
-export_code DwarfSignal in Haskell module_name DwarfSignal (string_classes)
+simulate DwarfSignal
+
+text \<open> Testing SML lazy code evaluation \<close>
+
+code_lazy_type itree
+
+lemma "trres \<langle>setNewProperState warning, turnOff L2, turnOn L3, shine {L1, L3}\<rangle> 20 DwarfSignal = VisR {shine_C {L1, L3}, setNewProperState_C dark, setNewProperState_C stop, setNewProperState_C drive}"
+  by eval
+
+
+
 
 end

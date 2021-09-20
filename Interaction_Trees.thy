@@ -2,19 +2,21 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Relation_Lib"
+  "Z_Toolkit.Relation_Toolkit"
 begin
 
 subsection \<open> Preliminaries \<close>
 
-type_notation pfun (infixr "\<Zpfun>" 0)
-notation pdom_res (infixr "\<Zdres>" 66)
-abbreviation ndres (infixr "\<Zndres>" 66) where "ndres A P \<equiv> (- A) \<Zdres> P"
+unbundle Z_Type_Syntax
+unbundle Z_Relation_Syntax
 
-declare [[coercion pfun_app]]
-declare [[coercion_enabled]]
+text \<open> Allow partial functions to be written with braces \<close>
 
-consts tick :: "'a \<Rightarrow> 'b" ("\<cmark>")
+syntax "_Pfun"     :: "maplets => ('a, 'b) pfun"            ("(1{_})")
+
+notation pempty ("{\<mapsto>}")
+
+consts tick :: "'a \<Rightarrow> 'b" ("\<checkmark>")
 
 subsection \<open> Interaction Tree Type \<close>
 
@@ -94,7 +96,7 @@ theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induc
   by (coinduct rule: itree.coinduct_strong, auto elim!: is_VisE simp add: relt_pfun_iff)
 
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
- cf. "Coinduction all the way up". Davide Sangiorgi. Replace R \<subseteq> F(R) prove R \<subseteq> C(F(R)). \<close>
+ cf. "Coinduction all the way up". Davide Sangiorgi. Replace @{term "R \<subseteq> F(R)"} prove @{term "R \<subseteq> C(F(R))"}. \<close>
 
 subsection \<open> Kleisli Trees and Monads \<close>
 
@@ -209,6 +211,11 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
    apply (metis (no_types, hide_lams) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.collapse(3) itree.exhaust_disc)
   apply transfer_prover
   done
+
+lemma kcomp_assoc: 
+  fixes P :: "('e, 'r, 's) ktree" 
+  shows "(P \<Zcomp> Q) \<Zcomp> R = P \<Zcomp> (Q \<Zcomp> R)"
+  by (simp add: kleisli_comp_def fun_eq_iff bind_itree_assoc)
 
 subsection \<open> Run \<close>
 
@@ -616,7 +623,7 @@ abbreviation "nonterminates P \<equiv> (\<^bold>R(P) = {})"
 
 abbreviation "terminates P \<equiv> (\<^bold>R(P) \<noteq> {})"
 
-lemma nonterminates_iff: "nonterminates P \<longleftrightarrow> (\<forall> es x. \<not> P \<midarrow>es\<leadsto> \<cmark> x)"
+lemma nonterminates_iff: "nonterminates P \<longleftrightarrow> (\<forall> es x. \<not> P \<midarrow>es\<leadsto> \<checkmark> x)"
   by (auto simp add: retvals_def)
 
 lemma retvals_Ret [simp]: "\<^bold>R(Ret x) = {x}"
