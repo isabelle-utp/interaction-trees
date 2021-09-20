@@ -737,14 +737,14 @@ definition MemorySTM_opt_GasAnalysis where
   (par_hide
     (discard_state (GasAnalysis_Memory_opt_i (Chemical_IntensityC (0::2))))
     GasAnalysis_i_events
-    (hide 
+    ( 
       (
         (par_hide
           (discard_state (GasAnalysis_Memory_opt_st (Chemical_Status_noGas)))
           GasAnalysis_st_events
-          (hide 
+          ( 
             (
-              (hide
+              (
                 (
                   (par_hide
                     (discard_state (GasAnalysis_Memory_opt_gs (bmake TYPE(2) [])))
@@ -757,19 +757,16 @@ definition MemorySTM_opt_GasAnalysis where
                   )
                   \<parallel>\<^bsub> GasAnalysis_opt_0_internal_set \<^esub>
                   (discard_state (GasAnalysis_MemoryTransitions_opt_0 idd))
-                )
-                ({internal_GasAnalysis_C TID_GasAnalysis_t1})
+                ) \<setminus> ({internal_GasAnalysis_C TID_GasAnalysis_t1})
               )
               \<parallel>\<^bsub> GasAnalysis_opt_1_internal_set \<^esub> 
               (discard_state (GasAnalysis_MemoryTransitions_opt_1 idd))
-            )
-            (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t4, TID_GasAnalysis_t3]))
+            ) \<setminus> (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t4, TID_GasAnalysis_t3]))
           )
         )
         \<parallel>\<^bsub> GasAnalysis_opt_2_internal_set \<^esub>
         (discard_state (GasAnalysis_MemoryTransitions_opt_2 idd))
-      )
-      (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t8, TID_GasAnalysis_t9a]))
+      ) \<setminus> (set (enumchans1 [internal_GasAnalysis_C] [TID_GasAnalysis_t8, TID_GasAnalysis_t9a]))
     )
   )   
 "
@@ -808,23 +805,23 @@ definition rename_GasAnalysis_events_others where
 
 definition rename_MemorySTM_opt_GasAnalysis where
 "rename_MemorySTM_opt_GasAnalysis idd = 
-  rename (set (rename_GasAnalysis_events @ rename_GasAnalysis_events_others)) 
-    (MemorySTM_opt_GasAnalysis idd)
+  ( (MemorySTM_opt_GasAnalysis idd) \<lbrakk>
+      (set (rename_GasAnalysis_events @ rename_GasAnalysis_events_others))
+    \<rbrakk>)
 "
 
 definition AUX_opt_GasAnalysis where
 "AUX_opt_GasAnalysis (idd::integer) = 
-  (hide 
+  ( 
     ( 
       (rename_MemorySTM_opt_GasAnalysis idd) \<lbrakk> set [terminate_GasAnalysis_C ()] \<Zrres> skip
-    )
-    GasAnalysis_MachineInternalEvents
+    ) \<setminus> GasAnalysis_MachineInternalEvents
   )
 "
 
 definition D__GasAnalysis where
 "D__GasAnalysis (idd::integer) = 
-  hide (AUX_opt_GasAnalysis idd) internal_events_GasAnalysis
+  (AUX_opt_GasAnalysis idd) \<setminus> internal_events_GasAnalysis
 "
 
 subsection \<open> MainController \<close>
@@ -851,7 +848,9 @@ definition rename_MainController_GasAnalysis_events where
 "
 
 definition rename_D__GasAnalysis where
-  "rename_D__GasAnalysis idd = rename (set rename_MainController_GasAnalysis_events) (D__GasAnalysis idd)"
+"rename_D__GasAnalysis idd = (
+    (D__GasAnalysis idd) \<lbrakk> (set rename_MainController_GasAnalysis_events)\<rbrakk>
+)"
 
 definition D__MainController where
 "D__MainController (idd::integer) = 
@@ -859,7 +858,7 @@ definition D__MainController where
     (rename_D__GasAnalysis idd)
     {}
     (discard_state (Memory_MainController idd))
-  )  \<lbrakk> set [terminate_MainController_C ()] \<Zrres> skip
+  ) \<lbrakk> set [terminate_MainController_C ()] \<Zrres> skip
 "
 
 subsubsection \<open> Export code \<close>

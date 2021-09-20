@@ -609,8 +609,8 @@ definition AUX_changeDirection where
 
 definition D__changeDirection where
 "D__changeDirection (idd::integer) = 
-  hide (hide (AUX_changeDirection idd) internal_events_changeDirection) 
-  (set [terminate_changeDirection_C ()])
+  ((AUX_changeDirection idd) \<setminus> internal_events_changeDirection)
+    \<setminus> (set [terminate_changeDirection_C ()])
 "
 
 subsection \<open> Movement state machine \<close>
@@ -1867,40 +1867,37 @@ abbreviation Movement_opt_1_internal_set where
 
 definition MemorySTM_opt_Movement' where
 "MemorySTM_opt_Movement' (idd::integer) = 
-         (
-            (hide 
-              (
-                (hide
-                  (
-                    (par_hide
-                      (discard_state (Movement_Memory_opt_l (Location_Loc_left)))
-                      Movement_l_events
-                      (par_hide 
-                        (discard_state (Movement_Memory_opt_a Chemical_Angle_Left)) 
-                        Movement_a_events 
-                        (STM_Movement idd)
-                      )
-                    )
-                    \<parallel>\<^bsub> Movement_opt_0_internal_set \<^esub>
-                    (discard_state (Movement_MemoryTransitions_opt_0 idd))
-                  )
-                  (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1,
-                       internal_changeDirection_C TID_changeDirection_t2])
-                )
-                \<parallel>\<^bsub> Movement_opt_2_internal_set \<^esub> 
-                (discard_state (Movement_MemoryTransitions_opt_2 idd))
+(
+   ( 
+      (
+        (
+          (
+            (par_hide
+              (discard_state (Movement_Memory_opt_l (Location_Loc_left)))
+              Movement_l_events
+              (par_hide 
+                (discard_state (Movement_Memory_opt_a Chemical_Angle_Left)) 
+                Movement_a_events 
+                (STM_Movement idd)
               )
-              (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
             )
-          
-        )"
+            \<parallel>\<^bsub> Movement_opt_0_internal_set \<^esub>
+            (discard_state (Movement_MemoryTransitions_opt_0 idd))
+          ) \<setminus> (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1,
+               internal_changeDirection_C TID_changeDirection_t2])
+        )
+        \<parallel>\<^bsub> Movement_opt_2_internal_set \<^esub> 
+        (discard_state (Movement_MemoryTransitions_opt_2 idd))
+      ) \<setminus> (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
+   )
+)"
 
 definition MemorySTM_opt_Movement where
 "MemorySTM_opt_Movement (idd::integer) = 
   (par_hide
     (discard_state (changeDirection_Memory_opt_l (Location_Loc_left)))
     changeDirection_l_events
-    (hide
+    (
       (
         (par_hide
           (discard_state (Movement_Memory_opt_d1 (0)))
@@ -1908,9 +1905,9 @@ definition MemorySTM_opt_Movement where
           (par_hide
             (discard_state (Movement_Memory_opt_d0 (0)))
             Movement_d0_events
-            (hide 
+            ( 
               (
-                (hide
+                (
                   (
                     (par_hide
                       (discard_state (Movement_Memory_opt_l (Location_Loc_left)))
@@ -1923,21 +1920,18 @@ definition MemorySTM_opt_Movement where
                     )
                     \<parallel>\<^bsub> Movement_opt_0_internal_set \<^esub>
                     (discard_state (Movement_MemoryTransitions_opt_0 idd))
-                  )
-                  (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1,
+                  ) \<setminus> (set [internal_Movement_C TID_Movement_t5, internal_Movement_C TID_Movement_t1,
                        internal_changeDirection_C TID_changeDirection_t2])
                 )
                 \<parallel>\<^bsub> Movement_opt_2_internal_set \<^esub> 
                 (discard_state (Movement_MemoryTransitions_opt_2 idd))
-              )
-              (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
+              ) \<setminus> (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
             )
           )
         )
         \<parallel>\<^bsub> Movement_opt_1_internal_set \<^esub>
         (discard_state (changeDirection_MemoryTransitions_opt_1 idd))
-      )
-      (set changeDirection_opt_internal_set)
+      ) \<setminus> (set changeDirection_opt_internal_set)
     )
   )
 "
@@ -1981,24 +1975,23 @@ definition rename_Movement_events_others where
 "
 
 definition rename_MemorySTM_opt_Movement where
-"rename_MemorySTM_opt_Movement idd = 
-  rename (set (rename_Movement_events @ rename_Movement_events_others)) 
-    (MemorySTM_opt_Movement idd)
-"
+"rename_MemorySTM_opt_Movement idd = ( 
+  (MemorySTM_opt_Movement idd) \<lbrakk>(set (rename_Movement_events @ rename_Movement_events_others))\<rbrakk>
+)
+" 
 
 definition AUX_opt_Movement where
 "AUX_opt_Movement (idd::integer) = 
-  (hide 
+  ( 
     ( 
       (rename_MemorySTM_opt_Movement idd) \<lbrakk> set [terminate_Movement_C ()] \<Zrres> skip
-    )
-    (Movement_MachineInternalEvents \<union> changeDirection_MachineInternalEvents)
+    ) \<setminus> (Movement_MachineInternalEvents \<union> changeDirection_MachineInternalEvents)
   )
 "
 
 definition D__Movement where
 "D__Movement (idd::integer) = 
-  hide (AUX_opt_Movement idd) internal_events_Movement
+  (AUX_opt_Movement idd) \<setminus> internal_events_Movement
 "
 
 subsection \<open> MicroController \<close>
@@ -2042,7 +2035,7 @@ definition rename_MicroController_Movement_events where
 "
 
 definition rename_D__Movement where
-  "rename_D__Movement idd = rename (set rename_MicroController_Movement_events) (D__Movement idd)"
+  "rename_D__Movement idd = ((D__Movement idd) \<lbrakk>(set rename_MicroController_Movement_events)\<rbrakk>)"
 
 definition D__MicroController where
 "D__MicroController (idd::integer) = 

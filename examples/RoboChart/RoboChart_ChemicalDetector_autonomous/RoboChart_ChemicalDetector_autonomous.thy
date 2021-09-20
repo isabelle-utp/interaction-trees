@@ -37,8 +37,8 @@ definition rename_ChemicalDetector_D__MainController_events where
 "
 
 definition rename_D__MainController where
-"rename_D__MainController idd = 
-  rename (set rename_ChemicalDetector_D__MainController_events) (D__MainController idd)"
+"rename_D__MainController idd = (
+  (D__MainController idd) \<lbrakk>(set rename_ChemicalDetector_D__MainController_events)\<rbrakk>) "
 
 definition rename_ChemicalDetector_D__MicroController_events where
 "rename_ChemicalDetector_D__MicroController_events = 
@@ -65,8 +65,8 @@ definition rename_ChemicalDetector_D__MicroController_events where
 "
 
 definition rename_D__MicroController where
-"rename_D__MicroController idd = 
-  rename (set rename_ChemicalDetector_D__MicroController_events) (D__MicroController idd)"
+"rename_D__MicroController idd = (
+  (D__MicroController idd) \<lbrakk>(set rename_ChemicalDetector_D__MicroController_events)\<rbrakk>)"
 
 text \<open> The connection from MainController to MicroController on the event turn is asynchronous, 
 and so its CSP semantics has a buffer in between. The buffer is defined below.
@@ -97,27 +97,24 @@ definition ChemicalDetector_controllers_buffer_events where
 
 definition D__ChemicalDetector where
 "D__ChemicalDetector (idd::integer) = 
-  (hide
+  (
     (
       (par_hide 
         (discard_state (buffer0 []))
         ChemicalDetector_controllers_buffer_events
         (
           (
-            hide 
-              (
-                (rename_D__MainController idd) 
-                \<parallel>\<^bsub> (ChemicalDetector_controllers_sync_events) \<^esub> 
-                (rename_D__MicroController idd)
-              )
-              (ChemicalDetector_controllers_sync_events - (set [terminate_C ()]))
+            (
+              (rename_D__MainController idd) 
+              \<parallel>\<^bsub> (ChemicalDetector_controllers_sync_events) \<^esub> 
+              (rename_D__MicroController idd)
+            ) \<setminus> (ChemicalDetector_controllers_sync_events - (set [terminate_C ()]))
           )
           \<parallel>\<^bsub> (set []) \<^esub> 
           Memory_ChemicalDetector
         )
       ) \<lbrakk> set [terminate_C ()] \<Zrres> skip
-    )
-    (set [terminate_C ()])
+    ) \<setminus> (set [terminate_C ()])
   )
 "
 

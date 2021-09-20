@@ -271,11 +271,11 @@ definition stm0_e1_x_internal_set where
 subsubsection \<open> State machine \<close>
 definition MemorySTM_opt_stm0 where
 "MemorySTM_opt_stm0 (idd::integer) = 
-  (hide
+  (
     (
       (discard_state (stm0_Memory_opt_x 0))
       \<parallel>\<^bsub> stm0_x_events \<^esub>
-      (hide 
+      ( 
         (
           (par_hide
             (par_hide (discard_state (stm0_Memory_opt_l 0)) stm0_l_events (STM_stm0 idd))
@@ -284,11 +284,9 @@ definition MemorySTM_opt_stm0 where
           )
           \<parallel>\<^bsub> stm0_e1_x_internal_set \<^esub> 
           (discard_state (stm0_MemoryTransitions_opt_1 idd))
-        )
-        {internal_stm0_C TID_stm0_t2}
+        ) \<setminus> {internal_stm0_C TID_stm0_t2}
       )
-    )
-    (set [get_x_stm0_C n. n \<leftarrow> rc.core_int_list])
+    ) \<setminus> (set [get_x_stm0_C n. n \<leftarrow> rc.core_int_list])
   )   
 "
 
@@ -360,26 +358,22 @@ definition rename_stm0_events_others' where
 "*)
 
 definition rename_MemorySTM_opt_stm0 where
-"rename_MemorySTM_opt_stm0 idd = 
-  rename (set (rename_stm0_events @ rename_stm0_events_others)) 
-    (MemorySTM_opt_stm0 idd)
+"rename_MemorySTM_opt_stm0 idd =
+    ((MemorySTM_opt_stm0 idd) \<lbrakk>(set (rename_stm0_events @ rename_stm0_events_others))\<rbrakk>)
 "
-
-term "(MemorySTM_opt_stm0 idd) \<lbrakk> set [(terminate_stm0_C (), terminate_stm0_C ())] \<rbrakk>"
 
 definition AUX_opt_stm0 where
 "AUX_opt_stm0 (idd::integer) = 
-  (hide 
+  ( 
     ( 
       (rename_MemorySTM_opt_stm0 idd) \<lbrakk> set [terminate_stm0_C ()] \<Zrres> skip
-    )
-    stm0_MachineInternalEvents
+    ) \<setminus> stm0_MachineInternalEvents
   )
 "
 
 definition D__stm0 where
 "D__stm0 (idd::integer) = 
-  hide (AUX_opt_stm0 idd) internal_events_stm0
+  (AUX_opt_stm0 idd) \<setminus> internal_events_stm0
 "
 
 subsection \<open> stm1 \<close>
@@ -606,20 +600,18 @@ definition stm1_e1_x_internal_set where
 subsubsection \<open> State machine \<close>
 definition MemorySTM_opt_stm1 where
 "MemorySTM_opt_stm1 (idd::integer) = 
-  (hide
+  (
     (
-      (hide
+      (
         (
           (discard_state (stm1_Memory_opt_x 0))
           \<parallel>\<^bsub> stm1_x_events \<^esub>
           (STM_stm1 idd)
-        )
-        (set [get_x_stm1_C n. n \<leftarrow> rc.core_int_list])
+        ) \<setminus> (set [get_x_stm1_C n. n \<leftarrow> rc.core_int_list])
       )
       \<parallel>\<^bsub> stm1_e1_x_internal_set \<^esub>
       (discard_state (stm1_MemoryTransitions_opt_0 idd))
-    )
-    {internal_stm1_C TID_stm1_t0}
+    ) \<setminus> {internal_stm1_C TID_stm1_t0}
   )
 "
 (*
@@ -679,25 +671,23 @@ definition rename_stm1_events_others where
 
 definition rename_MemorySTM_opt_stm1 where
 "rename_MemorySTM_opt_stm1 idd = 
-  rename (set (rename_stm1_events @ rename_stm1_events_others)) 
-    (MemorySTM_opt_stm1 idd)
+  ((MemorySTM_opt_stm1 idd) \<lbrakk>(set (rename_stm1_events @ rename_stm1_events_others))\<rbrakk>)
 "
 
 (* Exception: P [| A |> Q*)
 (* Renaming *)
 definition AUX_opt_stm1 where
 "AUX_opt_stm1 (idd::integer) = 
-  (hide 
+  ( 
     ( 
       (rename_MemorySTM_opt_stm1 idd) \<lbrakk> set [terminate_stm1_C ()] \<Zrres> skip
-    )
-    stm1_MachineInternalEvents
+    ) \<setminus> stm1_MachineInternalEvents
   )
 "
 
 definition D__stm1 where
 "D__stm1 (idd::integer) = 
-  hide (AUX_opt_stm1 idd) internal_events_stm1
+  (AUX_opt_stm1 idd) \<setminus> internal_events_stm1
 "
 
 subsection \<open> Controller \<close>
@@ -752,7 +742,7 @@ definition rename_ctr0_stm0_events where
   (enumchansp2_2 [(e1_stm0_C, e1_ctr0_C), (e3_stm0_C, e3_ctr0_C)] InOut_list rc.core_int_list)"
 
 definition rename_D__stm0 where
-"rename_D__stm0 idd = rename (set rename_ctr0_stm0_events) (D__stm0 idd)"
+"rename_D__stm0 idd = ((D__stm0 idd) \<lbrakk>(set rename_ctr0_stm0_events)\<rbrakk>)"
 (*
 definition rename_ctr0_stm1_events where
 "rename_ctr0_stm1_events = 
@@ -778,7 +768,7 @@ definition rename_ctr0_stm1_events where
 "
 
 definition rename_D__stm1 where
-"rename_D__stm1 idd = rename (set rename_ctr0_stm1_events) (D__stm1 idd)"
+"rename_D__stm1 idd = ((D__stm1 idd) \<lbrakk>(set rename_ctr0_stm1_events)\<rbrakk>)"
 
 definition "ctr0_stms_events = set (
   enumchan1 terminate_ctr0_C [()] @
@@ -792,9 +782,9 @@ definition "ctr0_mem_events = set (
 definition D__ctr0 where
 "D__ctr0 (idd::integer) = 
   (par_hide
-    (hide 
+    ( 
       ((rename_D__stm0 idd) \<parallel>\<^bsub> ctr0_stms_events \<^esub> (rename_D__stm1 idd))
-      (ctr0_stms_events - set [terminate_ctr0_C ()])
+      \<setminus> (ctr0_stms_events - set [terminate_ctr0_C ()])
     )
     ctr0_mem_events
     (discard_state (Memory_ctr0 idd))
@@ -846,7 +836,7 @@ definition rename_mod0_ctr0_events where
 "
 
 definition rename_D__ctr0 where
-"rename_D__ctr0 idd = rename (set rename_mod0_ctr0_events) (D__ctr0 idd)"
+"rename_D__ctr0 idd = ((D__ctr0 idd) \<lbrakk>(set rename_mod0_ctr0_events)\<rbrakk>)"
 
 definition "mod0_set_x_events = set (
   enumchan1 set_x_mod0_C  rc.core_int_list
@@ -869,21 +859,18 @@ definition D__ctr_mem where
 
 definition D__mod0 where
 "D__mod0 (idd::integer) = 
-  (hide
+  (
     (
       (skip \<parallel>\<^bsub> {} \<^esub> 
         (
-          hide 
-            (
-              (rename_D__ctr0 idd) 
-              \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
-              (discard_state (Memory_mod0 idd))
-            )
-            ((mod0_set_x_events \<union> mod0_get_x_events) \<union> mod0_set_EXT_x_events)
+          (
+            (rename_D__ctr0 idd) 
+            \<parallel>\<^bsub> (mod0_set_x_events \<union> mod0_set_EXT_x_events) \<^esub> 
+            (discard_state (Memory_mod0 idd))
+          ) \<setminus> ((mod0_set_x_events \<union> mod0_get_x_events) \<union> mod0_set_EXT_x_events)
         )
       )  \<lbrakk> set [terminate_mod0_C ()] \<Zrres> skip
-    )
-    (set [terminate_mod0_C ()])
+    ) \<setminus> (set [terminate_mod0_C ()])
   )
 "
 
