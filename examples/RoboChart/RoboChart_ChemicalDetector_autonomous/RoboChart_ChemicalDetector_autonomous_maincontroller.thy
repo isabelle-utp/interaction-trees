@@ -890,6 +890,9 @@ generate_file \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close> =
 \<open>module Simulate (simulate) where
 import qualified Interaction_Trees;
 import qualified Partial_Fun;
+import qualified Bounded_List;
+import qualified Data.List.Split;
+import qualified Data.List;
 
 isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
 isPrefixOf [] _         =  True;
@@ -899,6 +902,38 @@ isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
 removeSubstr :: String -> String -> String;
 removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
+
+replace :: String -> String -> String -> String;
+replace old new = Data.List.intercalate new . Data.List.Split.splitOn old
+
+renameGasEvent :: String -> String;
+renameGasEvent gas = 
+  (
+  replace " ()]" "]" (
+    replace " ()," "," (
+      removeSubstr "Chemical_GasSensor_ext " (
+        replace "(Chemical_IntensityC 1)" "1)" (
+          replace "(Chemical_IntensityC 0)" "0)" (
+            replace "(Chemical_ChemC 1)" "(1," (
+              replace "(Chemical_ChemC 0)" "(0," (
+                replace "(Abs_bit0 (Pos One))" "1" (
+                  replace "(Abs_bit0 Zero_int)" "0" (
+                    removeSubstr "Chemical_GasSensor_ext " (
+                      removeSubstr "Bmake Type" (
+                        removeSubstr "_C" gas)))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+{-  (removeSubstr "_C" gas) >>=
+  (\e -> removeSubstr "Bmake Type" e) >>=
+  (\e -> removeSubstr "Chemical_GasSensor_ext" e);
+-}
 
 simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Interaction_Trees.Itree e s -> Prelude.IO ();
 simulate_cnt n (Interaction_Trees.Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
@@ -911,7 +946,7 @@ simulate_cnt n (Interaction_Trees.Sil p) =
      };
 simulate_cnt n (Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
 simulate_cnt n t@(Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist m)) =
-  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
+  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ renameGasEvent e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
        e <- Prelude.getLine;
        case (Prelude.reads e) of
          []       -> if (Prelude.length m == 1)
