@@ -1,22 +1,36 @@
 section \<open> Simulation of a very basic RoboChart model \<close>
 text \<open> This theory aims for simulation of a trivial RoboChart model based on its CSP
- semantics. We use the @{term "rename"} operator for renaming.
+ semantics. 
+
+﻿\begin{figure}
+  \includegraphics[scale=0.30]{module}
+\end{figure}
 \<close>
 theory RoboChart_basic
   imports "../../../ITree_RoboChart"
 begin
 
 subsection \<open> General definitions \<close>
+text \<open> Instantiation of @{term "min_int"}, @{term "max_int"}, @{term "max_nat"}, @{term "min_real"}, 
+@{term "max_real"},, to -1, 1, 1, -1, and 1 separately.
+\<close>
 interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
 subsection \<open> stm0 \<close>
+text \<open> @{term "SIDS_stm0"} defines state identifiers for state machine @{text "stm0"}, which include 
+the machine itself and the state @{text "s0"}.\<close>
 datatype SIDS_stm0 = SID_stm0
                    | SID_stm0_s0
 
+text \<open> @{term "SIDS_stm0_list"} defines a list of all possible values in @{term "SIDS_stm0"}.\<close>
 definition "SIDS_stm0_list = [SID_stm0, SID_stm0_s0]"
+
+text \<open> @{term "SIDS_stm0_set"} defines a set of all possible values in @{term "SIDS_stm0"}.\<close>
 definition "SIDS_stm0_set = set SIDS_stm0_list"
+
 definition "SIDS_stm0_without_s0 = (removeAll SID_stm0_s0 SIDS_stm0_list)"
 
+text \<open> @{term "TIDS_stm0"} defines transition identifiers for state machine @{text "stm0"}.\<close>
 datatype TIDS_stm0 = NULLTRANSITION_stm0
                    | TID_stm0_t0
                    | TID_stm0_t1
@@ -25,9 +39,12 @@ datatype TIDS_stm0 = NULLTRANSITION_stm0
 definition "TIDS_stm0_list = [NULLTRANSITION_stm0, TID_stm0_t0, TID_stm0_t1, TID_stm0_t2]"
 definition "TIDS_stm0_set = set TIDS_stm0_list"
 
+text \<open> @{term "ITIDS_stm0_list"} gives a list of transition IDs that can interrupt a state. \<close>
 definition "ITIDS_stm0_list = [TID_stm0_t1, TID_stm0_t2]"
-definition "ITIDS_stm0 = set ITIDS_stm0_list"  
+definition "ITIDS_stm0_set = set ITIDS_stm0_list"  
 
+text \<open> @{term "Chan_stm0"} is a channel type for the state machine, and it declares various channels 
+including flow channels, variable channels, and event channels.\<close>
 chantype Chan_stm0 =
 (* flow channels *)
   (* will be hidden *)
@@ -58,15 +75,19 @@ chantype Chan_stm0 =
   e3__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e3_stm0 :: "InOut \<times> core_int"
 
+text \<open> The type of a channel is a prism from the data type of the channel to the channel type. 
+For example, the type of @{term "e3_stm0"} is @{typeof "e3_stm0"}. \<close>
 term "e3_stm0"
 
 subsubsection \<open> Sets of events \<close>
+text \<open> @{term "int_int_stm0"} defines a set of internal channel events that can interrupt states. \<close>
 definition int_int_stm0 where
 "int_int_stm0 = 
   set ((enumchans3 [e1__stm0_C, e3__stm0_C] [TID_stm0_t1,TID_stm0_t2] [din, dout] rc.core_int_list) @
        (enumchan1 internal_stm0_C [TID_stm0_t1,TID_stm0_t2])
 )"
 
+text \<open> @{term "internal_events_stm0"} defines a set of internal flow control events. \<close>
 definition internal_events_stm0 where
 "internal_events_stm0 = 
   set (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] SIDS_stm0_list SIDS_stm0_list)"
@@ -88,6 +109,8 @@ definition CS_stm0_s0_sync where
       (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] [SID_stm0_s0] [SID_stm0_s0])
 )"
 
+text \<open> @{term "stm0_s0_triggers"} defines a set of channel events that act as triggers of transitions
+. \<close>
 definition stm0_s0_triggers where
 "stm0_s0_triggers = 
   set ((enumchan3 e1__stm0_C [TID_stm0_t1,TID_stm0_t2] [din, dout] rc.core_int_list) @
@@ -95,11 +118,13 @@ definition stm0_s0_triggers where
 )
 "
 
+text \<open> @{term "stm0_l_events"} defines a set of variable channel events for @{text "l"}. \<close>
 definition stm0_l_events where
 "stm0_l_events = 
     set (enumchans1 [get_l_stm0_C, set_l_stm0_C] rc.core_int_list)
 "
 
+text \<open> @{term "stm0_x_events"} defines a set of variable channel events for @{text "x"}. \<close>
 definition stm0_x_events where
 "stm0_x_events = 
     set (
@@ -108,6 +133,7 @@ definition stm0_x_events where
     )
 "
 
+text \<open> @{term "stm0_MachineInternalEvents"} defines a set of @{text "internal_"} channel events. \<close>
 definition stm0_MachineInternalEvents where
 "stm0_MachineInternalEvents = 
   set (enumchan1 internal_stm0_C TIDS_stm0_list)

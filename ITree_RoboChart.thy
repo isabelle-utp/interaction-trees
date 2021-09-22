@@ -119,6 +119,8 @@ definition mapfpc :: "('c \<times> 'a \<Rightarrow> 'b) list \<Rightarrow> 'c li
 definition mapfp :: "('b \<Rightarrow> 'a) list \<Rightarrow> 'b list \<Rightarrow> ('a \<times> 'a) list" where
 "mapfp fs xs = concat (map (\<lambda> f. map f xs) (map (\<lambda>f. \<lambda>x. (f x, f x)) fs))"
 
+text \<open> @{text "enumchanp1"} and @{text "enumchansp1"} are similar to @{text "enumchan1"} and 
+@{text "enumchans1"}, but for pairs, of which the first and the second elements are the same. \<close>
 abbreviation "enumchanp1 ch a \<equiv> mapfp [ch] a"
 abbreviation "enumchanp2 ch a b \<equiv> mapf (mapfpc [ch] a) b"
 abbreviation "enumchanp3 ch a b c \<equiv> mapf (mapfc (mapfpc [ch] a) b) c"
@@ -129,8 +131,8 @@ abbreviation "enumchansp3 chs a b c \<equiv> mapf (mapfc (mapfpc chs a) b) c"
 abbreviation "enumchansp4 chs a b c d \<equiv> mapf (mapfc (mapfc (mapfpc chs a) b) c) d"
 
 text \<open> @{text "forget_first"} maps an event @{text "e_"} to another @{text "e"} by forgetting 
-the first element (a transition id, tid) of @{text "e_"}. This is used for the event renaming 
-like [(e1__stm0.tid.dir.n, e1_stm0.dir.n), ...].
+the first element (a transition id, @{text "tid"}) of @{text "e_"}. This is used for the event 
+renaming like @{text "[(e1__stm0.tid.dir.n, e1_stm0.dir.n), ...]"}.
 \<close>
 definition forget_first where
 "forget_first e_' e xs = (\<lambda>(dir). 
@@ -150,6 +152,8 @@ definition mapfpc2 :: "(('d \<times> 'a \<Rightarrow> 'b) \<times> ('d \<times> 
 definition mapfp2 :: "(('c \<Rightarrow> 'a) \<times> ('c \<Rightarrow> 'b)) list \<Rightarrow> 'c list \<Rightarrow> ('a \<times> 'b) list" where
 "mapfp2 fs xs = concat (map (\<lambda> f. map f xs) (map (\<lambda>f. \<lambda>x. ((fst f) x, (snd f) x)) fs))"
 
+text \<open> @{text "enumchanp2_1"} and @{text "enumchansp2_1"} are for pairs, of which the first and 
+the second elements are different. \<close>
 abbreviation "enumchanp2_1 ch a \<equiv> mapfp2 [ch] a"
 abbreviation "enumchanp2_2 ch a b \<equiv> mapf (mapfpc2 [ch] a) b"
 abbreviation "enumchanp2_3 ch a b c \<equiv> mapf (mapfc (mapfpc2 [ch] a) b) c"
