@@ -1,18 +1,23 @@
 section \<open> Simulation of a very basic RoboChart model \<close>
 text \<open> This theory aims for simulation of a trivial RoboChart model (see 
-Figure~\ref{fig:robochart_basic}) based on its CSP semantics. This model contains one robotic 
+Figure~\ref{fig:robochart_basic}) based on its CSP semantics. 
+\begin{figure}
+  \includegraphics[scale=0.50]{images/system.pdf}
+  \caption{The RoboChart model of a trivial example}
+  \label{fig:robochart_basic}
+\end{figure}
+
+This model contains one robotic
 platform @{text rp0} and one controller @{text ctr0}. The controller is further composed of two 
 state machines: @{text stm0} and @{text stm1}. A shared variable @{text x} is provided by @{text rp0} 
 and required by the controller and its two state machines. The machine @{text stm0} additionally has 
 a local variable @{text l}. The controller communicates with the platform through two input events:
 @{text e1} and @{text e2}, which are further connected to @{text stm0} and @{text stm1}. The two 
-state machines are also connected through an event: @{text e3}.  
+state machines are also connected through an event: @{text e3} (from @{text stm0} to @{text stm1}).
 
-﻿\begin{figure}
-  \includegraphics[scale=0.50]{images/system.pdf}
-  \caption{The RoboChart model of a trivial example}
-  \label{fig:robochart_basic}
-\end{figure}
+We note this theory is not directly translated from the RoboChart model. Instead, it is translated 
+from the standard CSP semantics (under @{verbatim "csp-gen/defs"}) of the model which is generated in 
+RoboTool.
 \<close>
 theory RoboChart_basic
   imports "ITree_RoboChart.ITree_RoboChart"
@@ -52,15 +57,11 @@ definition "ITIDS_stm0_list = [TID_stm0_t1, TID_stm0_t2]"
 definition "ITIDS_stm0_set = set ITIDS_stm0_list"  
 
 text \<open> @{term "Chan_stm0"} is a channel type for the state machine, and it declares various channels 
-including flow channels, variable channels, and event channels.\<close>
+including flow channels, variable channels, and event channels.
+\<close>
 chantype Chan_stm0 =
 (* flow channels *)
-  (* will be hidden *)
   internal_stm0 :: TIDS_stm0
-  (* enteredV_stm0 :: SIDS_stm0
-  enterV_stm0 :: SIDS_stm0 
-  exitV_stm0  :: SIDS_stm0 
-  exitedV_stm0 :: SIDS_stm0 *)
   enter_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   entered_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exit_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
@@ -83,9 +84,29 @@ chantype Chan_stm0 =
   e3__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e3_stm0 :: "InOut \<times> core_int"
 
-text \<open> The type of a channel is a prism from the data type of the channel to the channel type. 
-For example, the type of @{term "e3_stm0"} is @{typeof "e3_stm0"}. \<close>
-term "e3_stm0"
+text \<open> Here, we use the following 
+conventions.
+\begin{itemize}
+  \item a channel type: @{term "Chan_stm0"},
+  \item channels (declared in @{term "Chan_stm0"}): @{term "internal_stm0"}, @{term "e1_stm0"}, etc.
+  \begin{itemize}
+    \item an internal trigger channel: @{term "internal_stm0"};
+    \item flow control channels: @{term "enter_stm0"}, @{term "entered_stm0"}, @{term "exit_stm0"}, 
+      and @{term "exited_stm0"};
+    \item a terminate channel: @{term "terminate_stm0"};
+    \item local variable channels: @{term "get_l_stm0"}, and @{term "set_l_stm0"};
+    \item shared variable channels: @{term "get_x_stm0"}, @{term "set_x_stm0"}, and 
+      @{term "set_EXT_x_stm0"};
+    \item Event channels: trigger event channels (@{term "e1__stm0"} and @{term "e3__stm0"}), 
+      and event channels (@{term "e1_stm0"} and @{term "e3_stm0"}).
+  \end{itemize}
+  \item a channel event: an event starting with the name of a channel and carrying a value on the 
+  channel, such as @{text "internal_stm0 TID_stm0_t1"};
+  %\item the data type of a channel (@{term "e1_stm0"}): @{typeof "e1_stm0_C"};
+  \item the type of a channel (@{term "e1_stm0"}): @{typeof "e1_stm0"}, a prism from the data type 
+    of the channel to the channel type.
+\end{itemize}
+\<close>
 
 subsubsection \<open> Sets of events \<close>
 text \<open> @{term "int_int_stm0"} defines a set of internal channel events that can interrupt states. \<close>
@@ -98,7 +119,8 @@ definition int_int_stm0 where
 text \<open> @{term "internal_events_stm0"} defines a set of internal flow control events. \<close>
 definition internal_events_stm0 where
 "internal_events_stm0 = 
-  set (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] SIDS_stm0_list SIDS_stm0_list)"
+  set (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] SIDS_stm0_list 
+  SIDS_stm0_list)"
 
 (*
 definition shared_variable_events_stm0 where
@@ -148,18 +170,20 @@ definition stm0_MachineInternalEvents where
 "
 
 subsubsection \<open> State Machine Memory \<close>
-text \<open> Memory cell processes \<close>
+paragraph \<open> Memory cell processes \<close>
 
-(* for the shared variable x *)
+text \<open> @{term "stm0_Memory_opt_x"} is a memory cell process for a shared variable @{term x}.\<close>
 definition stm0_Memory_opt_x where
 "stm0_Memory_opt_x = 
   mem_of_svar get_x_stm0 set_x_stm0 set_EXT_x_stm0 rc.core_int_set"
 
-(* for the local variable l *)
+text \<open> @{term "stm0_Memory_opt_l"} is a memory cell process for a local variable @{term l}.\<close>
 definition stm0_Memory_opt_l where
 "stm0_Memory_opt_l = mem_of_lvar get_l_stm0 set_l_stm0 rc.core_int_set"
 
-text \<open> Memory transition processes \<close>
+paragraph \<open> Memory transition processes \<close>
+text \<open> @{term "stm0_MemoryTransitions_opt_0"} and @{term "stm0_MemoryTransitions_opt_1"} are memory 
+processes for transitions, particularly the guards of transitions evaluated in the process.\<close>
 definition stm0_MemoryTransitions_opt_0 where
 "stm0_MemoryTransitions_opt_0 = 
   loop (\<lambda> id::integer. 
