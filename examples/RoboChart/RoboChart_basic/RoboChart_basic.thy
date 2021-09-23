@@ -20,7 +20,7 @@ from the standard CSP semantics (under @{verbatim "csp-gen/defs"}) of the model 
 RoboTool.
 \<close>
 theory RoboChart_basic
-  imports "ITree_RoboChart.ITree_RoboChart"
+  imports "ITree_RoboChart.ITree_RoboChart" "Interaction_Trees.ITree_Simulation"
 begin
 
 subsection \<open> General definitions \<close>
@@ -932,6 +932,9 @@ definition D__mod0 where
   )
 "
 
+definition "D_mod0_sim = D__mod0 0"
+animate D_mod0_sim
+ 
 subsection \<open> Export code \<close>
 export_code
   stm0_Memory_opt_x
