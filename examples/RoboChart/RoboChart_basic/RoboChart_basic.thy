@@ -1,13 +1,21 @@
 section \<open> Simulation of a very basic RoboChart model \<close>
-text \<open> This theory aims for simulation of a trivial RoboChart model based on its CSP
- semantics. 
+text \<open> This theory aims for simulation of a trivial RoboChart model (see 
+Figure~\ref{fig:robochart_basic}) based on its CSP semantics. This model contains one robotic 
+platform @{text rp0} and one controller @{text ctr0}. The controller is further composed of two 
+state machines: @{text stm0} and @{text stm1}. A shared variable @{text x} is provided by @{text rp0} 
+and required by the controller and its two state machines. The machine @{text stm0} additionally has 
+a local variable @{text l}. The controller communicates with the platform through two input events:
+@{text e1} and @{text e2}, which are further connected to @{text stm0} and @{text stm1}. The two 
+state machines are also connected through an event: @{text e3}.  
 
 ﻿\begin{figure}
-  \includegraphics[scale=0.30]{module}
+  \includegraphics[scale=0.50]{images/system.pdf}
+  \caption{The RoboChart model of a trivial example}
+  \label{fig:robochart_basic}
 \end{figure}
 \<close>
 theory RoboChart_basic
-  imports "../../../ITree_RoboChart"
+  imports "ITree_RoboChart.ITree_RoboChart"
 begin
 
 subsection \<open> General definitions \<close>
@@ -199,7 +207,7 @@ definition State_stm0_s0 where
           [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]) ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_stm0_s0_execute \<close>
+        \<comment> \<open> @{text State_stm0_s0_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -209,7 +217,7 @@ definition State_stm0_s0 where
               outp entered_stm0 (snd (snd s), SID_stm0_s0);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_stm0_t1 \<close>
+                \<comment> \<open> @{text T_stm0_t1} \<close>
                 do {t \<leftarrow> inp_in e1__stm0 (set [(TID_stm0_t1, din, l) . l \<leftarrow> rc.core_int_list]) ;
                       outp set_l_stm0 (snd (snd t)) ; 
                       outp exit_stm0 (SID_stm0_s0, SID_stm0_s0);
@@ -219,7 +227,7 @@ definition State_stm0_s0 where
                         outp enter_stm0 (SID_stm0_s0, SID_stm0_s0);
                         Ret(True, fst (snd s), SID_stm0_s0)
                     } \<box>
-                \<comment> \<open> T_stm0_t2 \<close>
+                \<comment> \<open> @{text T_stm0_t2} \<close>
                 do {outp internal_stm0 TID_stm0_t2;
                     outp exit_stm0 (SID_stm0_s0, SID_stm0_s0);
                     outp exited_stm0 (SID_stm0_s0, SID_stm0_s0);
@@ -529,7 +537,7 @@ definition State_stm1_s0 where
           [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]) ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_stm1_s0_execute \<close>
+        \<comment> \<open> @{text State_stm1_s0_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -539,18 +547,18 @@ definition State_stm1_s0 where
               outp entered_stm1 (snd (snd s), SID_stm1_s0);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_stm1_t1 \<close>
+                \<comment> \<open> @{text T_stm1_t1} \<close>
                 do {t \<leftarrow> inp_in e3__stm1 (set [(TID_stm1_t1, din, l) . l \<leftarrow> rc.core_int_list]) ;
                       outp set_x_stm1 (snd (snd t)) ; 
                       outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                       outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
                       x \<leftarrow> inp_in get_x_stm1 rc.core_int_set ; 
-                        \<comment> \<open>outp set_x_stm1 (x+1);\<close>
+                        \<comment> \<open> @{text \<open>outp set_x_stm1 (x+1);\<close>} \<close>
                         outp set_x_stm1 (rc.Plus x 1 rc.core_int_set);
                         outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
                         Ret(True, fst (snd s), SID_stm1_s0)
                     } \<box>
-                \<comment> \<open> T_stm1_t2 \<close>
+                \<comment> \<open> @{text T_stm1_t2} \<close>
                 do {outp e2__stm1 (TID_stm1_t2, din);
                     outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                     outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
