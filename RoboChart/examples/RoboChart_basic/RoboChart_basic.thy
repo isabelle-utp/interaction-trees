@@ -17,7 +17,11 @@ state machines are also connected through an event: @{text e3} (from @{text stm0
 
 We note this theory is not directly translated from the RoboChart model. Instead, it is translated 
 from the standard CSP semantics (under @{verbatim "csp-gen/defs"}) of the model which is generated in 
-RoboTool.
+RoboTool. In the CSP semantics, there are a variety of versions, such as default 
+(@{verbatim "Dunopt__"}), optimised (@{verbatim "D__"}), optimised with compressions 
+(@{verbatim "O__"}), visible (@{verbatim "VS__"}) etc. Here, we choose the optimised version 
+(@{verbatim "D__"}) because the version of the optimised with compressions (@{verbatim "O__"}) is 
+used for checking core assertions in RoboTool and compressions are not implemented here.
 \<close>
 theory RoboChart_basic
   imports "ITree_RoboChart.ITree_RoboChart" "Interaction_Trees.ITree_Simulation"
@@ -84,8 +88,7 @@ chantype Chan_stm0 =
   e3__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
   e3_stm0 :: "InOut \<times> core_int"
 
-text \<open> Here, we use the following 
-conventions.
+text \<open> Here, we use the following conventions.
 \begin{itemize}
   \item a channel type: @{term "Chan_stm0"},
   \item channels (declared in @{term "Chan_stm0"}): @{term "internal_stm0"}, @{term "e1_stm0"}, etc.
@@ -109,7 +112,8 @@ conventions.
 \<close>
 
 subsubsection \<open> Sets of events \<close>
-text \<open> @{term "int_int_stm0"} defines a set of internal channel events that can interrupt states. \<close>
+text \<open> @{term "int_int_stm0"} defines a set of internal channel events that can interrupt states.  
+\<close>
 definition int_int_stm0 where
 "int_int_stm0 = 
   set ((enumchans3 [e1__stm0_C, e3__stm0_C] [TID_stm0_t1,TID_stm0_t2] [din, dout] rc.core_int_list) @
@@ -182,8 +186,19 @@ definition stm0_Memory_opt_l where
 "stm0_Memory_opt_l = mem_of_lvar get_l_stm0 set_l_stm0 rc.core_int_set"
 
 paragraph \<open> Memory transition processes \<close>
-text \<open> @{term "stm0_MemoryTransitions_opt_0"} and @{term "stm0_MemoryTransitions_opt_1"} are memory 
-processes for transitions, particularly the guards of transitions evaluated in the process.\<close>
+text \<open> Both @{term "stm0_MemoryTransitions_opt_0"} and @{term "stm0_MemoryTransitions_opt_1"} are memory 
+processes for transitions, particularly the guards of transitions evaluated in processes. They also 
+have a parameter @{text "id"}.
+\<close>
+text \<open> For @{term "stm0_MemoryTransitions_opt_0"}, we manually add an external choice with 
+@{term deadlock} to tackle an issue that the instance of @{verbatim \<open>(Eq Chan_stm0)\<close>} won't be 
+generated if there is no equality checking. However, this instance is necessary for our animation. 
+We, therefore, deliberately enable an equality checking by adding an external choice with 
+@{term deadlock} (and this will not change the semantics). For this theory, actually this addition is
+not necessary because there are equality checking in other processes. But, in case of an error like 
+(@{verbatim "No instance for (Eq Chan) arising from a use of simulate"}), this is a feasible 
+solution.
+\<close>
 definition stm0_MemoryTransitions_opt_0 where
 "stm0_MemoryTransitions_opt_0 = 
   loop (\<lambda> id::integer. 
@@ -196,6 +211,8 @@ definition stm0_MemoryTransitions_opt_1 where
   loop (\<lambda> id::integer.
     do {x \<leftarrow> inp_in get_x_stm0 rc.core_int_set ; 
       (
+        \<comment> \<open>This constrained input prefixing corresponds to the input trigger with guard 
+        (@{verbatim \<open>e1?l[x==0]\<close>}) \<close>
         do {inp_in e1__stm0 (set [(TID_stm0_t1, din, l). l \<leftarrow> rc.core_int_list, (x = 0)])
               ; Ret (id)} \<box>
         do {guard (x \<noteq> 0); outp internal_stm0 TID_stm0_t2 ; Ret (id)} \<box>
@@ -207,6 +224,11 @@ definition stm0_MemoryTransitions_opt_1 where
 "
 
 subsubsection \<open> States \<close>
+text \<open> This section defines processes for states in the state machine. \<close>
+
+text \<open> @{term "I_stm0_i0"} is for the transition @{verbatim t0} that is from the initial junction 
+@{verbatim i0} to the state @{verbatim s0}. \<close>
+
 definition I_stm0_i0 where
 "I_stm0_i0 = (\<lambda> (id::integer) . 
   do {outp internal_stm0 TID_stm0_t0 ; 

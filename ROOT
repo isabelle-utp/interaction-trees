@@ -1,23 +1,23 @@
-session "Interaction_Trees_temp" = "Shallow-Expressions-Z" +
+session "Interaction_Trees" = "Shallow-Expressions-Z" +
   options [timeout = 600, document = pdf, document_output = "output"]
   theories
     ITrees
   document_files
     "root.tex"
 
-session "ITree_UTP_temp" in "UTP" = "Interaction_Trees_temp" +
+session "ITree_UTP" in "UTP" = "Interaction_Trees" +
   options [timeout = 600, document = false]
   theories
     ITree_UTP
 
-session "ITree_RoboChart" in "RoboChart" = "ITree_UTP_temp" +
+session "ITree_RoboChart" in "RoboChart" = "ITree_UTP" +
   options [timeout = 600, document = pdf, document_output = "output"]
   theories
     ITree_RoboChart
   document_files
     "root.tex"
 
-session "RoboChart_basic" in "examples/RoboChart/RoboChart_basic" = "ITree_RoboChart" +
+session "RoboChart_basic" in "RoboChart/examples/RoboChart_basic" = "ITree_RoboChart" +
   options [timeout = 600, document = pdf, document_output = "output"]
   sessions
     "ITree_RoboChart"
@@ -27,7 +27,7 @@ session "RoboChart_basic" in "examples/RoboChart/RoboChart_basic" = "ITree_RoboC
     "root.tex"
     "images/system.pdf"
 
-session "RoboChart_ChemicalDetector_autonomous" in "examples/RoboChart/RoboChart_ChemicalDetector_autonomous" = "ITree_RoboChart" +
+session "RoboChart_ChemicalDetector_autonomous" in "RoboChart/examples/RoboChart_ChemicalDetector_autonomous" = "ITree_RoboChart" +
   options [timeout = 600, document = pdf, document_output = "output"]
   sessions
     "ITree_RoboChart"
