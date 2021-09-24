@@ -11,7 +11,7 @@ declare deadlock_def [code_unfold]
 text \<open> Configuring the code generator; either partial functions or associative lists can be used
   in specifying choice functions. Partial injections are also supported using lists. \<close>
 
-code_datatype pfun_of_alist pfun_of_map pfun_of_pinj 
+code_datatype pfun_of_alist pfun_of_map pfun_of_pinj pfun_entries
 code_datatype pinj_of_alist
 
 declare pinv_pinj_of_alist [code]
@@ -61,6 +61,12 @@ end
 instantiation ffun :: (type, type) default
 begin
 definition "default_ffun = ({}\<^sub>f :: ('a, 'b) ffun)"
+instance ..
+end
+
+instantiation pinj :: (type, type) default
+begin
+definition default_pinj :: "'a \<Zpinj> 'b" where "default_pinj = 0"
 instance ..
 end
 
