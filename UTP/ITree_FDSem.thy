@@ -489,8 +489,17 @@ lemma failures_bind:
     apply (metis (no_types, lifting) map_Ev_of_Ev map_append map_map trace_to_bind)+
   done
 
-lemma "failures(Ret x) = failures(Vis F) \<Longrightarrow> False"
-  by (simp add: failures_Ret failures_Vis, auto)
+lemma failure_Ret_neq_Vis: 
+  assumes "failures(Ret x) = failures(Vis F)"
+  shows "False"
+proof -
+  have "([\<checkmark> x], {}) \<in> failures(Ret x)"
+    by (auto simp add: failures_Ret)
+  moreover have "([\<checkmark> x], {}) \<notin> failures(Vis F)"
+    by (auto simp add: failures_Vis)
+  ultimately show ?thesis
+    using assms by blast
+qed
 
 lemma mstep_to_term: "P \<Midarrow>[\<checkmark> v]\<Rightarrow> P' \<longleftrightarrow> (\<exists> n. P = Sils n (Ret v) \<and> P' = deadlock)"
   by (metis append_Nil map_is_Nil_conv mstep_termE mstep_to_def trace_of_Sils trace_to_NilE)

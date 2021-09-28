@@ -85,7 +85,6 @@ lemma inp_in_where_map_code [code_unfold]:
   "wb_prism c \<Longrightarrow> inp_in_where c A P = inp_map_in_where c A P"
   apply (auto simp add: inp_in_where_def inp_map_in_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
   apply (metis (no_types, hide_lams) imageI option.distinct(1) option.exhaust_sel wb_prism_def)
-  apply (meson option.distinct(1))
   done
 
 lemma inp_in_where_list_code [code_unfold]:

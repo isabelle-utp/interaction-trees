@@ -661,7 +661,7 @@ lemma evalpha_Ret [simp]: "\<^bold>A(Ret x) = {}"
 
 lemma evalpha_Vis [simp]: "\<^bold>A(Vis F) = pdom(F) \<union> (\<Union> (\<^bold>A ` pran(F)))"
   apply (auto simp add: evalpha_def)
-  using pran_pdom apply fastforce
+  apply (metis Vis_Cons_trns image_eqI list.set_cases pran_pdom)
    apply (metis list.set_intros(1) trace_to_Nil trace_to_Vis)
   apply (metis (no_types, lifting) imageE list.set_intros(2) pran_pdom trace_to_Vis)
   done
