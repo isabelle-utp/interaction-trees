@@ -15,26 +15,61 @@ a local variable @{text l}. The controller communicates with the platform throug
 @{text e1} and @{text e2}, which are further connected to @{text stm0} and @{text stm1}. The two 
 state machines are also connected through an event: @{text e3} (from @{text stm0} to @{text stm1}).
 
-We note this theory is not directly translated from the RoboChart model. Instead, it is translated 
-from the standard CSP semantics (under @{verbatim "csp-gen/defs"}) of the model which is generated in 
-RoboTool. In the CSP semantics, there are a variety of versions, such as default 
+We note this theory is not directly translated from the RoboChart model. 
+Instead, it is translated from the standard CSP semantics (under @{verbatim "csp-gen/defs"}) of 
+the model which is generated in RoboTool, particularly the file @{verbatim "mod0.csp"}. 
+In the CSP semantics, there are a variety of versions, such as default 
 (@{verbatim "Dunopt__"}), optimised (@{verbatim "D__"}), optimised with compressions 
 (@{verbatim "O__"}), visible (@{verbatim "VS__"}) etc. Here, we choose the optimised version 
 (@{verbatim "D__"}) because the version of the optimised with compressions (@{verbatim "O__"}) is 
 used for checking core assertions in RoboTool and compressions are not implemented here.
+
+To decide which part of the CSP semantics should be translated, we use the top-down approach, 
+starting from the @{verbatim "D__(id__)"} process for the module @{text mod0}, then to the controller,
+and finally to the state machines. By this way, we know which channels, definitions, and processes 
+are used in the version, and, therefore, they should be translated in this theory. For example, 
+channel @{verbatim "enter"} should be included, but channel @{verbatim "enterV"} is not. 
+
+This theory, on the contrary, is built from the bottom up because the definition of a top process 
+relies on the definitions of other processes in the top process. 
 \<close>
 theory RoboChart_basic
   imports "ITree_RoboChart.ITree_RoboChart" "Interaction_Trees.ITree_Simulation"
 begin
 
-subsection \<open> General definitions \<close>
+text \<open>We, therefore, structure the theory as follows. In Sect.~\ref{ssec:basic_general}, we give 
+general definitions. 
+Then we define processes for @{text stm0} in Sect.~\ref{ssec:basic_stm0}, for @{text stm1} in 
+Sect.~\ref{ssec:basic_stm1}, for @{text ctr0} in Sect.~\ref{ssec:basic_ctr0}, and for @{text mod0} 
+in Sect.~\ref{ssec:basic_mod0}.
+\<close>
+
+subsection \<open> General definitions \label{ssec:basic_general}\<close>
 text \<open> Instantiation of @{term "min_int"}, @{term "max_int"}, @{term "max_nat"}, @{term "min_real"}, 
 @{term "max_real"},, to -1, 1, 1, -1, and 1 separately.
 \<close>
 interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
 
-subsection \<open> stm0 \<close>
-text \<open> @{term "SIDS_stm0"} defines state identifiers for state machine @{text "stm0"}, which include 
+subsection \<open> State machine @{text stm0} \label{ssec:basic_stm0}\<close>
+text \<open> Each state machine shares common definitions:
+\begin{itemize}
+\item two data types: @{text SIDS} and @{text TIDS} for state and transition identifiers, 
+\item one channel type @{text Chan}, 
+\item sets of events used in synchronisation and hiding,
+\item state machine memory: memory cell and memory transition processes,
+\item restricted state processes,
+\item state machine processes: composition of memory processes and state processes.
+\end{itemize}
+
+We note the CSP process for a state machine is encapsulated in a module such as 
+@{verbatim "module stm0"}, and so the names like @{verbatim SIDS} can be used in the module directly.
+This theory here, however, is not based on a modular approach, and so the names like @{text SIDS} 
+cannot be used to denote a state identifier type for @{text stm0}. Otherwise, it will cause a name 
+conflict with @{text SIDS} for other state machines. For this reason, we add a suffix 
+(the state machine name) to these names such as @{text SIDS_stm0}.
+\<close>
+
+text \<open> @{term "SIDS_stm0"} defines state identifiers for @{text "stm0"}, which include 
 the machine itself and the state @{text "s0"}.\<close>
 datatype SIDS_stm0 = SID_stm0
                    | SID_stm0_s0
@@ -64,28 +99,20 @@ text \<open> @{term "Chan_stm0"} is a channel type for the state machine, and it
 including flow channels, variable channels, and event channels.
 \<close>
 chantype Chan_stm0 =
-(* flow channels *)
   internal_stm0 :: TIDS_stm0
   enter_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   entered_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exit_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   exited_stm0 :: "SIDS_stm0 \<times> SIDS_stm0"
   terminate_stm0 :: unit
-(* variable channels : the next 3 channels will be hidden *)
-  get_l_stm0 :: core_int
+  get_l_stm0 :: core_int (* variable channels : the next 3 channels will be hidden *)
   set_l_stm0 :: core_int
   get_x_stm0 :: core_int
-(* this won't be hidden, and will be renamed to set_x_ctr0 *)
-  set_x_stm0 :: core_int
-(* shared variable channels, and will be renamed to set_EXT_x_ctr0_stm0 *)
-  set_EXT_x_stm0 :: core_int
-(* event channels *)
-  (* will be renamed to e1_stm0 (may introduce nondeterminism) *)
-  e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
-  (* will be further renamed to e1_ctr0 *)
-  e1_stm0 :: "InOut \<times> core_int"
-  (* will be renamed to e3_ctr0.out *)
-  e3__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"
+  set_x_stm0 :: core_int (* this won't be hidden, and will be renamed to set_x_ctr0 *)
+  set_EXT_x_stm0 :: core_int (* shared variable channels, and will be renamed to set_EXT_x_ctr0_stm0 *)
+  e1__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int" (* event channels will be renamed to e1_stm0 (may introduce nondeterminism) *)
+  e1_stm0 :: "InOut \<times> core_int"   (* will be further renamed to e1_ctr0 *)
+  e3__stm0 :: "TIDS_stm0 \<times> InOut \<times> core_int"   (* will be renamed to e3_ctr0.out *)
   e3_stm0 :: "InOut \<times> core_int"
 
 text \<open> Here, we use the following conventions.
@@ -101,7 +128,7 @@ text \<open> Here, we use the following conventions.
     \item shared variable channels: @{term "get_x_stm0"}, @{term "set_x_stm0"}, and 
       @{term "set_EXT_x_stm0"};
     \item Event channels: trigger event channels (@{term "e1__stm0"} and @{term "e3__stm0"}), 
-      and event channels (@{term "e1_stm0"} and @{term "e3_stm0"}).
+      and action event channels (@{term "e1_stm0"} and @{term "e3_stm0"}).
   \end{itemize}
   \item a channel event: an event starting with the name of a channel and carrying a value on the 
   channel, such as @{text "internal_stm0 TID_stm0_t1"};
@@ -137,9 +164,9 @@ definition shared_variable_events_stm0 where
 definition CS_stm0_s0_sync where
 "CS_stm0_s0_sync = 
   set (
-      \<comment> \<open> enter from x to y \<close>
+      \<comment> \<open> enter and exit from x to y \<close>
       (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] [SID_stm0_s0] [SID_stm0_s0])@
-      \<comment> \<open> enter from y to x \<close>
+      \<comment> \<open> enter and exit from y to x \<close>
       (enumchans2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] [SID_stm0_s0] [SID_stm0_s0])
 )"
 
@@ -176,18 +203,22 @@ definition stm0_MachineInternalEvents where
 subsubsection \<open> State Machine Memory \<close>
 paragraph \<open> Memory cell processes \<close>
 
-text \<open> @{term "stm0_Memory_opt_x"} is a memory cell process for a shared variable @{term x}.\<close>
+text \<open> The @{term "stm0_Memory_opt_x"} defines a memory cell process for a shared variable @{term x}.\<close>
 definition stm0_Memory_opt_x where
 "stm0_Memory_opt_x = 
   mem_of_svar get_x_stm0 set_x_stm0 set_EXT_x_stm0 rc.core_int_set"
 
-text \<open> @{term "stm0_Memory_opt_l"} is a memory cell process for a local variable @{term l}.\<close>
+text \<open> The type of @{term "stm0_Memory_opt_x"} is @{typeof "stm0_Memory_opt_x"}, a function from 
+the type of the variable @{term x} to an @{term itree} whose channel type is @{term Chan_stm0} and 
+return type is the same as the type of the variable.\<close>
+
+text \<open> The @{term "stm0_Memory_opt_l"} is a memory cell process for a local variable @{term l}.\<close>
 definition stm0_Memory_opt_l where
 "stm0_Memory_opt_l = mem_of_lvar get_l_stm0 set_l_stm0 rc.core_int_set"
 
 paragraph \<open> Memory transition processes \<close>
 text \<open> Both @{term "stm0_MemoryTransitions_opt_0"} and @{term "stm0_MemoryTransitions_opt_1"} are memory 
-processes for transitions, particularly the guards of transitions evaluated in processes. They also 
+processes for transitions, particularly the guards of transitions evaluated in the processes. They also 
 have a parameter @{text "id"}.
 \<close>
 text \<open> For @{term "stm0_MemoryTransitions_opt_0"}, we manually add an external choice with 
@@ -212,9 +243,10 @@ definition stm0_MemoryTransitions_opt_1 where
     do {x \<leftarrow> inp_in get_x_stm0 rc.core_int_set ; 
       (
         \<comment> \<open>This constrained input prefixing corresponds to the input trigger with guard 
-        (@{verbatim \<open>e1?l[x==0]\<close>}) \<close>
+        (@{verbatim \<open>e1?l[x==0]\<close>}) of @{text t1}. \<close>
         do {inp_in e1__stm0 (set [(TID_stm0_t1, din, l). l \<leftarrow> rc.core_int_list, (x = 0)])
               ; Ret (id)} \<box>
+        \<comment> \<open>This corresponds to the guard (@{verbatim \<open>[x!=0]\<close>}) of @{text t2}.\<close>
         do {guard (x \<noteq> 0); outp internal_stm0 TID_stm0_t2 ; Ret (id)} \<box>
         do {x \<leftarrow> inp_in set_x_stm0 rc.core_int_set; Ret (id)} \<box>
         do {x \<leftarrow> inp_in set_EXT_x_stm0 rc.core_int_set; Ret (id)}
@@ -224,10 +256,15 @@ definition stm0_MemoryTransitions_opt_1 where
 "
 
 subsubsection \<open> States \<close>
-text \<open> This section defines processes for states in the state machine. \<close>
+text \<open> This section defines processes for junctions and states in the state machine. \<close>
 
-text \<open> @{term "I_stm0_i0"} is for the transition @{verbatim t0} that is from the initial junction 
-@{verbatim i0} to the state @{verbatim s0}. \<close>
+text \<open> @{term "I_stm0_i0"} is for the initial junction @{verbatim i0} and the only transition from it
+is @{verbatim t0} (to the state @{verbatim s0}). This transition has no trigger (and so an internal 
+trigger channel @{term internal_stm0} is used to model it), no guard (and so 
+@{term stm0_MemoryTransitions_opt_0} has no guard), has an action @{verbatim "x=0"} (update through 
+a channel @{term set_x_stm0} with value @{term 0}. After it, @{text stm0} enters @{text s0}. 
+We note @{term "I_stm0_i0"} is not a loop because it only executes once and then terminates.
+\<close>
 
 definition I_stm0_i0 where
 "I_stm0_i0 = (\<lambda> (id::integer) . 
@@ -241,11 +278,17 @@ definition I_stm0_i0 where
 definition tids_stm0_s0 where
 " tids_stm0_s0 = 
     (filter 
-        (\<lambda> s. s \<notin> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2}) 
+        (\<lambda> s. s \<notin> {NULLTRANSITION_stm0,TID_stm0_t1,TID_stm0_t2})
         ITIDS_stm0_list)"
 
-(* We need an interrupt operator for during actions *) 
-(* ::"integer \<Rightarrow> SIDS_stm0 \<Rightarrow> (Chan_stm0, SIDS_stm0) itree" *)
+text \<open> The definition of the CSP process @{verbatim State_stm0_s0} has a mutual recursion. 
+The process calls @{verbatim State_stm0_s0_execute} with an extra parameter for the source state of 
+a transition entering this state @{text s0}, in addition to a normal @{verbatim id} parameter.
+The process @{verbatim State_stm0_s0_execute} also calls @{verbatim State_stm0_s0}. Here, in the 
+definition @{term State_stm0_s0} below, we use a 
+loop (a special iteration whose boolean condition is always true) to model @{verbatim State_stm0_s0}
+ and an embedded iteration to model @{verbatim State_stm0_s0_execute}. 
+\<close>
 definition State_stm0_s0 where 
 "State_stm0_s0 = 
   loop (\<lambda> (id::integer).
@@ -282,6 +325,7 @@ definition State_stm0_s0 where
                         outp enter_stm0 (SID_stm0_s0, SID_stm0_s0);
                         Ret(True, fst (snd s), SID_stm0_s0)
                     } \<box>
+                \<comment> \<open> @{text internal_stm0} \<close>
                 do {
                     x \<leftarrow> inp_in internal_stm0 
                       (set tids_stm0_s0);
@@ -290,6 +334,7 @@ definition State_stm0_s0 where
                       outp exit_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), SID_stm0_s0)
                     } \<box>
+                \<comment> \<open> @{text e1__stm0} \<close>
                 do {
                     x \<leftarrow> inp_in e1__stm0 (set [(s, d, l) . 
                         s \<leftarrow> tids_stm0_s0, 
@@ -300,6 +345,7 @@ definition State_stm0_s0 where
                       outp exit_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), SID_stm0_s0)
                     } \<box>
+                \<comment> \<open> @{text e3__stm0} \<close>
                 do {
                     x \<leftarrow> inp_in e3__stm0 (set [(s, d, l) . 
                         s \<leftarrow> tids_stm0_s0, 
@@ -320,6 +366,18 @@ definition State_stm0_s0 where
   }
 )
 "
+
+text \<open>In the definition above, we assemble the return value of the embedded iteration as a triple 
+@{text ret}, whose first element is a boolean value denoting the condition of this iteration, whose 
+second element is @{text id} from the parameter of @{term State_stm0_s0}, and whose third element is 
+the source state of a transition entering @{text s0}. So in the body of the loop, we return a triple 
+and pass it to the embedded iteration. Inside the iteration, if a process (such as the one for 
+@{text T_stm0_t1}) continues the iteration (the definition of @{verbatim T_stm0_t1} calls 
+@{verbatim State_stm0_s0_execute}), it just returns with a triple whose first element is 
+true. Otherwise, the first element is false (see the process for the trigger event @{text e1__stm0}).
+This corresponds to the termination of the iteration. In the body of the loop, then only @{text id} 
+is returned to the loop. 
+\<close>
 
 definition State_stm0_s0_R where
 "State_stm0_s0_R (idd::integer) = 
@@ -456,7 +514,7 @@ definition D__stm0 where
   (AUX_opt_stm0 idd) \<setminus> internal_events_stm0
 "
 
-subsection \<open> stm1 \<close>
+subsection \<open> State machine @{text stm1} \label{ssec:basic_stm1}\<close>
 
 datatype SIDS_stm1 = SID_stm1 | SID_stm1_s0
 
@@ -770,7 +828,7 @@ definition D__stm1 where
   (AUX_opt_stm1 idd) \<setminus> internal_events_stm1
 "
 
-subsection \<open> Controller \<close>
+subsection \<open> Controller \label{ssec:basic_ctr0}\<close>
 chantype Chan_ctr0 =
 (* terminates of stm0 and stm1 are mapped to it *)
   terminate_ctr0 :: unit 
@@ -871,7 +929,7 @@ definition D__ctr0 where
   )  \<lbrakk> set [terminate_ctr0_C ()] \<Zrres> skip
 "
 
-subsection \<open> Module \<close>
+subsection \<open> Module \label{ssec:basic_mod0}\<close>
 chantype Chan_mod0 =
 (* terminates of ctr0 are mapped to it *)
   terminate_mod0 :: unit 
