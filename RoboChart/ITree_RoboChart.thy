@@ -99,6 +99,14 @@ single (not tuple), based on the list of values @{text "a"}.
 The @{text "enumchans1 chs a"} supports enumerations of multiple channels.
 Other definitions with suffix 2, 3, and 4 are similar, but for the channels whose types are pairs, 
 triples, and quadruples.
+
+We note such functions are not necessary in the future.
+At this moment, we use these functions to explicitly enumerate events. We observe that 
+the CSP-M syntax @{verbatim "{| c |}"} is simpler and more familiar. There is a better syntax 
+(like @{text "\<lbrace> c v. v \<in> T_list \<rbrace>"}) introduced in the beginning of @{verbatim "ITree_CSP.thy"}. 
+However, in order to make this syntax work, we need to instantiate the type of @{term v} for 
+@{class enum} and @{class equal}. Otherwise, an error will be raised: @{verbatim 
+"Type ... not of sort {enum,equal}"} when generating code. So this can be improved.
 \<close>
 abbreviation "enumchan1 ch a \<equiv> mapf [ch] a"
 abbreviation "enumchan2 ch a b \<equiv> mapf (mapfc [ch] a) b"
@@ -154,7 +162,14 @@ definition mapfp2 :: "(('c \<Rightarrow> 'a) \<times> ('c \<Rightarrow> 'b)) lis
 "mapfp2 fs xs = concat (map (\<lambda> f. map f xs) (map (\<lambda>f. \<lambda>x. ((fst f) x, (snd f) x)) fs))"
 
 text \<open> @{text "enumchanp2_1"} and @{text "enumchansp2_1"} are for pairs, of which the first and 
-the second elements are different. \<close>
+the second elements are different. 
+
+Similarly, these functions are also not necessary in the future. A better syntax 
+(@{text "\<lbrace>c1 (v1, v2) \<mapsto> c2 (v1, v2) | (v1, v2). v1 \<in> T1_list \<and> v2 \<in> T2_list \<rbrace>"}) is present. 
+For the same reason, the type (@{term "T1 \<times> T2"}) of @{term c1} should be instantiated for 
+@{class enum} and @{class equal}.
+\<close>
+
 abbreviation "enumchanp2_1 ch a \<equiv> mapfp2 [ch] a"
 abbreviation "enumchanp2_2 ch a b \<equiv> mapf (mapfpc2 [ch] a) b"
 abbreviation "enumchanp2_3 ch a b c \<equiv> mapf (mapfc (mapfpc2 [ch] a) b) c"

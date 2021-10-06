@@ -26,6 +26,7 @@ session "RoboChart_basic" in "RoboChart/examples/RoboChart_basic" = "ITree_RoboC
   document_files
     "root.tex"
     "images/system.pdf"
+    "images/system.png"
 
 session "RoboChart_ChemicalDetector_autonomous" in "RoboChart/examples/RoboChart_ChemicalDetector_autonomous" = "ITree_RoboChart" +
   options [timeout = 600, document = pdf, document_output = "output"]

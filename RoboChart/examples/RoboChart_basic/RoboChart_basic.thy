@@ -2,7 +2,7 @@ section \<open> Simulation of a very basic RoboChart model \<close>
 text \<open> This theory aims for simulation of a trivial RoboChart model (see 
 Figure~\ref{fig:robochart_basic}) based on its CSP semantics. 
 \begin{figure}
-  \includegraphics[scale=0.50]{images/system.pdf}
+  \includegraphics[scale=0.25]{images/system}
   \caption{The RoboChart model of a trivial example}
   \label{fig:robochart_basic}
 \end{figure}
@@ -45,10 +45,21 @@ in Sect.~\ref{ssec:basic_mod0}.
 \<close>
 
 subsection \<open> General definitions \label{ssec:basic_general}\<close>
-text \<open> Instantiation of @{term "min_int"}, @{term "max_int"}, @{term "max_nat"}, @{term "min_real"}, 
-@{term "max_real"},, to -1, 1, 1, -1, and 1 separately.
+text \<open> The interpretation of the locale @{text robochart_confs} below instantiates 
+@{term "min_int"}, @{term "max_int"}, @{term "max_nat"}, @{term "min_real"}, 
+and @{term "max_real"}, to -1, 1, 1, -1, and 1 separately. In the CSP semantics, these values are 
+set in the @{verbatim "instantiation.csp"} file.
 \<close>
 interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
+
+(* We can animate this theory with [-50, 50]. 
+For the input E2, the animation is very smooth, and we can see the next events available to execute 
+quite fast. This is the same case for the E1(Din, 0).
+But for other cases, it will take about 15 seconds to compute 2000 internal steps in simulation, and 
+then we see the next "Many steps (> 2000); Continue? [Y/N]" available to choose continuation or 
+termination.
+*)
+(* interpretation rc: robochart_confs "-50" "50" "1" "-1" "1". *)
 
 subsection \<open> State machine @{text stm0} \label{ssec:basic_stm0}\<close>
 text \<open> Each state machine shares common definitions:
@@ -70,7 +81,15 @@ conflict with @{text SIDS} for other state machines. For this reason, we add a s
 \<close>
 
 text \<open> @{term "SIDS_stm0"} defines state identifiers for @{text "stm0"}, which include 
-the machine itself and the state @{text "s0"}.\<close>
+the machine itself and the state @{text "s0"}.
+Another possibly better way to define such a type for identifiers is through a more generic typedef 
+with two type variables: one to make the type distinct for a particular state machine, and another 
+is a enumerable type (@{class enum}), such as a numeral type (@{typ "2"}), to denote all identifiers 
+(0 and 1 for this example). Please see @{term TrID} in @{verbatim ITree_RoboChart.thy} for more 
+details. At this moment, we cannot use it now because we have not instantiated @{term TrID} for 
+@{class enum}, which is necessary to enumerate all elements for such a type, like 
+@{term "SIDS_stm0_list"} below.
+\<close>
 datatype SIDS_stm0 = SID_stm0
                    | SID_stm0_s0
 
@@ -379,6 +398,14 @@ This corresponds to the termination of the iteration. In the body of the loop, t
 is returned to the loop. 
 \<close>
 
+text \<open>In the definition of @{term State_stm0_s0_R} below, its parameter is named @{text idd}, 
+instead of @{text id}, due to the fact that @{term "id"} is a predefined identity function in 
+Isabelle/HOL. 
+We also note that @{term State_stm0_s0} is not directly in parallel with @{term skip}. 
+Instead, its return value is discarded by @{term discard_state} (simply by being sequentially 
+composed with @{term skip}, and so the type of the return value matches with the type @{type unit} 
+of the return value in @{term skip}. This is necessary for the parallel composition.
+\<close>
 definition State_stm0_s0_R where
 "State_stm0_s0_R (idd::integer) = 
    (discard_state (State_stm0_s0 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
@@ -386,12 +413,16 @@ definition State_stm0_s0_R where
    skip
 "
 
+text \<open> The @{term flow_event_stm0_not_s0} defined below gives a set of flow events that represents 
+entering (or exiting from) @{text s0} from the all other states. 
+\<close>
 definition flow_event_stm0_not_s0 where 
 "flow_event_stm0_not_s0 = set (
   enumchans2 [enter_stm0_C, entered_stm0_C,exit_stm0_C,exited_stm0_C] 
              SIDS_stm0_without_s0 [SID_stm0_s0]
 )"
 
+text \<open> @{term STM_stm0} is the composition of the processes for the initial junction and states. \<close>
 definition STM_stm0 where
 "STM_stm0 (idd::integer) = 
    (I_stm0_i0(idd))
@@ -399,6 +430,7 @@ definition STM_stm0 where
    State_stm0_s0_R(idd)
 "
 
+subsubsection \<open> State machine \<close>
 definition stm0_e1_x_internal_set where
 "stm0_e1_x_internal_set = 
   set ((enumchan3 e1__stm0_C [TID_stm0_t1] [din, dout] rc.core_int_list) @ 
@@ -406,7 +438,9 @@ definition stm0_e1_x_internal_set where
        (enumchan1 set_x_stm0_C rc.core_int_list)
 )"
 
-subsubsection \<open> State machine \<close>
+text \<open> @{text MemorySTM_opt_stm0} is the composition of @{term STM_stm0} and the memory (for 
+variables and transitions) of the state machine. 
+\<close>
 definition MemorySTM_opt_stm0 where
 "MemorySTM_opt_stm0 (idd::integer) = 
   (
@@ -437,27 +471,17 @@ text \<open> This definition actually defines a non-injective mapping as shown b
   ]"
 }
 here multiple @{term "e1__stm0"} events are mapped to one @{term "e1_stm0"} event.
-So we cannot rename a process with a non-injective mapping now.
 \<close>
-(*
-definition rename_stm0_events where
-"rename_stm0_events = 
-  [(e1__stm0_C (tid, dir, n), e1_stm0_C (dir, n)) . 
-          tid \<leftarrow> TIDS_stm0_list, 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list] @
-  [(e3__stm0_C (tid, dir, n), e3_stm0_C (dir, n)) . 
-          tid \<leftarrow> TIDS_stm0_list, 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list]
-"*)
-
 definition rename_stm0_events where
 "rename_stm0_events = 
   concat ((enumchan2 (forget_first2 e1__stm0_C e1_stm0_C TIDS_stm0_list) InOut_list rc.core_int_list) @
           (enumchan2 (forget_first2 e3__stm0_C e3_stm0_C TIDS_stm0_list) InOut_list rc.core_int_list))
 "
 
+text \<open>For the events that are not renamed in CSP, we still need to have them in the relation map (
+otherwise, these events will not be present in the renamed process), and they shall be mapped to 
+themselves. 
+\<close>
 definition rename_stm0_events_others where
 "rename_stm0_events_others = 
   (enumchanp1 terminate_stm0_C [()]) @
@@ -465,41 +489,18 @@ definition rename_stm0_events_others where
   (enumchansp2 [e1_stm0_C, e3_stm0_C] InOut_list rc.core_int_list) @
   (enumchansp2 [enter_stm0_C, entered_stm0_C, exit_stm0_C, exited_stm0_C] SIDS_stm0_list SIDS_stm0_list)
 "
-(*
-definition rename_stm0_events_others' where
-"rename_stm0_events_others' = 
-  [(terminate_stm0_C(), terminate_stm0_C () ) ] @
-  [(get_x_stm0_C (n), get_x_stm0_C (n)) . 
-          n \<leftarrow> rc.core_int_list] @
-  [(set_x_stm0_C (n), set_x_stm0_C (n)) . 
-          n \<leftarrow> rc.core_int_list] @
-  [(set_EXT_x_stm0_C (n), set_EXT_x_stm0_C (n)) .
-          n \<leftarrow> rc.core_int_list] @
-  [(e1_stm0_C (dir, n), e1_stm0_C (dir, n)) . 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list] @
-  [(e3_stm0_C (dir, n), e3_stm0_C (dir, n)) . 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list] @
-  [(enter_stm0_C (sid1, sid2), enter_stm0_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list] @
-  [(entered_stm0_C (sid1, sid2), entered_stm0_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list] @
-  [(exit_stm0_C (sid1, sid2), exit_stm0_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list] @
-  [(exited_stm0_C (sid1, sid2), exited_stm0_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm0_list, 
-          sid2 \<leftarrow> SIDS_stm0_list] 
-"*)
 
+text \<open>So the renaming of @{term MemorySTM_opt_stm0} includes the events to be renamed 
+(@{term rename_stm0_events}) and not to be renamed (@{term rename_stm0_events_others}).
+\<close>
 definition rename_MemorySTM_opt_stm0 where
 "rename_MemorySTM_opt_stm0 idd =
     ((MemorySTM_opt_stm0 idd) \<lbrakk>(set (rename_stm0_events @ rename_stm0_events_others))\<rbrakk>)
 "
 
+text \<open>The exception operator allows @{term rename_MemorySTM_opt_stm0} to be terminated by the
+@{term terminate_stm0} event. Furthermore, the @{term internal_stm0} channel events will be hidden.
+\<close>
 definition AUX_opt_stm0 where
 "AUX_opt_stm0 (idd::integer) = 
   ( 
@@ -509,6 +510,7 @@ definition AUX_opt_stm0 where
   )
 "
 
+text \<open>Additionally, the flow channel events are hidden.\<close>
 definition D__stm0 where
 "D__stm0 (idd::integer) = 
   (AUX_opt_stm0 idd) \<setminus> internal_events_stm0
@@ -752,46 +754,7 @@ definition MemorySTM_opt_stm1 where
     ) \<setminus> {internal_stm1_C TID_stm1_t0}
   )
 "
-(*
-definition rename_stm1_events where
-"rename_stm1_events = 
-  [(e2__stm1_C (tid, dir), e2_stm1_C (dir)) . 
-          tid \<leftarrow> TIDS_stm1_list, 
-          dir \<leftarrow> InOut_list] @
-  [(e3__stm1_C (tid, dir, n), e3_stm1_C (dir, n)) . 
-          tid \<leftarrow> TIDS_stm1_list, 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list]
-"
 
-definition rename_stm1_events_others where
-"rename_stm1_events_others = 
-  [(terminate_stm1_C(), terminate_stm1_C () ) ] @
-  [(get_x_stm1_C (n), get_x_stm1_C (n)) . 
-          n \<leftarrow> rc.core_int_list] @
-  [(set_x_stm1_C (n), set_x_stm1_C (n)) . 
-          n \<leftarrow> rc.core_int_list] @
-  [(set_EXT_x_stm1_C (n), set_EXT_x_stm1_C (n)) .
-          n \<leftarrow> rc.core_int_list] @
-  [(e2_stm1_C (dir), e2_stm1_C (dir)) . 
-          dir \<leftarrow> InOut_list] @
-  [(e3_stm1_C (dir, n), e3_stm1_C (dir, n)) . 
-          dir \<leftarrow> InOut_list, 
-          n \<leftarrow> rc.core_int_list] @
-  [(enter_stm1_C (sid1, sid2), enter_stm1_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list] @
-  [(entered_stm1_C (sid1, sid2), entered_stm1_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list] @
-  [(exit_stm1_C (sid1, sid2), exit_stm1_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list] @
-  [(exited_stm1_C (sid1, sid2), exited_stm1_C (sid1, sid2)) . 
-          sid1 \<leftarrow> SIDS_stm1_list, 
-          sid2 \<leftarrow> SIDS_stm1_list] 
-"
-*)
 definition rename_stm1_events where
 "rename_stm1_events = 
   concat ((enumchan1 (forget_first e2__stm1_C e2_stm1_C TIDS_stm1_list) InOut_list) @
@@ -812,8 +775,6 @@ definition rename_MemorySTM_opt_stm1 where
   ((MemorySTM_opt_stm1 idd) \<lbrakk>(set (rename_stm1_events @ rename_stm1_events_others))\<rbrakk>)
 "
 
-(* Exception: P [| A |> Q*)
-(* Renaming *)
 definition AUX_opt_stm1 where
 "AUX_opt_stm1 (idd::integer) = 
   ( 
@@ -829,6 +790,15 @@ definition D__stm1 where
 "
 
 subsection \<open> Controller \label{ssec:basic_ctr0}\<close>
+text \<open> A controller has a different channel type from those of state machines. Here, we declare a 
+new channel type @{term Chan_ctr0} for @{text ctr0}. The events of @{text stm0} and @{text stm1} are 
+renamed to the events in @{term Chan_ctr0}.
+
+We note the event @{text e3} in the model is not an event of @{text ctr0}, and we introduce the 
+event @{term e3_ctr0} here to let the events @{term e3_stm0} and @{term e3_stm1} mapped to it.
+By this way, @{term e3_stm0} and @{term e3_stm1} are linked.
+\<close>
+
 chantype Chan_ctr0 =
 (* terminates of stm0 and stm1 are mapped to it *)
   terminate_ctr0 :: unit 
@@ -853,6 +823,13 @@ definition shared_variable_events_ctr0 where
   set (enumchan1 set_EXT_x_ctr0_C rc.core_int_list)"
 
 subsubsection \<open> Memory \<close>
+text \<open> The memory of @{text ctr0}, @{term Memory_ctr0}, relays the update of @{text x} 
+from @{text mod0} to @{text stm0} and @{text stm1}.
+We note that the update of @{text x} here introduces nondeterminism because it is possible that 
+@{text x} in @{text stm0} has been updated, but @{text x} in @{text stm1} has not been updated.
+The @{text "Ret (id)"} here passes the value of @{text id} to the next loop.
+\<close>
+
 definition Memory_ctr0 where
 "Memory_ctr0 = loop (\<lambda> id::integer.
   ( do {x \<leftarrow> inp_in set_EXT_x_ctr0 rc.core_int_set; 
@@ -862,16 +839,11 @@ definition Memory_ctr0 where
 )"
 
 subsubsection \<open> Controller \<close>
-(*
-definition rename_ctr0_stm0_events where
-"rename_ctr0_stm0_events = 
-  [(terminate_stm0_C (), terminate_ctr0_C ())] @
-  [(set_x_stm0_C n, set_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
-  [(get_x_stm0_C n, get_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
-  [(e1_stm0_C (d, n), e1_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
-  [(e3_stm0_C (d, n), e3_ctr0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
-  [(set_EXT_x_stm0_C x, set_EXT_x_ctr0_stm0_C x) . x \<leftarrow> rc.core_int_list]
-" *)
+text \<open>For @{term D__stm0}, its events are renamed to the corresponding events in @{term Chan_ctr0}. 
+The renaming relation is defined in @{term rename_ctr0_stm0_events} where the event of 
+@{term e3_stm0_C} is renamed to that of @{term e3_ctr0_C} with the same direction and value.
+\<close>
+
 definition rename_ctr0_stm0_events where
 "rename_ctr0_stm0_events = 
   (enumchanp2_1 (terminate_stm0_C,terminate_ctr0_C) [()]) @
@@ -881,19 +853,13 @@ definition rename_ctr0_stm0_events where
 
 definition rename_D__stm0 where
 "rename_D__stm0 idd = ((D__stm0 idd) \<lbrakk>(set rename_ctr0_stm0_events)\<rbrakk>)"
-(*
-definition rename_ctr0_stm1_events where
-"rename_ctr0_stm1_events = 
-  [(terminate_stm1_C (), terminate_ctr0_C ())] @
-  [(set_x_stm1_C n, set_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
-  [(get_x_stm1_C n, get_x_ctr0_C n). n \<leftarrow> rc.core_int_list] @
-  [(e2_stm1_C (d), e2_ctr0_C (d)). d \<leftarrow> InOut_list] @
-\<comment> \<open>It is important to invert directions in one side: either stm0 or stm1 \<close>
-  [(e3_stm1_C (din, n), e3_ctr0_C (dout, n)). n \<leftarrow> rc.core_int_list] @
-  [(e3_stm1_C (dout, n), e3_ctr0_C (din, n)). n \<leftarrow> rc.core_int_list] @
-  [(set_EXT_x_stm1_C x, set_EXT_x_ctr0_stm1_C x) . x \<leftarrow> rc.core_int_list]
-"
-*)
+
+text \<open>For @{term D__stm1}, its events are also renamed to the corresponding events in @{term Chan_ctr0}. 
+The renaming relation is defined in @{term rename_ctr0_stm1_events} where the event of 
+@{term e3_stm0_C} is renamed to that of @{term e3_ctr0_C} with the opposite direction and the same 
+value. By this way, we connect the output of @{text e3} in @{text stm0} to the input of @{text e3} 
+in @{text stm1}.
+\<close>
 definition rename_ctr0_stm1_events where
 "rename_ctr0_stm1_events = 
   (enumchanp2_1 (terminate_stm1_C,terminate_ctr0_C) [()]) @
@@ -908,15 +874,22 @@ definition rename_ctr0_stm1_events where
 definition rename_D__stm1 where
 "rename_D__stm1 idd = ((D__stm1 idd) \<lbrakk>(set rename_ctr0_stm1_events)\<rbrakk>)"
 
+text \<open>The @{term ctr0_stms_events} below gives a set of synchronisation events between @{text stm0} 
+and @{text stm1} which includes termination and @{text e3}.
+\<close>
 definition "ctr0_stms_events = set (
   enumchan1 terminate_ctr0_C [()] @
   enumchan2 e3_ctr0_C InOut_list rc.core_int_list
 )"
 
+text \<open>The memory update events for @{text stm0} and @{text stm1} are defined in 
+@{term ctr0_mem_events}. \<close>
 definition "ctr0_mem_events = set (
   enumchans1 [set_EXT_x_ctr0_stm0_C, set_EXT_x_ctr0_stm1_C] rc.core_int_list
 )"
 
+text \<open>So the controller @{text ctr0} is the composition of the renamed @{text stm0}, the renamed 
+@{text stm1}, and its memory with appropriate event hiding. \<close>
 definition D__ctr0 where
 "D__ctr0 (idd::integer) = 
   (par_hide
@@ -930,6 +903,10 @@ definition D__ctr0 where
 "
 
 subsection \<open> Module \label{ssec:basic_mod0}\<close>
+text \<open>Similar to the controller, a module also has a different channel type from that of the 
+controller. Here, we declare a new channel type @{term Chan_mod0} for @{text mod0}. 
+The events of @{text ctr0} are renamed to those of @{term Chan_mod0}.
+\<close>
 chantype Chan_mod0 =
 (* terminates of ctr0 are mapped to it *)
   terminate_mod0 :: unit 
@@ -944,6 +921,10 @@ chantype Chan_mod0 =
   e2_mod0 :: "InOut"
 
 subsubsection \<open> Memory \<close>
+text \<open>The memory of @{text mod0} accepts an update to @{text x} and then propagates this update to 
+the controller. Finally, the update will reach the all controllers and state machines 
+that require @{text x}, such as @{text ctr0}, @{text stm0}, and @{text stm1} in this model.
+\<close>
 definition Memory_mod0 where
 "Memory_mod0 = loop (\<lambda> id::integer.
   ( do {x \<leftarrow> inp_in set_x_mod0 rc.core_int_set; 
@@ -951,19 +932,10 @@ definition Memory_mod0 where
   )
 )"
 
-(*
-definition rename_mod0_ctr0_events where
-"rename_mod0_ctr0_events = 
-  [(terminate_ctr0_C (), terminate_mod0_C ())] @
-  [(set_x_ctr0_C n, set_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(get_x_ctr0_C n, get_x_mod0_C n). n \<leftarrow> rc.core_int_list] @
-  [(e1_ctr0_C (d, n), e1_mod0_C (d, n)). d \<leftarrow> InOut_list, n \<leftarrow> rc.core_int_list] @
-  [(e2_ctr0_C (d), e2_mod0_C (d)). d \<leftarrow> InOut_list] @
-  [(set_EXT_x_ctr0_C n, set_EXT_x_mod0_ctr0_C n). n \<leftarrow> rc.core_int_list]
-"
-*)
-
 subsubsection \<open> Module \<close>
+text \<open>The renaming relation from @{text ctr0} to @{text mod0}, defined by 
+@{term rename_mod0_ctr0_events} is simple and straightforward.
+\<close>
 definition rename_mod0_ctr0_events where
 "rename_mod0_ctr0_events = 
   (enumchanp2_1 (terminate_ctr0_C,terminate_mod0_C) [()]) @
@@ -995,6 +967,9 @@ definition D__ctr_mem where
               (discard_state (Memory_mod0 idd))
             )"
 
+text \<open>Finally, the module is a composition of the renamed @{text ctr0} and the memory of 
+@{text mod0} with a possibility to terminate through the exception operator.
+\<close>
 definition D__mod0 where
 "D__mod0 (idd::integer) = 
   (
@@ -1012,10 +987,19 @@ definition D__mod0 where
   )
 "
 
+text \<open>We can animate @{term D__mod0} in Isabelle/HOL by the @{term animate} command. This command 
+only works on a customised version of Isabelle, based on Isabelle2021.
+\<close>
 definition "D_mod0_sim = D__mod0 0"
 animate D_mod0_sim
  
 subsection \<open> Export code \<close>
+text \<open>We export various processes to Haskell. These processes can be animated with ghci. 
+By this way, we can debug a process at the first place when it is defined. Actually, it is not 
+mandatory to export code since we have supported the @{term animate} command. However, due to the 
+fact that the command cannot work on a standard Isabelle, it is better to keep exporting code because 
+this way works on both the standard Isabelle and the customised version.
+\<close>
 export_code
   stm0_Memory_opt_x
   stm0_Memory_opt_l
@@ -1047,6 +1031,7 @@ export_code
   file_prefix RoboChart_basic 
   (string_classes) 
 
+text \<open>A simulation file is generated as a pure Haskell code. \<close>
 generate_file \<open>code/RoboChart_basic/Simulate.hs\<close> = 
 \<open>module Simulate (simulate) where
 import qualified Interaction_Trees;
@@ -1087,6 +1072,10 @@ simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interactio
 simulate = simulate_cnt 0;
 \<close>
 
+text \<open>The @{verbatim Main.hs} generated below is the main module in the generated code which is used 
+to compile and build the generated code to an executable file by ghc. We note a compiled version has 
+better performance than the interpreted version by ghci.
+\<close>
 generate_file \<open>code/RoboChart_basic/Main.hs\<close> = 
 \<open>import qualified Interaction_Trees;
 import qualified Partial_Fun;
