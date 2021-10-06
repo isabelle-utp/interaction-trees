@@ -1989,10 +1989,16 @@ definition AUX_opt_Movement where
   )
 "
 
+definition "AUX_opt_Movement_sim = AUX_opt_Movement 0"
+(* animate1 AUX_opt_Movement_sim *)
+
 definition D__Movement where
 "D__Movement (idd::integer) = 
   (AUX_opt_Movement idd) \<setminus> internal_events_Movement
 "
+
+definition "D_Movement_sim = D__Movement 0"
+animate1 D_Movement_sim
 
 subsection \<open> MicroController \<close>
 chantype Chan_MicroCtrl =
@@ -2046,6 +2052,8 @@ definition D__MicroController where
   )  \<lbrakk> set [terminate_MicroController_C ()] \<Zrres> skip
 "
 
+definition "D_MicroController_sim = D__MicroController 0"
+(* animate1 D_MicroController_sim *)
 
 subsection \<open> Export code \<close>
 export_code

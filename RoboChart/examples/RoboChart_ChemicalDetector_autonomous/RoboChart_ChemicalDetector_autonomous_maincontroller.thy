@@ -58,16 +58,16 @@ chantype Chan_GasAnalysis =
 (* Variables *)
   get_st_GasAnalysis :: Chemical_Status
   set_st_GasAnalysis :: Chemical_Status
-  get_gs_GasAnalysis :: "2 Chemical_GasSensor[2]blist" (* "Chemical_GasSensor LSeq"*)
-  set_gs_GasAnalysis :: "2 Chemical_GasSensor[2]blist"
+  get_gs_GasAnalysis :: "2 Chemical_GasSensor blist[2]" (* "Chemical_GasSensor LSeq"*)
+  set_gs_GasAnalysis :: "2 Chemical_GasSensor blist[2]"
   get_i_GasAnalysis :: "2 Chemical_Intensity"
   set_i_GasAnalysis :: "2 Chemical_Intensity"
   get_a_GasAnalysis :: "Chemical_Angle"
   set_a_GasAnalysis :: "Chemical_Angle"
 
 (* event channels *)
-  gas__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut \<times> 2 Chemical_GasSensor[2]blist"
-  gas_GasAnalysis :: "InOut \<times> 2 Chemical_GasSensor[2]blist"
+  gas__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut \<times> 2 Chemical_GasSensor blist[2]"
+  gas_GasAnalysis :: "InOut \<times> 2 Chemical_GasSensor blist[2]"
   resume__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut"
   resume_GasAnalysis :: "InOut"
   turn__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut \<times> Chemical_Angle"
@@ -76,7 +76,7 @@ chantype Chan_GasAnalysis =
   stop_GasAnalysis :: "InOut"
 
 subsubsection \<open> Sets of events \<close>
-(* How to use a list to represent all possible values of Chemical_GasSensor[2]blist *)
+(* How to use a list to represent all possible values of Chemical_GasSensor blist[2] *)
 term "\<lbrace>gas__GasAnalysis (t, d, s). t \<in> set [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
      TID_GasAnalysis_t3, TID_GasAnalysis_t4,
      TID_GasAnalysis_t8, TID_GasAnalysis_t9a] \<and> d \<in> set [din, dout] \<and> s \<in> set lseq_gassensor_enum\<rbrace> \<union> {}"
@@ -827,7 +827,7 @@ definition D__GasAnalysis where
 subsection \<open> MainController \<close>
 chantype Chan_MainController =
   terminate_MainController :: unit
-  gas_MainController :: "InOut \<times> 2 Chemical_GasSensor[2]blist"
+  gas_MainController :: "InOut \<times> 2 Chemical_GasSensor blist[2]"
   resume_MainController :: "InOut"
   turn_MainController :: "InOut \<times> Chemical_Angle"
   stop_MainController :: "InOut"

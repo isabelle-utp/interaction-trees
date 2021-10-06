@@ -1,6 +1,8 @@
 section \<open> Animation of the autonomous chemical detector RoboChart model \<close>
-text \<open> This theory aims for animation of a trivial RoboChart model based on its CSP
- semantics. 
+text \<open> This theory aims for animation of the autonomous chemical detector RoboChart model 
+(Version 4.0)\footnote{\url{https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4}}
+based on its CSP semantics. This model is obsolete and cannot be supported in the current 
+RoboTool v2.0, and so we have updated it. 
 \<close>
 theory RoboChart_ChemicalDetector_autonomous
   imports "RoboChart_ChemicalDetector_autonomous_general"
@@ -12,7 +14,7 @@ subsection \<open> Module \<close>
 chantype Chan_ChemicalDetector =
   terminate :: unit 
   flag :: "InOut"
-  gas :: "InOut \<times> 2 Chemical_GasSensor[2]blist"
+  gas :: "InOut \<times> 2 Chemical_GasSensor blist[2]"
   obstacle :: "InOut \<times> Location_Loc"
   odometer :: "InOut \<times> core_real"
   resume :: "InOut"
@@ -117,6 +119,9 @@ definition D__ChemicalDetector where
     ) \<setminus> (set [terminate_C ()])
   )
 "
+
+definition "D_ChemicalDetector_sim = D__ChemicalDetector 0"
+animate1 D_ChemicalDetector_sim
 
 subsection \<open> Export code \<close>
 export_code
