@@ -79,7 +79,7 @@ fun simulator_setup thy =
 
 fun sim_files_cp tmp = 
   "(fn path => let open Isabelle_System; val path' = Path.append path (Path.make [\"code\", \"simulate\"])" ^
-  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; ghc Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
+  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; isabelle ghc_stack ghc Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
 
 open Named_Target
 
@@ -106,9 +106,6 @@ fun prep_simulation model thy ctx =
                  (Path.binding0 (Path.make []))
                  (Input.string (sim_files_cp (Path.implode tmp)))
     in ctx' end)
-
-
-(*  (fn ctx => let val _ = export_generated_files ctx [([], Local_Theory.exit_global ctx), ([], @{theory})] in ctx end) *)
   end
 
 fun run_simulation thy =
