@@ -3,7 +3,9 @@ theory RoboChart_ChemicalDetector_autonomous_maincontroller
   imports "RoboChart_ChemicalDetector_autonomous_general"
 begin
 
-subsection \<open> GasAnalysis \<close>
+subsection \<open> GasAnalysis \label{ssec:chem_gasanalysis}\<close>
+text \<open>The state machine @{text GasAnalysis} has a constant named @{text thr} of type 
+@{text Intensity}. Its value is 1 (see @{verbatim "instantiation.csp"}).\<close>
 definition "const_GasAnalysis_thr \<equiv> Chemical_IntensityC (1::2)"
 
 datatype SIDS_GasAnalysis = SID_GasAnalysis
@@ -54,17 +56,15 @@ chantype Chan_GasAnalysis =
   exit_GasAnalysis :: "SIDS_GasAnalysis \<times> SIDS_GasAnalysis"
   exited_GasAnalysis :: "SIDS_GasAnalysis \<times> SIDS_GasAnalysis"
   terminate_GasAnalysis :: unit
-
 (* Variables *)
   get_st_GasAnalysis :: Chemical_Status
   set_st_GasAnalysis :: Chemical_Status
-  get_gs_GasAnalysis :: "2 Chemical_GasSensor blist[2]" (* "Chemical_GasSensor LSeq"*)
+  get_gs_GasAnalysis :: "2 Chemical_GasSensor blist[2]"
   set_gs_GasAnalysis :: "2 Chemical_GasSensor blist[2]"
   get_i_GasAnalysis :: "2 Chemical_Intensity"
   set_i_GasAnalysis :: "2 Chemical_Intensity"
   get_a_GasAnalysis :: "Chemical_Angle"
   set_a_GasAnalysis :: "Chemical_Angle"
-
 (* event channels *)
   gas__GasAnalysis :: "TIDS_GasAnalysis \<times> InOut \<times> 2 Chemical_GasSensor blist[2]"
   gas_GasAnalysis :: "InOut \<times> 2 Chemical_GasSensor blist[2]"
@@ -77,42 +77,10 @@ chantype Chan_GasAnalysis =
 
 subsubsection \<open> Sets of events \<close>
 (* How to use a list to represent all possible values of Chemical_GasSensor blist[2] *)
-term "\<lbrace>gas__GasAnalysis (t, d, s). t \<in> set [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
-     TID_GasAnalysis_t3, TID_GasAnalysis_t4,
-     TID_GasAnalysis_t8, TID_GasAnalysis_t9a] \<and> d \<in> set [din, dout] \<and> s \<in> set lseq_gassensor_enum\<rbrace> \<union> {}"
-
-definition int_int_GasAnalysis' where
-"int_int_GasAnalysis' = set (
-  (enumchans3 [gas__GasAnalysis_C] 
-    [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
-     TID_GasAnalysis_t3, TID_GasAnalysis_t4,
-     TID_GasAnalysis_t8, TID_GasAnalysis_t9a] 
-    [din, dout] 
-    (lseq_gassensor_enum)) @
-  (enumchans2 [resume__GasAnalysis_C] 
-    [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
-     TID_GasAnalysis_t3, TID_GasAnalysis_t4,
-     TID_GasAnalysis_t8, TID_GasAnalysis_t9a] 
-    [din, dout]) @
-  (enumchans3 [turn__GasAnalysis_C] 
-    [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
-     TID_GasAnalysis_t3, TID_GasAnalysis_t4,
-     TID_GasAnalysis_t8, TID_GasAnalysis_t9a] 
-    [din, dout]
-    Chemical_Angle_list
-    ) @
-  (enumchans2 [stop__GasAnalysis_C] 
-    [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
-     TID_GasAnalysis_t3, TID_GasAnalysis_t4,
-     TID_GasAnalysis_t8, TID_GasAnalysis_t9a] 
-    [din, dout]  
-    ) @
-  (enumchan1 internal_GasAnalysis_C 
-    [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
-     TID_GasAnalysis_t3, TID_GasAnalysis_t4,
-     TID_GasAnalysis_t8, TID_GasAnalysis_t9a])
-)"
-
+(*term "\<lbrace>gas__GasAnalysis (t, d, s). t \<in> set [TID_GasAnalysis_t0, TID_GasAnalysis_t2, 
+     TID_GasAnalysis_t3, TID_GasAnalysis_t4, TID_GasAnalysis_t8, TID_GasAnalysis_t9a] 
+  \<and> d \<in> set [din, dout] \<and> s \<in> set lseq_gassensor_enum\<rbrace> \<union> {}"
+*)
 definition int_int_GasAnalysis where
 "int_int_GasAnalysis = set (
   (enumchans3 [gas__GasAnalysis_C] 
@@ -158,18 +126,12 @@ definition GasAnalysis_i_events where
 "GasAnalysis_i_events = 
     set (enumchans1 [get_i_GasAnalysis_C, set_i_GasAnalysis_C] Chemical_Intensity2_list)
 "
-
-(*
-definition GasAnalysis_i_events where
-"GasAnalysis_i_events = 
+(* This is a new syntax to define a set of events.
+definition GasAnalysis_i_events' where
+"GasAnalysis_i_events' = 
     \<lbrace>get_i_GasAnalysis x. x \<in> set Chemical_Intensity2_list \<rbrace>
 "
-
-(*
-Type 2 Chemical_Intensity not of sort {enum,equal}
-No type arity Chemical_Intensity :: enum 
-*)
-value "GasAnalysis_i_events"
+value "GasAnalysis_i_events'"
 *)
 
 definition GasAnalysis_st_events where
@@ -193,13 +155,11 @@ definition GasAnalysis_MachineInternalEvents where
 "
 
 subsubsection \<open> State Machine Memory \<close>
-text \<open> Memory cell processes \<close>
-
-(* for the local variable x *)
+text \<open> Memory cell processes for local variables @{text gs}, @{text a}, @{text i}, and @{text st} 
+are defined below.\<close>
 definition GasAnalysis_Memory_opt_gs where
 "GasAnalysis_Memory_opt_gs = 
-  mem_of_lvar get_gs_GasAnalysis set_gs_GasAnalysis 
-    (set (lseq_gassensor_enum))"
+  mem_of_lvar get_gs_GasAnalysis set_gs_GasAnalysis (set (lseq_gassensor_enum))"
 
 definition GasAnalysis_Memory_opt_a where
 "GasAnalysis_Memory_opt_a = mem_of_lvar get_a_GasAnalysis set_a_GasAnalysis Chemical_Angle_set"
@@ -210,7 +170,7 @@ definition GasAnalysis_Memory_opt_i where
 definition GasAnalysis_Memory_opt_st where
 "GasAnalysis_Memory_opt_st = mem_of_lvar get_st_GasAnalysis set_st_GasAnalysis (Chemical_Status_set)"
 
-text \<open> Memory transition processes \<close>
+text \<open> Memory transition processes are defined below.\<close>
 definition GasAnalysis_MemoryTransitions_opt_0 where
 "GasAnalysis_MemoryTransitions_opt_0 = 
   loop (\<lambda> id::integer. 
@@ -227,7 +187,9 @@ definition GasAnalysis_MemoryTransitions_opt_1 where
   loop (\<lambda> id::integer.
     do {st \<leftarrow> inp_in get_st_GasAnalysis Chemical_Status_set ; 
       (
+        \<comment> \<open>The transition @{text t4} with a guard @{text \<open>[st==Status::gasD]\<close>}\<close>
         do {guard (st = Chemical_Status_gasD); outp internal_GasAnalysis TID_GasAnalysis_t4 ; Ret (id)} \<box>
+        \<comment> \<open>The transition @{text t3} with a guard @{text \<open>[st==Status::noGas]\<close>}\<close>
         do {guard (st = Chemical_Status_noGas); outp internal_GasAnalysis TID_GasAnalysis_t3 ; Ret (id)} \<box>
         do {x \<leftarrow> inp_in set_st_GasAnalysis Chemical_Status_set; Ret (id)}
       )
@@ -333,7 +295,7 @@ definition State_GasAnalysis_NoGas where
     do {sd \<leftarrow> inp_in enter_GasAnalysis Other_SIDs_to_NoGas_GasAnalysis ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_GasAnalysis_NoGas_execute \<close>
+        \<comment> \<open> @{verbatim State_GasAnalysis_NoGas_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -343,7 +305,7 @@ definition State_GasAnalysis_NoGas where
               outp entered_GasAnalysis (snd (snd s), SID_GasAnalysis_NoGas);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_GasAnalysis_t2 \<close>
+                \<comment> \<open> @{verbatim T_GasAnalysis_t2} \<close>
                 do {t \<leftarrow> inp_in gas__GasAnalysis (set [(TID_GasAnalysis_t2, din, gs). 
                                 gs \<leftarrow> (lseq_gassensor_enum)]) ;
                       outp set_gs_GasAnalysis (snd (snd t)) ; 
@@ -413,7 +375,7 @@ definition State_GasAnalysis_Analysis where
     do {sd \<leftarrow> inp_in enter_GasAnalysis Other_SIDs_to_Analysis_GasAnalysis ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_GasAnalysis_Analysis_execute \<close>
+        \<comment> \<open> @{verbatim State_GasAnalysis_Analysis_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -425,7 +387,7 @@ definition State_GasAnalysis_Analysis where
               outp entered_GasAnalysis (snd (snd s), SID_GasAnalysis_Analysis);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_GasAnalysis_t3 \<close>
+                \<comment> \<open> @{verbatim T_GasAnalysis_t3} \<close>
                 do {outp internal_GasAnalysis TID_GasAnalysis_t3 ;
                     outp exit_GasAnalysis (SID_GasAnalysis_Analysis, SID_GasAnalysis_Analysis);
                     outp exited_GasAnalysis (SID_GasAnalysis_Analysis, SID_GasAnalysis_Analysis);
@@ -434,7 +396,7 @@ definition State_GasAnalysis_Analysis where
                     outp entered_GasAnalysis (SID_GasAnalysis_Analysis, SID_GasAnalysis_NoGas);
                     Ret(False, fst (snd s), SID_GasAnalysis_Analysis)
                     } \<box>
-                \<comment> \<open> T_GasAnalysis_t4 \<close>
+                \<comment> \<open> @{verbatim T_GasAnalysis_t4} \<close>
                 do {outp internal_GasAnalysis TID_GasAnalysis_t4 ;
                     outp exit_GasAnalysis (SID_GasAnalysis_Analysis, SID_GasAnalysis_Analysis);
                     outp exited_GasAnalysis (SID_GasAnalysis_Analysis, SID_GasAnalysis_Analysis);
@@ -457,7 +419,7 @@ definition State_GasAnalysis_Analysis where
 
 definition State_GasAnalysis_Analysis_R where
 "State_GasAnalysis_Analysis_R (idd::integer) = 
-   (discard_state (State_GasAnalysis_Analysis idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_GasAnalysis_Analysis idd))
     \<parallel>\<^bsub> (int_int_GasAnalysis - GasAnalysis_Analysis_triggers) \<^esub> 
    skip
 "
@@ -502,7 +464,7 @@ definition State_GasAnalysis_GasDetected where
     do {sd \<leftarrow> inp_in enter_GasAnalysis Other_SIDs_to_GasDetected_GasAnalysis ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_GasAnalysis_GasDetected_execute \<close>
+        \<comment> \<open> @{verbatim State_GasAnalysis_GasDetected_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -515,7 +477,7 @@ definition State_GasAnalysis_GasDetected where
               outp entered_GasAnalysis (snd (snd s), SID_GasAnalysis_GasDetected);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_GasAnalysis_t8 \<close>
+                \<comment> \<open> @{verbatim T_GasAnalysis_t8} \<close>
                 do {outp internal_GasAnalysis TID_GasAnalysis_t8 ;
                     outp exit_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
                     outp exited_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
@@ -524,7 +486,7 @@ definition State_GasAnalysis_GasDetected where
                     outp entered_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_j1);
                     Ret(False, fst (snd s), SID_GasAnalysis_GasDetected)
                     } \<box>
-                 \<comment> \<open> T_GasAnalysis_t9a \<close>
+                 \<comment> \<open> @{verbatim T_GasAnalysis_t9a} \<close>
                 do {outp internal_GasAnalysis TID_GasAnalysis_t9a ;
                     outp exit_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
                     outp exited_GasAnalysis (SID_GasAnalysis_GasDetected, SID_GasAnalysis_GasDetected);
@@ -595,7 +557,7 @@ definition State_GasAnalysis_j1 where
 
 definition State_GasAnalysis_j1_R where
 "State_GasAnalysis_j1_R (idd::integer) = 
-   (discard_state (State_GasAnalysis_j1 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_GasAnalysis_j1 idd))
     \<parallel>\<^bsub> (int_int_GasAnalysis - GasAnalysis_j1_triggers) \<^esub> 
    skip
 "
@@ -640,7 +602,7 @@ definition State_GasAnalysis_Reading where
     do {sd \<leftarrow> inp_in enter_GasAnalysis Other_SIDs_to_Reading_GasAnalysis ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_GasAnalysis_Reading_execute \<close>
+        \<comment> \<open> @{verbatim State_GasAnalysis_Reading_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -650,7 +612,7 @@ definition State_GasAnalysis_Reading where
               outp entered_GasAnalysis (snd (snd s), SID_GasAnalysis_Reading);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_GasAnalysis_t0 \<close>
+                \<comment> \<open> @{verbatim T_GasAnalysis_t0} \<close>
                 do {gs \<leftarrow> inp_in gas__GasAnalysis (set [(TID_GasAnalysis_t0, din, x). 
                         x \<leftarrow> (lseq_gassensor_enum)]) ;
                     outp set_gs_GasAnalysis (snd (snd gs));
@@ -675,7 +637,7 @@ definition State_GasAnalysis_Reading where
 
 definition State_GasAnalysis_Reading_R where
 "State_GasAnalysis_Reading_R (idd::integer) = 
-   (discard_state (State_GasAnalysis_Reading idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_GasAnalysis_Reading idd))
     \<parallel>\<^bsub> (int_int_GasAnalysis - GasAnalysis_Reading_triggers) \<^esub> 
    skip
 "
@@ -824,7 +786,7 @@ definition D__GasAnalysis where
   (AUX_opt_GasAnalysis idd) \<setminus> internal_events_GasAnalysis
 "
 
-subsection \<open> MainController \<close>
+subsection \<open> MainController \label{ssec:chem_maincontroller}\<close>
 chantype Chan_MainController =
   terminate_MainController :: unit
   gas_MainController :: "InOut \<times> 2 Chemical_GasSensor blist[2]"

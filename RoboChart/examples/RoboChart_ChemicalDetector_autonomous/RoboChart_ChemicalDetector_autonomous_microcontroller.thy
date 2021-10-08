@@ -1,20 +1,22 @@
-section \<open> Simulation of a very basic RoboChart model \<close>
-text \<open> This theory aims for simulation of a trivial RoboChart model based on its CSP
- semantics. We use the @{term "rename"} operator for renaming.
-\<close>
 
-text \<open> In this version, we have removed the transition t21 from Avoiding to Going in the Movement state 
-machine to avoid animation deadlock in the original model, or the fact that the only available 
-transition at Avoiding is this transition t21 if the resume trigger is removed for this transition.
-\<close>
 theory RoboChart_ChemicalDetector_autonomous_microcontroller
   imports "RoboChart_ChemicalDetector_autonomous_general"
 begin
 
-declare [[show_types]]
+subsection \<open> Movement state machine\label{ssec:chem_movement}\<close>
+text \<open> The @{text Movement} state machine in the @{text MicroController} differs from 
+@{text GasAnalysis} in that it requires an operation @{text changeDirection}, which is provided by 
+@{text MicroController} and defined in the package @{text Location}. The operation is defined using 
+a standard state machine.
 
-subsection \<open> Movement General Definitions \<close>
+We also note that the machine @{text Movement} encoded in this theory differs from the original 
+version 4.0\footnote{\url{https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4}}
+ in that the transition @{text t21} from @{text Avoiding} to @{text Going} with a trigger 
+@{text resume} should not be here and so removed in this theory. \<close>
+
+subsection \<open> Movement general definitions\label{ssec:chem_movement_general}\<close>
 subsubsection \<open> Constants \<close>
+text \<open>The values of these constants are from @{verbatim "instantiation.csp"}. \<close>
 abbreviation const_Movement_lv :: "core_real" where
 "const_Movement_lv \<equiv> 0"
 
@@ -30,11 +32,15 @@ abbreviation const_Movement_stuckDist :: "core_real" where
 abbreviation const_Movement_outPeriod :: "core_nat" where
 "const_Movement_outPeriod \<equiv> 0"
 
+text \<open>The definition @{term const_Location_changeDirection_lv} corresponds to the constant 
+@{text lv} in the definition of the operation @{text changeDirection} in the package @{text Location}.
+\<close>
 abbreviation const_Location_changeDirection_lv :: "core_real" where
 "const_Location_changeDirection_lv \<equiv> 0"
 
 subsubsection \<open> Types \<close>
-(**************************changeOperation************************************)
+paragraph \<open> changeOperation \<close>
+
 datatype SIDS_changeDirection = SID_changeDirection
 	              | SID_changeDirection_From
 	              | SID_changeDirection_j0
@@ -64,7 +70,7 @@ abbreviation "ITIDS_changeDirection_list \<equiv> [
 ]"
 abbreviation "ITIDS_changeDirection \<equiv> set ITIDS_changeDirection_list"
 
-(**************************Movement************************************)
+paragraph \<open> Movement \<close>
 datatype SIDS_Movement = SID_Movement
 	              | SID_Movement_Waiting
 	              | SID_Movement_Going
@@ -92,7 +98,6 @@ abbreviation "SIDS_Movement_no_GettingOut \<equiv> (removeAll SID_Movement_Getti
 
 (* Here we change enumtype to datatype as enumtype will take very long time to resolve 
 this definition (I mean Isabelle keeps running poly and high CPU usage.) *)
-
 datatype TIDS_Movement = NULLTRANSITION__Movement
 	              | TID_Movement_t1
 	              | TID_Movement_t2
@@ -118,8 +123,7 @@ datatype TIDS_Movement = NULLTRANSITION__Movement
 	              | TID_Movement_t13
 	              | TID_Movement_t5
 
-
-(*
+(* An example to use TrID to construct a more abstract data type.
 typedef Movement = "{()}" by auto
 
 type_synonym TIDS_Movement = "(Movement, 24) TrID"
@@ -200,6 +204,23 @@ abbreviation "ITIDS_Movement_list \<equiv> [TID_Movement_t0,
 
 abbreviation "ITIDS_Movement \<equiv> set ITIDS_Movement_list"
 
+text \<open>Because this state machine requires three undefined operations @{text randomWalk}, 
+@{text move}, and @{text shortRandomWalk}, provided by the platform through the interface 
+@{text Operations}, its channel type @{term Chan_Movement} contains three 
+extra channels @{text randomWalkCall_Movement}, @{text moveCall_Movement}, and 
+@{text shortRandomWalkCall_Movement} to record calls of these operations. 
+
+Additionally, the state machine also requiresa state machine defined operation 
+@{text changeDirection}. The usual channels, such as @{text internal}, @{text terminate}, 
+flow channels, variables, and events, in the channel type for a state machine are also present for 
+this operation @{text changeDirection}. But these channels are not inside a separate channel type 
+for @{text changeDirection}. Instead, they are also merged into this channel type @{text Chan_Movement}. 
+
+The reason why these channels are still in this channel type is because in the CSP semantics 
+the memory processes and the states processes of this operation are merged into @{text Movement}.
+In order to compose them with the processes for @{text Movement}, @{text Movement} and 
+@{text changeDirection} shall have the same channel type. So we build a big channel type to contain 
+channels for both of them. \<close>
 chantype Chan_Movement =
 (* flow channels *)
   internal_Movement :: TIDS_Movement
@@ -208,7 +229,6 @@ chantype Chan_Movement =
   exit_Movement :: "SIDS_Movement \<times> SIDS_Movement"
   exited_Movement :: "SIDS_Movement \<times> SIDS_Movement"
   terminate_Movement :: unit
-
 (* Variables *)
   get_d0_Movement :: core_real
   set_d0_Movement :: core_real
@@ -218,7 +238,6 @@ chantype Chan_Movement =
   set_l_Movement :: "Location_Loc"
   get_a_Movement :: "Chemical_Angle"
   set_a_Movement :: "Chemical_Angle"
-
 (* event channels *)
   obstacle__Movement :: "TIDS_Movement \<times> InOut \<times> Location_Loc"
   obstacle_Movement :: "InOut \<times> Location_Loc"
@@ -232,14 +251,13 @@ chantype Chan_Movement =
   stop_Movement :: "InOut"
   flag__Movement :: "TIDS_Movement \<times> InOut"
   flag_Movement :: "InOut"
-
 (* Call events for undefined operations *)
   (* changeDirectionCall_Movement :: "Location_Loc" *)
   randomeWalkCall_Movement :: unit
   moveCall_Movement :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall_Movement :: unit
 
-(* Channels for changeOperation *)
+\<comment> \<open>Channels for @{text changeOperation}\<close>
 (* flow channels *)
   internal_changeDirection :: TIDS_changeDirection
   enter_changeDirection :: "SIDS_changeDirection \<times> SIDS_changeDirection"
@@ -247,11 +265,12 @@ chantype Chan_Movement =
   exit_changeDirection :: "SIDS_changeDirection \<times> SIDS_changeDirection"
   exited_changeDirection :: "SIDS_changeDirection \<times> SIDS_changeDirection"
   terminate_changeDirection :: unit
-
-(* Variables *)
+\<comment> \<open>The operation itself does not have a local variable named @{text l}. In the CSP semantics, we 
+treat the parameter @{text l} as a local variable. Its value is set when the operation is called 
+outside, and got inside the process for the operation. So its value will not be set inside the 
+operation. \<close>
   get_l_changeDirection :: "Location_Loc"
   set_l_changeDirection :: "Location_Loc"
-
 (* timeout *)
   stuck_timeout__Movement :: "TIDS_Movement \<times> InOut"
   stuck_timeout_Movement :: "InOut"
@@ -264,12 +283,28 @@ chantype Chan_Movement =
   shortRandomWalkCall_changeDirection :: unit
   *)
 
+text \<open>We also note that in @{term Chan_Movement} there is no operation call event for the call to the 
+@{text move} operation in @{text changeOperation}. Instead, @{text changeOperation} will use the 
+@{term moveCall_Movement} for that call. This is due to the fact that the required operations in 
+@{text changeOperation} (as an operation called in @{text Movement}) must also be required in 
+@{text Movement}. This is enforced by a well-formedness condition of RoboChart. So the channel for 
+the call to the required @{text move} operation in @{text changeOperation} has already provided by 
+@{text Movement}: @{term moveCall_Movement}. 
+
+In @{term Chan_Movement}, we also add another event channel @{term stuck_timeout__Movement} to deal 
+with a problem raised by the ignorance of time expressions in the guard of the transition from 
+@{text AvoidingAgain} to @{text GettingOut}. This problem will be explained later.
+\<close>
+
 subsubsection \<open> Operation Calls \<close>
 (*
 definition CALL__changeDirection_Movement :: "integer \<Rightarrow> Location_Loc \<Rightarrow> (Chan_Movement, unit) itree" where
 "CALL__changeDirection_Movement idd l = do {outp changeDirectionCall_Movement l}"
 *)
-
+text \<open>Calls to the platform provided operations @{text randomWalk}, @{text move}, and 
+@{text shortRandomWalk} are wrapped in the functions: @{term CALL__randomWalk_Movement},
+@{term CALL__move_Movement}, and @{term CALL__shortRandomWalk_Movement} below. Each function outputs 
+the operation parameters on its corresponding channel event.\<close>
 definition CALL__randomWalk_Movement :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
 "CALL__randomWalk_Movement idd = do {outp randomeWalkCall_Movement ()}"
 
@@ -279,7 +314,10 @@ definition CALL__move_Movement :: "integer \<Rightarrow> core_real \<Rightarrow>
 definition CALL__shortRandomWalk_Movement :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
 "CALL__shortRandomWalk_Movement idd = do {outp shortRandomWalkCall_Movement ()}"
 
-subsection \<open> changeDirection operation \<close>
+subsection \<open> The @{text changeDirection} operation\label{ssec:chem_changedirection_op}\<close>
+text \<open>In this theory, the memory processes and the state machine process of @{text changeDirection} 
+are not independent in its own module in CSP. Instead, they are part of those of @{text Movement}. \<close>
+
 subsubsection \<open> Sets of events \<close>
 
 abbreviation "int_int_tids_changeDirection \<equiv> 
@@ -309,8 +347,8 @@ abbreviation changeDirection_MachineInternalEvents where
 "
 
 subsubsection \<open> State Machine Memory \<close>
-text \<open> Memory cell processes and memory transition processes of this operations are part of Movement
-, not in the process for this operation. \<close>
+text \<open> Memory cell processes and memory transition processes of this operation are part of the memory 
+processes of @{text Movement}. \<close>
 
 definition changeDirection_Memory_opt_l where
 "changeDirection_Memory_opt_l = 
@@ -380,7 +418,7 @@ definition State_changeDirection_From where
     do {sd \<leftarrow> inp_in enter_changeDirection Other_SIDs_to_From_changeDirection ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_changeDirection_From_execute \<close>
+        \<comment> \<open>  @{verbatim State_changeDirection_From_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -390,7 +428,7 @@ definition State_changeDirection_From where
               outp entered_changeDirection (snd (snd s), SID_changeDirection_From);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_changeDirection_t1 \<close>
+                \<comment> \<open>  @{verbatim T_changeDirection_t1} \<close>
               do {outp internal_changeDirection TID_changeDirection_t1 ;
                   outp exit_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
                   outp exited_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
@@ -400,7 +438,7 @@ definition State_changeDirection_From where
                   outp entered_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
                   Ret(False, fst (snd s), SID_changeDirection_From)
               } \<box>
-              \<comment> \<open> T_changeDirection_t3 \<close>
+              \<comment> \<open>  @{verbatim T_changeDirection_t3} \<close>
               do {outp internal_changeDirection TID_changeDirection_t3 ;
                   outp exit_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
                   outp exited_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
@@ -410,7 +448,7 @@ definition State_changeDirection_From where
                   outp entered_changeDirection (SID_changeDirection_From, SID_changeDirection_j0);
                   Ret(False, fst (snd s), SID_changeDirection_From)
               } \<box>
-              \<comment> \<open> T_changeDirection_t4 \<close>
+              \<comment> \<open>  @{verbatim T_changeDirection_t4} \<close>
               do {outp internal_changeDirection TID_changeDirection_t4 ;
                   outp exit_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
                   outp exited_changeDirection (SID_changeDirection_From, SID_changeDirection_From);
@@ -435,12 +473,12 @@ definition State_changeDirection_From where
 
 definition State_changeDirection_From_R where
 "State_changeDirection_From_R (idd::integer) = 
-   (discard_state (State_changeDirection_From idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_changeDirection_From idd))
     \<parallel>\<^bsub> (int_int_changeDirection - changeDirection_From_triggers) \<^esub> 
    skip
 "
 
-paragraph \<open> j0 \<close>
+paragraph \<open> Final (j0) \<close>
 abbreviation CS_changeDirection_j0_sync where
 "CS_changeDirection_j0_sync \<equiv>
   set (
@@ -464,7 +502,7 @@ definition State_changeDirection_j0 where
     do {sd \<leftarrow> inp_in enter_changeDirection Other_SIDs_to_j0_changeDirection ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_changeDirection_j0_execute \<close>
+        \<comment> \<open>  @{verbatim State_changeDirection_j0_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -485,7 +523,7 @@ definition State_changeDirection_j0 where
 
 definition State_changeDirection_j0_R where
 "State_changeDirection_j0_R (idd::integer) = 
-   (discard_state (State_changeDirection_j0 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_changeDirection_j0 idd))
     \<parallel>\<^bsub> (int_int_changeDirection - changeDirection_j0_triggers) \<^esub> 
    skip
 "
@@ -580,9 +618,9 @@ definition D__changeDirection where
 
 subsubsection \<open> State machine inside MicroController \<close>
 *)
-text \<open> This is the version inside the MicroController.csp. In this version, the memory of local 
+(*text \<open> This is the version inside the MicroController.csp. In this version, the memory of local 
 variables is with the state machine Movement, instead of inside this operation.
-\<close>
+\<close>*)
 (* This process will deadlock because there are three internal events enabled and hidden. 
 See the definition of hide. *)
 
@@ -598,8 +636,14 @@ definition AUX_changeDirection where
 "
 *)
 
-(* This version inside MicroController.csp actually won't hide internal__ events.
-These events are hidden later in AUX_opt_Movement.*)
+text \<open> The reference of @{term AUX_changeDirection} is @{verbatim AUX_changeDirection} inside 
+@{verbatim MicroController.csp}. This definition of this process is different from that of 
+@{text Movement} in that it will not hide the @{text internal__changeDirection} channel events 
+(@{term changeDirection_MachineInternalEvents}). If this channel is hidden here, then it cannot be 
+used to synchronise with @{text internal__changeDirection} in the memory of @{text changeDirection} 
+because its memory is part of the memory of @{text Movement}.
+These events, therefore, are hidden later in @{term AUX_opt_Movement}.
+\<close>
 definition AUX_changeDirection where
 "AUX_changeDirection (idd::integer) = 
     ( 
@@ -607,14 +651,19 @@ definition AUX_changeDirection where
     )
 "
 
+text \<open>Similarly, @{term D__changeDirection} does not hide @{term internal_events_changeDirection}. \<close>
 definition D__changeDirection where
 "D__changeDirection (idd::integer) = 
   ((AUX_changeDirection idd) \<setminus> internal_events_changeDirection)
     \<setminus> (set [terminate_changeDirection_C ()])
 "
 
-subsection \<open> Movement state machine \<close>
+subsection \<open> Movement state machine\label{ssec:chem_movement}\<close>
 subsubsection \<open> Operation Calls \<close>
+text \<open>The function @{term CALL__changeDirection_Movement} below corresponds to the call of @{text 
+changeDirection} in @{text Movement}. The call parameter is recorded in @{text l} and set to the 
+memory cell for @{text l} in the operation through channel @{term set_l_changeDirection}. Afterwards, 
+the process of the operation is called. \<close>
 definition CALL__changeDirection_Movement 
   :: "integer \<Rightarrow> Location_Loc \<Rightarrow> (Chan_Movement, unit) itree" where
 "CALL__changeDirection_Movement idd l = do {outp set_l_changeDirection l; D__changeDirection idd}"
@@ -675,9 +724,8 @@ abbreviation Movement_MachineInternalEvents where
 "
 
 subsubsection \<open> State Machine Memory \<close>
-text \<open> Memory cell processes \<close>
-
-(* for the local variable x *)
+text \<open> Memory cell processes for local variables @{text d0}, @{text d1}, @{text a}, and @{text l} are 
+defined below. \<close>
 definition Movement_Memory_opt_d0 where
 "Movement_Memory_opt_d0 = 
   mem_of_lvar get_d0_Movement set_d0_Movement (rc.core_real_set)"
@@ -692,7 +740,7 @@ definition Movement_Memory_opt_a where
 definition Movement_Memory_opt_l where
 "Movement_Memory_opt_l = mem_of_lvar get_l_Movement set_l_Movement (Location_Loc_set)"
 
-text \<open> Memory transition processes \<close>
+text \<open> Memory transition processes are given below. \<close>
 definition Movement_MemoryTransitions_opt_0 where
 "Movement_MemoryTransitions_opt_0 = 
   loop (\<lambda> id::integer. 
@@ -710,10 +758,10 @@ definition Movement_MemoryTransitions_opt_0 where
     do {outp internal_Movement TID_Movement_t1 ; Ret (id)} \<box>
     do {l \<leftarrow> inp_in obstacle__Movement (set [(TID_Movement_t6, din, l). 
               l \<leftarrow> (Location_Loc_list)]) ; Ret (id)} \<box>
-    \<comment> \<open>do {outp internal_Movement (TID_Movement_t21) ; Ret (id)} \<box>\<close>
+    \<comment> \<open>@{text \<open>do {outp internal_Movement (TID_Movement_t21) ; Ret (id)} \<box> \<close>} \<close>
     do {outp stop__Movement (TID_Movement_t15, din) ; Ret (id)} \<box>
     do {outp internal_Movement TID_Movement_t5 ; Ret (id)} \<box>
-    \<comment> \<open>This is for transition t2 in changeDirection.\<close>
+    \<comment> \<open>This is for the default transition @{text t2} in @{text changeDirection}.\<close>
     do {outp internal_changeDirection TID_changeDirection_t2 ; Ret (id)} \<box>
     do {outp stop__Movement (TID_Movement_t4, din) ; Ret (id)} \<box>
     do {outp resume__Movement (TID_Movement_t10, din) ; Ret (id)} \<box>
@@ -748,7 +796,8 @@ definition Movement_MemoryTransitions_opt_1 where
 "
 *)
 
-text \<open> Memory transitions for changeOperation. \<close>
+text \<open> This memory transition process @{term changeDirection_MemoryTransitions_opt_1} is for 
+the three transitions from @{text From} to @{text Final} of @{text changeOperation}. \<close>
 definition changeDirection_MemoryTransitions_opt_1 where
 "changeDirection_MemoryTransitions_opt_1 =
   loop (\<lambda> id::integer.
@@ -771,12 +820,13 @@ definition Movement_MemoryTransitions_opt_2 where
   loop (\<lambda> id::integer.
     do {d1 \<leftarrow> inp_in get_d1_Movement rc.core_real_set ; 
         d0 \<leftarrow> inp_in get_d0_Movement rc.core_real_set ;
-        ( \<comment> \<open> In CSP semantics, the guard of both is true; We can manually discard 
-            time primitives, but not (d1-d0\<le>stuckDist) for t13, and (d1-d0>stuckDist) for t12\<close>
+        ( \<comment> \<open>In the CSP semantics, the guards of transitions @{text t12} and @{text t13} are both true; 
+          We manually discard time primitives, but keep the non-time expression 
+          @{text \<open>(d1-d0\<le>stuckDist)\<close>} for @{text t13}, and 
+          @{text \<open>(d1-d0>stuckDist)\<close>} for @{text t12}. \<close>
           do {guard ((rc.Minus d1 d0 rc.core_real_set) > const_Movement_stuckDist); 
               outp internal_Movement TID_Movement_t12 ; Ret (id)} \<box>
-          \<comment> \<open> 
-          do {guard (d1-d0 \<le> const_Movement_stuckDist); outp internal_Movement TID_Movement_t13 ; Ret (id)} \<box> \<close>
+          \<comment> \<open> \<close>
           do {guard ((rc.Minus d1 d0 rc.core_real_set) \<le> const_Movement_stuckDist); 
               outp stuck_timeout__Movement (TID_Movement_t13, din) ; Ret (id)} \<box>
           do {inp_in set_d1_Movement rc.core_real_set; Ret (id)} \<box>
@@ -938,7 +988,7 @@ definition State_Movement_Waiting where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Waiting_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_Waiting_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_Waiting_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -948,7 +998,7 @@ definition State_Movement_Waiting where
               outp entered_Movement (snd (snd s), SID_Movement_Waiting);
               (do {guard(True); CALL__randomWalk_Movement(id) ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t2 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t2} \<close>
                 do {t \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t2, din, a). 
                                 a \<leftarrow> (Chemical_Angle_list)]) ;
                       outp set_a_Movement (snd (snd t)) ; 
@@ -958,14 +1008,14 @@ definition State_Movement_Waiting where
                       outp entered_Movement (SID_Movement_Waiting, SID_Movement_Going);
                       Ret(False, fst (snd s), SID_Movement_Waiting)
                     } \<box>
-                \<comment> \<open> T_Movement_t0 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t0} \<close>
                 do {outp resume__Movement (TID_Movement_t0, din) ;
                       outp exit_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       outp exited_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       outp enter_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       Ret(True, fst (snd s), SID_Movement_Waiting)
                     } \<box>
-                \<comment> \<open> T_Movement_t15 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t15} \<close>
                 do {outp stop__Movement (TID_Movement_t15, din) ;
                       outp exit_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
                       outp exited_Movement (SID_Movement_Waiting, SID_Movement_Waiting);
@@ -988,7 +1038,7 @@ definition State_Movement_Waiting where
 
 definition State_Movement_Waiting_R where
 "State_Movement_Waiting_R (idd::integer) = 
-   (discard_state (State_Movement_Waiting idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_Waiting idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_Waiting_triggers) \<^esub> 
    skip
 "
@@ -1038,7 +1088,7 @@ definition State_Movement_Going where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Going_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_Going_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_Going_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -1050,7 +1100,7 @@ definition State_Movement_Going where
               outp entered_Movement (snd (snd s), SID_Movement_Going);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t3 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t3} \<close>
                 do {t \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t2, din, a). 
                                 a \<leftarrow> (Chemical_Angle_list)]) ;
                       outp set_a_Movement (snd (snd t)) ; 
@@ -1059,7 +1109,7 @@ definition State_Movement_Going where
                       outp enter_Movement (SID_Movement_Going, SID_Movement_Going);
                       Ret(True, fst (snd s), SID_Movement_Going)
                     } \<box>
-                \<comment> \<open> T_Movement_t4 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t4} \<close>
                 do {outp stop__Movement (TID_Movement_t4, din) ;
                       outp exit_Movement (SID_Movement_Going, SID_Movement_Going);
                       outp exited_Movement (SID_Movement_Going, SID_Movement_Going);
@@ -1067,7 +1117,7 @@ definition State_Movement_Going where
                       outp entered_Movement (SID_Movement_Going, SID_Movement_Found);
                       Ret(False, fst (snd s), SID_Movement_Going)
                     } \<box>
-                \<comment> \<open> T_Movement_t6 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t6} \<close>
                 do {r \<leftarrow> inp_in obstacle__Movement (set [(TID_Movement_t6, din, a). 
                         a \<leftarrow> Location_Loc_list]);
                       outp set_l_Movement (snd (snd r)) ; 
@@ -1092,7 +1142,7 @@ definition State_Movement_Going where
 
 definition State_Movement_Going_R where
 "State_Movement_Going_R (idd::integer) = 
-   (discard_state (State_Movement_Going idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_Going idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_Going_triggers) \<^esub> 
    skip
 "
@@ -1132,7 +1182,7 @@ definition State_Movement_Found where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Found_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_Found_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_Found_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -1144,7 +1194,7 @@ definition State_Movement_Found where
               outp entered_Movement (snd (snd s), SID_Movement_Found);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t5 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t5} \<close>
                 do {
                       outp internal_Movement TID_Movement_t5 ; 
                       outp exit_Movement (SID_Movement_Found, SID_Movement_Found);
@@ -1168,11 +1218,11 @@ definition State_Movement_Found where
 
 definition State_Movement_Found_R where
 "State_Movement_Found_R (idd::integer) = 
-   (discard_state (State_Movement_Found idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_Found idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_Found_triggers) \<^esub> 
    skip
 "
-paragraph \<open> j1 \<close>
+paragraph \<open> Final (j1) \<close>
 abbreviation CS_Movement_j1_sync where
 "CS_Movement_j1_sync \<equiv>
   set (
@@ -1206,7 +1256,7 @@ definition State_Movement_j1 where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_j1_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_j1_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_j1_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -1227,7 +1277,7 @@ definition State_Movement_j1 where
 
 definition State_Movement_j1_R where
 "State_Movement_j1_R (idd::integer) = 
-   (discard_state (State_Movement_j1 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_j1 idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_j1_triggers) \<^esub> 
    skip
 "
@@ -1277,7 +1327,7 @@ definition State_Movement_Avoiding where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_Avoiding_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_Avoiding_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_Avoiding_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -1292,7 +1342,7 @@ definition State_Movement_Avoiding where
               outp entered_Movement (snd (snd s), SID_Movement_Avoiding);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t7 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t7} \<close>
                 do {r \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t7, din, a). 
                             a \<leftarrow> (Chemical_Angle_list)]);
                       outp set_a_Movement (snd (snd r)); 
@@ -1302,7 +1352,7 @@ definition State_Movement_Avoiding where
                       outp entered_Movement (SID_Movement_Avoiding, SID_Movement_TryingAgain);
                       Ret(False, fst (snd s), SID_Movement_Avoiding)
                     } \<box>
-                \<comment> \<open> T_Movement_t18 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t18} \<close>
                 do {outp stop__Movement (TID_Movement_t18, din);
                     outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
@@ -1310,7 +1360,7 @@ definition State_Movement_Avoiding where
                     outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Found);
                     Ret(False, fst (snd s), SID_Movement_Avoiding)
                   } \<box>
-                \<comment> \<open> T_Movement_t19 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t19} \<close>
                 do {outp resume__Movement (TID_Movement_t19, din);
                     outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
@@ -1318,19 +1368,19 @@ definition State_Movement_Avoiding where
                     outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Waiting);
                     Ret(False, fst (snd s), SID_Movement_Avoiding)
                   } \<box> 
-                \<comment> \<open>We use biased external choice to avoid deadlock, and give priority to 
+                \<comment> \<open>We use the biased external choice to avoid deadlock, and give priority to 
                 resume to Waiting state. However, the biased operator cannot work at this level
                 because the resume__Movement events for t19 and t21 are different 
                 thanks to the transition id.
                 \<close>
-                \<comment> \<open> T_Movement_t21 \<close>
-                \<comment> \<open> do {outp internal_Movement (TID_Movement_t21);
+                \<comment> \<open> @{verbatim T_Movement_t21} \<close>
+                \<comment> \<open> @{text \<open>do {outp internal_Movement (TID_Movement_t21);
                     outp exit_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp exited_Movement (SID_Movement_Avoiding, SID_Movement_Avoiding);
                     outp enter_Movement (SID_Movement_Avoiding, SID_Movement_Going);
                     outp entered_Movement (SID_Movement_Avoiding, SID_Movement_Going);
                     Ret(False, fst (snd s), SID_Movement_Avoiding)
-                  } \<box>\<close>
+                  } \<box> \<close>}\<close>
                 (exit_events_Movement (fst (snd s)) SID_Movement_Avoiding 
                    tids_Movement_Avoiding Other_SIDs_to_Avoiding_Movement)
                 )
@@ -1346,7 +1396,7 @@ definition State_Movement_Avoiding where
 
 definition State_Movement_Avoiding_R where
 "State_Movement_Avoiding_R (idd::integer) = 
-   (discard_state (State_Movement_Avoiding idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_Avoiding idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_Avoiding_triggers) \<^esub> 
    skip
 "
@@ -1396,7 +1446,7 @@ definition State_Movement_TryingAgain where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_TryingAgain_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_TryingAgain_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_TryingAgain_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -1407,7 +1457,7 @@ definition State_Movement_TryingAgain where
               outp entered_Movement (snd (snd s), SID_Movement_TryingAgain);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t8 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t8} \<close>
                 do {r \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t7, din, a). 
                             a \<leftarrow> (Chemical_Angle_list)]);
                       outp set_a_Movement (snd (snd r)); 
@@ -1416,7 +1466,7 @@ definition State_Movement_TryingAgain where
                       outp enter_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
                       Ret(True, fst (snd s), SID_Movement_TryingAgain)
                     } \<box>
-                \<comment> \<open> T_Movement_t9 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t9} \<close>
                 do {outp stop__Movement (TID_Movement_t9, din);
                     outp exit_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
                     outp exited_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
@@ -1424,7 +1474,7 @@ definition State_Movement_TryingAgain where
                     outp entered_Movement (SID_Movement_TryingAgain, SID_Movement_Found);
                     Ret(False, fst (snd s), SID_Movement_TryingAgain)
                   } \<box>
-                \<comment> \<open> T_Movement_t10 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t10} \<close>
                 do {outp resume__Movement (TID_Movement_t10, din);
                     outp exit_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
                     outp exited_Movement (SID_Movement_TryingAgain, SID_Movement_TryingAgain);
@@ -1432,7 +1482,7 @@ definition State_Movement_TryingAgain where
                     outp entered_Movement (SID_Movement_TryingAgain, SID_Movement_Waiting);
                     Ret(False, fst (snd s), SID_Movement_TryingAgain)
                   } \<box>
-                \<comment> \<open> T_Movement_t11 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t11} \<close>
                 do {r \<leftarrow> inp_in obstacle__Movement (set [(TID_Movement_t11, din, l). 
                         l \<leftarrow> Location_Loc_list]);
                       outp set_l_Movement (snd (snd r)) ; 
@@ -1460,7 +1510,7 @@ definition State_Movement_TryingAgain where
 
 definition State_Movement_TryingAgain_R where
 "State_Movement_TryingAgain_R (idd::integer) = 
-   (discard_state (State_Movement_TryingAgain idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_TryingAgain idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_TryingAgain_triggers) \<^esub> 
    skip
 "
@@ -1506,12 +1556,21 @@ abbreviation Other_SIDs_to_AvoidingAgain_Movement where
 "Other_SIDs_to_AvoidingAgain_Movement \<equiv>
   set [(s, SID_Movement_AvoidingAgain) . s \<leftarrow> (SIDS_Movement_no_AvoidingAgain)]"
 
-\<comment> \<open> At this state, there are four outgoing transitions: one with trigger resume, one with trigger 
-stop, and another two without triggers (with different exclusive guards and event internal__ here).
-Eventually, this process will synchronise with Movement_MemoryTransitions_opt_2 on 
-internal__.t12 and internal__.t13 events, and hide the events in MemorySTM_opt_Movement.
-Based on the maximal progress assumption, the transitions with resume and stop cannot be available.
-We, therefore, add an extra timeout event to introduce time in an abstract way to avoid this issue.
+text \<open> At this state @{text AvoidingAgain}, there are four outgoing transitions: 
+\begin{itemize}
+  \item one with trigger resume, 
+  \item one with trigger stop, and 
+  \item another two @{text t12} and @{text t13} without triggers.
+\end{itemize}
+Eventually, this process will synchronise with @{term Movement_MemoryTransitions_opt_2} on 
+@{text internal__.t12} and @{text internal__.t13} events, and hide the events in 
+@{term MemorySTM_opt_Movement}.
+
+Based on the maximal progress assumption, the transitions with trigger @{text resume} and 
+@{text stop} cannot be available because the guards of @{text t12} and @{text t13} form a cover after 
+time expressions are removed.
+We, therefore, add an extra timeout event @{text stuck_timeout__Movement} to introduce time in an 
+abstract way to avoid this issue.
 \<close>
 definition State_Movement_AvoidingAgain where 
 "State_Movement_AvoidingAgain = 
@@ -1519,7 +1578,7 @@ definition State_Movement_AvoidingAgain where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_AvoidingAgain_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_AvoidingAgain_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_AvoidingAgain_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -1529,7 +1588,7 @@ definition State_Movement_AvoidingAgain where
               outp entered_Movement (snd (snd s), SID_Movement_AvoidingAgain);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t12 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t12} \<close>
                 do {outp internal_Movement TID_Movement_t12;
                       outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                       outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
@@ -1537,7 +1596,7 @@ definition State_Movement_AvoidingAgain where
                       outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_Avoiding);
                       Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
                     } \<box>
-                \<comment> \<open> T_Movement_t17 \<close>
+                \<comment> \<open>@{verbatim T_Movement_t17} \<close>
                 do {outp stop__Movement (TID_Movement_t17, din);
                     outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                     outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
@@ -1545,7 +1604,7 @@ definition State_Movement_AvoidingAgain where
                     outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_Found);
                     Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
                   } \<box>
-                \<comment> \<open> T_Movement_t22 \<close>
+                \<comment> \<open>@{verbatim T_Movement_t22} \<close>
                 do {outp resume__Movement (TID_Movement_t22, din);
                     outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                     outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
@@ -1553,16 +1612,16 @@ definition State_Movement_AvoidingAgain where
                     outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_Waiting);
                     Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
                   } \<box>
-                \<comment> \<open> T_Movement_t13 \<close>
-                \<comment> \<open>
+                \<comment> \<open>@{verbatim T_Movement_t13} \<close>
+                \<comment> \<open> @{text \<open>
                 do {outp internal_Movement TID_Movement_t13;
                       outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                       outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                       outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
                       outp entered_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
                       Ret(False, fst (snd s), SID_Movement_AvoidingAgain)
-                    }
-                \<close> do {outp stuck_timeout__Movement (TID_Movement_t13, din);
+                    } \<close> }\<close> 
+                  do {outp stuck_timeout__Movement (TID_Movement_t13, din);
                       outp exit_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                       outp exited_Movement (SID_Movement_AvoidingAgain, SID_Movement_AvoidingAgain);
                       outp enter_Movement (SID_Movement_AvoidingAgain, SID_Movement_GettingOut);
@@ -1584,7 +1643,7 @@ definition State_Movement_AvoidingAgain where
 
 definition State_Movement_AvoidingAgain_R where
 "State_Movement_AvoidingAgain_R (idd::integer) = 
-   (discard_state (State_Movement_AvoidingAgain idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_AvoidingAgain idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_AvoidingAgain_triggers) \<^esub> 
    skip
 "
@@ -1634,7 +1693,7 @@ definition State_Movement_GettingOut where
     do {sd \<leftarrow> inp_in enter_Movement Other_SIDs_to_GettingOut_Movement ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> State_Movement_GettingOut_execute \<close>
+        \<comment> \<open> @{verbatim State_Movement_GettingOut_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
@@ -1645,7 +1704,7 @@ definition State_Movement_GettingOut where
               outp entered_Movement (snd (snd s), SID_Movement_GettingOut);
               (do {skip ; stop} \<triangle>
                 (
-                \<comment> \<open> T_Movement_t14 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t14} \<close>
                 do {r \<leftarrow> inp_in turn__Movement (set [(TID_Movement_t14, din, a). 
                             a \<leftarrow> (Chemical_Angle_list)]);
                       outp set_a_Movement (snd (snd r)); 
@@ -1655,7 +1714,7 @@ definition State_Movement_GettingOut where
                       outp entered_Movement (SID_Movement_GettingOut, SID_Movement_Going);
                       Ret(False, fst (snd s), SID_Movement_GettingOut)
                     } \<box>
-                \<comment> \<open> T_Movement_t16 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t16} \<close>
                 do {outp stop__Movement (TID_Movement_t16, din);
                     outp exit_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
                     outp exited_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
@@ -1663,7 +1722,7 @@ definition State_Movement_GettingOut where
                     outp entered_Movement (SID_Movement_GettingOut, SID_Movement_Found);
                     Ret(False, fst (snd s), SID_Movement_GettingOut)
                   } \<box>
-                \<comment> \<open> T_Movement_t20 \<close>
+                \<comment> \<open> @{verbatim T_Movement_t20} \<close>
                 do {outp resume__Movement (TID_Movement_t20, din);
                     outp exit_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
                     outp exited_Movement (SID_Movement_GettingOut, SID_Movement_GettingOut);
@@ -1686,7 +1745,7 @@ definition State_Movement_GettingOut where
 
 definition State_Movement_GettingOut_R where
 "State_Movement_GettingOut_R (idd::integer) = 
-   (discard_state (State_Movement_GettingOut idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+   (discard_state (State_Movement_GettingOut idd))
     \<parallel>\<^bsub> (int_int_Movement - Movement_GettingOut_triggers) \<^esub> 
    skip
 "
@@ -1998,9 +2057,9 @@ definition D__Movement where
 "
 
 definition "D_Movement_sim = D__Movement 0"
-animate1 D_Movement_sim
+(* animate1 D_Movement_sim *)
 
-subsection \<open> MicroController \<close>
+subsection \<open> MicroController \label{ssec:chem_microcontroller}\<close>
 chantype Chan_MicroCtrl =
   terminate_MicroController :: unit
   obstacle_MicroController :: "InOut \<times> Location_Loc"
@@ -2053,9 +2112,9 @@ definition D__MicroController where
 "
 
 definition "D_MicroController_sim = D__MicroController 0"
-(* animate1 D_MicroController_sim *)
+animate1 D_MicroController_sim
 
-subsection \<open> Export code \<close>
+subsubsection \<open> Export code \<close>
 export_code
   Movement_Memory_opt_d0
   Movement_MemoryTransitions_opt_0
