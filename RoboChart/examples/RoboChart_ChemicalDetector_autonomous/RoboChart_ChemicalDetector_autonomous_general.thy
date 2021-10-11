@@ -1,3 +1,71 @@
+section \<open> Animation of the autonomous chemical detector RoboChart model \<close>
+text \<open> This theory aims for animation of the autonomous chemical detector RoboChart model 
+(Version 4.0)
+\footnote{
+@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4"}
+}
+based on its CSP semantics. This model is obsolete and cannot be supported in the current 
+RoboTool v2.0, and so we have updated it. The update includes a correction of an error in the 
+definition of the @{text intensity} function, a removal of the unnecessary transition from 
+@{text Avoiding} to @{text Going} in the @{text Movement} state machine, and other changes are minor.
+\<close>
+
+text \<open> 
+\begin{figure}
+  \includegraphics[scale=0.25]{images/Module.pdf}
+  \caption{The RoboChart model of an autonomous chemical detector example}
+  \label{fig:robochart_autonomous_module}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[scale=0.25]{images/Chemical.pdf}
+  \caption{The Chemical package}
+  \label{fig:robochart_autonomous_chemical}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[scale=0.25]{images/Location.pdf}
+  \caption{The Location package}
+  \label{fig:robochart_autonomous_location}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[scale=0.25]{images/MainController.pdf}
+  \caption{The MainController package}
+  \label{fig:robochart_autonomous_maincontroller}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[scale=0.25]{images/GasAnalysis.pdf}
+  \caption{The GasAnalysis state machine}
+  \label{fig:robochart_autonomous_gasanalysis}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[scale=0.25]{images/MicroController.pdf}
+  \caption{The MicroController package}
+  \label{fig:robochart_autonomous_microcontroller}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[scale=0.25]{images/Movement.pdf}
+  \caption{The Movement state machine}
+  \label{fig:robochart_autonomous_movement}
+\end{figure}
+\<close>
+
+text \<open>We structure the theory as follows. In Sect.~\ref{ssec:chem_general}, we give the general 
+definitions. Sects.~\ref{ssec:chem_chemical} and~\ref{ssec:chem_location} define types and 
+functions in the @{text Chemical} and @{text Location} packages of the model. The @{text GasAnalysis} 
+state machine and the @{text MainController} controller are defined in 
+Sects.~\ref{ssec:chem_gasanalysis} and~\ref{ssec:chem_maincontroller}. Then we present general 
+definitions of the @{text Movement} state machine, including the state machine defined operation 
+@{text changeDirection}, in Sect.~\ref{ssec:chem_movement_general}. 
+Afterwards, the operation and @{text Movement} are defined in 
+Sects.~\ref{ssec:chem_changedirection_op} and~\ref{ssec:chem_movement}, and @{text MicroController} 
+is defined in Sect.~\ref{ssec:chem_microcontroller}. Finally, the module @{text mod0} is defined in 
+Sect.~\ref{ssec:chem_module}.
+\<close>
 
 theory RoboChart_ChemicalDetector_autonomous_general
   imports "ITree_RoboChart.ITree_RoboChart" "RoboChart_Simulation"

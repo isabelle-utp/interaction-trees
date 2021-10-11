@@ -36,3 +36,10 @@ session "RoboChart_ChemicalDetector_autonomous" in "RoboChart/examples/RoboChart
     RoboChart_ChemicalDetector_autonomous 
   document_files
     "root.tex"
+    "images/Module.pdf"
+    "images/Chemical.pdf"
+    "images/Location.pdf"
+    "images/MainController.pdf"
+    "images/MicroController.pdf"
+    "images/GasAnalysis.pdf"
+    "images/Movement.pdf"

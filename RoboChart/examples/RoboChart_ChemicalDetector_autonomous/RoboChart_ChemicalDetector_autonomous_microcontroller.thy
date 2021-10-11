@@ -316,7 +316,7 @@ definition CALL__move_Movement :: "integer \<Rightarrow> core_real \<Rightarrow>
 definition CALL__shortRandomWalk_Movement :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
 "CALL__shortRandomWalk_Movement idd = do {outp shortRandomWalkCall_Movement ()}"
 
-subsection \<open> The @{text changeDirection} operation\label{ssec:chem_changedirection_op}\<close>
+subsection \<open> The changeDirection operation\label{ssec:chem_changedirection_op}\<close>
 text \<open>In this theory, the memory processes and the state machine process of @{text changeDirection} 
 are not independent in its own module in CSP. Instead, they are part of those of @{text Movement}. \<close>
 

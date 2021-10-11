@@ -1,32 +1,9 @@
-section \<open> Animation of the autonomous chemical detector RoboChart model \<close>
-text \<open> This theory aims for animation of the autonomous chemical detector RoboChart model 
-(Version 4.0)
-\footnote{
-@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4"}
-}
-based on its CSP semantics. This model is obsolete and cannot be supported in the current 
-RoboTool v2.0, and so we have updated it. The update includes a correction of an error in the 
-definition of the @{text intensity} function, a removal of the unnecessary transition from 
-@{text Avoiding} to @{text Going} in the @{text Movement} state machine, and other changes are minor.
-\<close>
+
 theory RoboChart_ChemicalDetector_autonomous
   imports "RoboChart_ChemicalDetector_autonomous_general"
     "RoboChart_ChemicalDetector_autonomous_maincontroller"
     "RoboChart_ChemicalDetector_autonomous_microcontroller"
 begin
-
-text \<open>We structure the theory as follows. In Sect.~\ref{ssec:chem_general}, we give the general 
-definitions. Sects.~\ref{ssec:chem_chemical} and~\ref{ssec:chem_location} define types and 
-functions in the @{text Chemical} and @{text Location} packages of the model. The @{text GasAnalysis} 
-state machine and the @{text MainController} controller are defined in 
-Sects.~\ref{ssec:chem_gasanalysis} and~\ref{ssec:chem_maincontroller}. Then we present general 
-definitions of the @{text Movement} state machine, including the state machine defined operation 
-@{text changeDirection}, in Sect.~\ref{ssec:chem_movement_general}. 
-Afterwards, the operation and @{text Movement} are defined in 
-Sects.~\ref{ssec:chem_changedirection_op} and~\ref{ssec:chem_movement}, and @{text MicroController} 
-is defined in Sect.~\ref{ssec:chem_microcontroller}. Finally, the module @{text mod0} is defined in 
-Sect.~\ref{ssec:chem_module}.
-\<close>
 
 subsection \<open> Module \label{ssec:chem_module}\<close>
 text \<open>For the channel name in the channel type for the module of a RoboChart model, we use a simple 
@@ -50,41 +27,48 @@ chantype Chan_ChemicalDetector =
 definition Memory_ChemicalDetector where
 "Memory_ChemicalDetector = skip"
 
+text \<open>The definition below gives a renaming map between the events of @{text MainController} and 
+those of the module. For the events of @{text MainController} that are connected to 
+@{text MicroController}, we do not change the directions of them here, but invert their directions 
+when renaming events of @{text MicroController}. This is to ensure that the output of an event (such as 
+@{text stop}) of @{text MainController} is connected to the input of the event of 
+@{text MicroController}.
+\<close>
 definition rename_ChemicalDetector_D__MainController_events where
 "rename_ChemicalDetector_D__MainController_events = 
   (enumchanp2_1 (terminate_MainController_C, terminate_C) [()]) @
   (enumchansp2_2 [(gas_MainController_C, gas_C)] InOut_list lseq_gassensor_enum) @
   (enumchansp2_2 [(turn_MainController_C, turn_C)] InOut_list Chemical_Angle_list) @
-  (enumchansp2_1 [(stop_MainController_C, stop_C), 
-      (resume_MainController_C, resume_C)] InOut_list) 
+  (enumchansp2_1 [(stop_MainController_C, stop_C), (resume_MainController_C, resume_C)] InOut_list)
 "
 
 definition rename_D__MainController where
 "rename_D__MainController idd = (
   (D__MainController idd) \<lbrakk>(set rename_ChemicalDetector_D__MainController_events)\<rbrakk>) "
 
+text \<open>As mentioned previously, for the events of @{text MicroController} that are connected to 
+@{text MainController}, the directions of those renamed events should be opposite. In the definition 
+of a renaming map between the events of @{text MicroController} and those of the module, 
+the directions of @{text stop} and @{text resume} are inverted. The direction of @{text turn} is not
+ inverted here because the event is asynchronously connected. For an asynchronous connection, its 
+CSP semantics introduces another buffer process @{text buffer0} below in between the two connected 
+events. We invert the directions of events in the buffer process and keep the directions here 
+unchanged. This achieves the same effect.
+\<close>
 definition rename_ChemicalDetector_D__MicroController_events where
 "rename_ChemicalDetector_D__MicroController_events = 
   (enumchanp2_1 (terminate_MicroController_C, terminate_C) [()]) @
-  (enumchansp2_2 [(obstacle_MicroController_C, obstacle_C)]  
-      InOut_list Location_Loc_list) @
-  (enumchansp2_2 [(odometer_MicroController_C, odometer_C)]  
-      InOut_list rc.core_real_list) @
-  (enumchansp2_2 [(turn_MicroController_C, turn_C)] 
-      InOut_list Chemical_Angle_list) @
+  (enumchansp2_2 [(obstacle_MicroController_C, obstacle_C)] InOut_list Location_Loc_list) @
+  (enumchansp2_2 [(odometer_MicroController_C, odometer_C)] InOut_list rc.core_real_list) @
   (enumchansp2_1 [(flag_MicroController_C, flag_C)] InOut_list) @
   (enumchansp2_1 [(randomeWalkCall_MicroController_C, randomeWalkCall_C),
       (shortRandomWalkCall_MicroController_C, shortRandomWalkCall_C)] [()]) @
   (enumchansp2_2 [(moveCall_MicroController_C, moveCall_C)]
       rc.core_real_list Chemical_Angle_list) @
-  \<comment> \<open> @{text stop.in} of @{text MicroController} -> @{text stop.out} of @{text ManController} 
-  through @{term stop_C} \<close>
-  [(stop_MicroController_C din, stop_C dout),
-    (stop_MicroController_C dout, stop_C din),
-    (resume_MicroController_C din, resume_C dout),
-    (resume_MicroController_C dout, resume_C din)
+  (enumchansp2_2 [(turn_MicroController_C, turn_C)] InOut_list Chemical_Angle_list) @
+  [(stop_MicroController_C din, stop_C dout), (stop_MicroController_C dout, stop_C din),
+   (resume_MicroController_C din, resume_C dout), (resume_MicroController_C dout, resume_C din)
   ]
-  \<comment> \<open> timeout \<close>
   @ (enumchansp2_1 [(stuck_timeout_MicroController_C, stuck_timeout_C)] InOut_list)
 "
 
@@ -92,8 +76,15 @@ definition rename_D__MicroController where
 "rename_D__MicroController idd = (
   (D__MicroController idd) \<lbrakk>(set rename_ChemicalDetector_D__MicroController_events)\<rbrakk>)"
 
-text \<open> The connection from MainController to MicroController on the event turn is asynchronous, 
-and so its CSP semantics has a buffer in between. The buffer is defined below.
+text \<open> The connection from @{text MainController} to @{text MicroController} on the event 
+@{text turn} is asynchronous, and so its CSP semantics has a buffer in between. 
+The buffer is defined below. The function @{term buffer0} defines an one-place buffer (a list) as 
+specified in the CSP semantics. When the buffer is full, the only element in the buffer can also be 
+overridden.
+
+We note that the direction of the event for input in @{term buffer0} is @{term dout} and that for 
+output is @{term din}. This is to ensure the output of the event in @{text MainController} is 
+connected to the input of the event in @{text MicroController} asynchronously.
 \<close>
 definition buffer0 :: "Chemical_Angle list \<Rightarrow> (Chan_ChemicalDetector, Chemical_Angle list) itree"  where
 "buffer0 = loop (\<lambda>la. 
@@ -142,6 +133,8 @@ definition D__ChemicalDetector where
   )
 "
 
+text \<open>This @{term D_ChemicalDetector_sim} below is defined to animate @{term D__ChemicalDetector}. This 
+is not part of the semantics of the model, but just for animation. \<close>
 definition "D_ChemicalDetector_sim = D__ChemicalDetector 0"
 animate1 D_ChemicalDetector_sim
 
