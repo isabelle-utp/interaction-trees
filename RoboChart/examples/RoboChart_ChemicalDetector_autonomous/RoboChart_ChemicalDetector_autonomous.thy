@@ -1,6 +1,9 @@
 section \<open> Animation of the autonomous chemical detector RoboChart model \<close>
 text \<open> This theory aims for animation of the autonomous chemical detector RoboChart model 
-(Version 4.0)\footnote{\url{https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4}}
+(Version 4.0)
+\footnote{
+@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4"}
+}
 based on its CSP semantics. This model is obsolete and cannot be supported in the current 
 RoboTool v2.0, and so we have updated it. The update includes a correction of an error in the 
 definition of the @{text intensity} function, a removal of the unnecessary transition from 
@@ -26,6 +29,9 @@ Sect.~\ref{ssec:chem_module}.
 \<close>
 
 subsection \<open> Module \label{ssec:chem_module}\<close>
+text \<open>For the channel name in the channel type for the module of a RoboChart model, we use a simple 
+name without adding a suffix. This is to make the events in the animation of the model have the 
+same name as the event name in the platform. \<close>
 chantype Chan_ChemicalDetector =
   terminate :: unit 
   flag :: "InOut"
@@ -71,7 +77,8 @@ definition rename_ChemicalDetector_D__MicroController_events where
       (shortRandomWalkCall_MicroController_C, shortRandomWalkCall_C)] [()]) @
   (enumchansp2_2 [(moveCall_MicroController_C, moveCall_C)]
       rc.core_real_list Chemical_Angle_list) @
-  \<comment> \<open> stop.in of MicroController -> stop.out of ManController through stop_C\<close>
+  \<comment> \<open> @{text stop.in} of @{text MicroController} -> @{text stop.out} of @{text ManController} 
+  through @{term stop_C} \<close>
   [(stop_MicroController_C din, stop_C dout),
     (stop_MicroController_C dout, stop_C din),
     (resume_MicroController_C din, resume_C dout),

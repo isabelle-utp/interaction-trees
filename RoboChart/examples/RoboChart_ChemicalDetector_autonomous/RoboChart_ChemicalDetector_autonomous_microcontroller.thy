@@ -10,7 +10,9 @@ text \<open> The @{text Movement} state machine in the @{text MicroController} d
 a standard state machine.
 
 We also note that the machine @{text Movement} encoded in this theory differs from the original 
-version 4.0\footnote{\url{https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4}}
+version 4.0\footnote{
+@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4"}
+}
  in that the transition @{text t21} from @{text Avoiding} to @{text Going} with a trigger 
 @{text resume} should not be here and so removed in this theory. \<close>
 
@@ -1321,6 +1323,8 @@ abbreviation Other_SIDs_to_Avoiding_Movement where
 "Other_SIDs_to_Avoiding_Movement \<equiv>
   set [(s, SID_Movement_Avoiding) . s \<leftarrow> (SIDS_Movement_no_Avoiding)]"
 
+text \<open>The entry action of the state @{text Avoiding} contains a call @{text "changeDirection(l)"} 
+to the operation. This is implemented by calling @{term CALL__changeDirection_Movement}. \<close>
 definition State_Movement_Avoiding where 
 "State_Movement_Avoiding = 
   loop (\<lambda> (id::integer).
@@ -1370,7 +1374,7 @@ definition State_Movement_Avoiding where
                   } \<box> 
                 \<comment> \<open>We use the biased external choice to avoid deadlock, and give priority to 
                 resume to Waiting state. However, the biased operator cannot work at this level
-                because the resume__Movement events for t19 and t21 are different 
+                because the @{text resume__Movement} events for t19 and t21 are different 
                 thanks to the transition id.
                 \<close>
                 \<comment> \<open> @{verbatim T_Movement_t21} \<close>
@@ -1762,6 +1766,12 @@ abbreviation flow_events_Movement_stm_to_nodes where
   )
 )"
 
+text \<open>We define here seven functions from @{term STM_Movement_1} to @{term STM_Movement_7} which 
+are to be used in the definition of @{term STM_Movement}. We can merge these definitions into 
+@{term STM_Movement}. One benefit of these definitions is to facilitate debug of parallel composition 
+of individual states, such as @{term STM_Movement_1} for composition of @{text AvoidingAgain} and 
+@{text GettingOut}.
+\<close>
 definition STM_Movement_1 where
 "STM_Movement_1 (idd::integer) =
   (State_Movement_AvoidingAgain_R(idd)  
@@ -1923,7 +1933,7 @@ abbreviation Movement_opt_1_internal_set where
   set (changeDirection_opt_internal_set @
        (enumchans1 [set_l_changeDirection_C] Location_Loc_list)
 )"
-
+(*
 definition MemorySTM_opt_Movement' where
 "MemorySTM_opt_Movement' (idd::integer) = 
 (
@@ -1950,7 +1960,11 @@ definition MemorySTM_opt_Movement' where
       ) \<setminus> (set (enumchans1 [internal_Movement_C] [TID_Movement_t12, TID_Movement_t13]))
    )
 )"
-
+*)
+text \<open>The memory cell process and the memory transition process of @{text changeDirection} is also 
+part of the memory of @{text Movement}, which is reflected in the definition of 
+@{term MemorySTM_opt_Movement} below.
+\<close>
 definition MemorySTM_opt_Movement where
 "MemorySTM_opt_Movement (idd::integer) = 
   (par_hide
@@ -2039,16 +2053,21 @@ definition rename_MemorySTM_opt_Movement where
 )
 " 
 
+text \<open>The @{text internal_} channel of @{text changeDirection} is hidden in @{term AUX_opt_Movement}.
+\<close>
 definition AUX_opt_Movement where
 "AUX_opt_Movement (idd::integer) = 
   ( 
     ( 
       (rename_MemorySTM_opt_Movement idd) \<lbrakk> set [terminate_Movement_C ()] \<Zrres> skip
     ) \<setminus> (Movement_MachineInternalEvents \<union> changeDirection_MachineInternalEvents)
-  )
+  )                                                      
 "
 
+text \<open>This @{term AUX_opt_Movement_sim} below is defined to animate @{term AUX_opt_Movement}. This 
+is not part of the semantics of the model, but just for animation. \<close>
 definition "AUX_opt_Movement_sim = AUX_opt_Movement 0"
+text \<open>Uncomment the line below to animate @{term AUX_opt_Movement}.\<close>
 (* animate1 AUX_opt_Movement_sim *)
 
 definition D__Movement where
@@ -2056,7 +2075,9 @@ definition D__Movement where
   (AUX_opt_Movement idd) \<setminus> internal_events_Movement
 "
 
+text \<open>This @{term D_Movement_sim} below is defined to animate @{term D__Movement}. \<close>
 definition "D_Movement_sim = D__Movement 0"
+text \<open>Uncomment the line below to animate @{term D__Movement}.\<close>
 (* animate1 D_Movement_sim *)
 
 subsection \<open> MicroController \label{ssec:chem_microcontroller}\<close>
@@ -2068,15 +2089,15 @@ chantype Chan_MicroCtrl =
   odometer_MicroController :: "InOut \<times> core_real"
   stop_MicroController :: "InOut"
   flag_MicroController :: "InOut"
-(* *)
+(* operation call events *)
   randomeWalkCall_MicroController :: unit
   moveCall_MicroController :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall_MicroController :: unit
-
 (* timeout *)
   stuck_timeout_MicroController :: "InOut"
 
 subsubsection \<open> Memory \<close>
+text \<open>This controller does not have a memory cell process or memory transition processes. \<close>
 definition Memory_MicroController where
 "Memory_MicroController (idd::integer) = skip"
 
@@ -2136,8 +2157,8 @@ export_code
   STM_Movement_6
   STM_Movement_7
   STM_Movement
-  MemorySTM_opt_Movement
-  MemorySTM_opt_Movement'
+  MemorySTM_opt_Movement(*
+  MemorySTM_opt_Movement'*)
   changeDirection_MemoryTransitions_opt_1
   rename_MemorySTM_opt_Movement
   AUX_opt_Movement
