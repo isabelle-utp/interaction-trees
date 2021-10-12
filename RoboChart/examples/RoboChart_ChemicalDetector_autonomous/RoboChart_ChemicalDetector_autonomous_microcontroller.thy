@@ -1,9 +1,10 @@
+section \<open> MicroController \label{sec:chem_microcontroller}\<close>
 
 theory RoboChart_ChemicalDetector_autonomous_microcontroller
   imports "RoboChart_ChemicalDetector_autonomous_general"
 begin
 
-subsection \<open> Movement state machine\label{ssec:chem_movement}\<close>
+subsection \<open> Overview\label{ssec:chem_movement_overview}\<close>
 text \<open> The @{text Movement} state machine in the @{text MicroController} differs from 
 @{text GasAnalysis} in that it requires an operation @{text changeDirection}, which is provided by 
 @{text MicroController} and defined in the package @{text Location}. The operation is defined using 
@@ -41,7 +42,7 @@ abbreviation const_Location_changeDirection_lv :: "core_real" where
 "const_Location_changeDirection_lv \<equiv> 0"
 
 subsubsection \<open> Types \<close>
-paragraph \<open> changeOperation \<close>
+paragraph \<open> changeOperation \<close>text\<open>\mbox{}\<close>
 
 datatype SIDS_changeDirection = SID_changeDirection
 	              | SID_changeDirection_From
@@ -72,7 +73,7 @@ abbreviation "ITIDS_changeDirection_list \<equiv> [
 ]"
 abbreviation "ITIDS_changeDirection \<equiv> set ITIDS_changeDirection_list"
 
-paragraph \<open> Movement \<close>
+paragraph \<open> Movement \<close>text\<open>\mbox{}\<close>
 datatype SIDS_Movement = SID_Movement
 	              | SID_Movement_Waiting
 	              | SID_Movement_Going
@@ -357,7 +358,7 @@ definition changeDirection_Memory_opt_l where
   mem_of_lvar get_l_changeDirection set_l_changeDirection (Location_Loc_set)"
 
 subsubsection \<open> States \<close>
-paragraph \<open> Initial \<close>
+paragraph \<open> Initial \<close>text\<open>\mbox{}\<close>
 definition I_changeDirection_i0 where
 "I_changeDirection_i0 = (\<lambda> (id::integer) . 
   do {outp internal_changeDirection TID_changeDirection_t2 ; 
@@ -366,7 +367,7 @@ definition I_changeDirection_i0 where
   })
 "
 
-paragraph \<open> From \<close>
+paragraph \<open> From \<close>text\<open>\mbox{}\<close>
 abbreviation CS_changeDirection_From_sync where
 "CS_changeDirection_From_sync \<equiv>
   set (
@@ -480,7 +481,7 @@ definition State_changeDirection_From_R where
    skip
 "
 
-paragraph \<open> Final (j0) \<close>
+paragraph \<open> Final (j0) \<close>text\<open>\mbox{}\<close>
 abbreviation CS_changeDirection_j0_sync where
 "CS_changeDirection_j0_sync \<equiv>
   set (
@@ -839,7 +840,7 @@ definition Movement_MemoryTransitions_opt_2 where
 "
 
 subsubsection \<open> States \<close>
-paragraph \<open> Initial \<close>
+paragraph \<open> Initial \<close>text\<open>\mbox{}\<close>
 definition I_Movement_i1 where
 "I_Movement_i1 = (\<lambda> (id::integer) . 
   do {outp internal_Movement TID_Movement_t1 ; 
@@ -848,7 +849,7 @@ definition I_Movement_i1 where
   })
 "
 
-paragraph \<open> Waiting \<close>
+paragraph \<open> Waiting \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_Waiting_sync where
 "CS_Movement_Waiting_sync \<equiv> 
   set (
@@ -1045,7 +1046,7 @@ definition State_Movement_Waiting_R where
    skip
 "
 
-paragraph \<open> Going \<close>
+paragraph \<open> Going \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_Going_sync where
 "CS_Movement_Going_sync \<equiv> 
   set (
@@ -1149,7 +1150,7 @@ definition State_Movement_Going_R where
    skip
 "
 
-paragraph \<open> Found \<close>
+paragraph \<open> Found \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_Found_sync where
 "CS_Movement_Found_sync \<equiv> 
   set (
@@ -1224,7 +1225,7 @@ definition State_Movement_Found_R where
     \<parallel>\<^bsub> (int_int_Movement - Movement_Found_triggers) \<^esub> 
    skip
 "
-paragraph \<open> Final (j1) \<close>
+paragraph \<open> Final (j1) \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_j1_sync where
 "CS_Movement_j1_sync \<equiv>
   set (
@@ -1284,7 +1285,7 @@ definition State_Movement_j1_R where
    skip
 "
 
-paragraph \<open> Avoiding \<close>
+paragraph \<open> Avoiding \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_Avoiding_sync where
 "CS_Movement_Avoiding_sync \<equiv> 
   set (
@@ -1405,7 +1406,7 @@ definition State_Movement_Avoiding_R where
    skip
 "
 
-paragraph \<open> TryingAgain \<close>
+paragraph \<open> TryingAgain \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_TryingAgain_sync where
 "CS_Movement_TryingAgain_sync \<equiv>
   set (
@@ -1519,7 +1520,7 @@ definition State_Movement_TryingAgain_R where
    skip
 "
 
-paragraph \<open> AvoidingAgain \<close>
+paragraph \<open> AvoidingAgain \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_AvoidingAgain_sync where
 "CS_Movement_AvoidingAgain_sync \<equiv> 
   set (
@@ -1652,7 +1653,7 @@ definition State_Movement_AvoidingAgain_R where
    skip
 "
 
-paragraph \<open> GettingOut \<close>
+paragraph \<open> GettingOut \<close>text\<open>\mbox{}\<close>
 abbreviation CS_Movement_GettingOut_sync where
 "CS_Movement_GettingOut_sync \<equiv>
   set (

@@ -1,3 +1,4 @@
+section \<open> MainController \label{sec:chem_maincontroller}\<close>
 
 theory RoboChart_ChemicalDetector_autonomous_maincontroller
   imports "RoboChart_ChemicalDetector_autonomous_general"
@@ -211,7 +212,9 @@ definition GasAnalysis_MemoryTransitions_opt_2 where
 "
 
 subsubsection \<open> States \<close>
-paragraph \<open> Initial \<close>
+(*An extra \mbox{} here is to avoid the next definition will be generated in the same line as 
+this paragraph *)
+paragraph \<open> Initial \<close>text\<open>\mbox{}\<close>
 definition I_GasAnalysis_i1 where
 "I_GasAnalysis_i1 = (\<lambda> (id::integer) . 
   do {outp internal_GasAnalysis TID_GasAnalysis_t1 ; 
@@ -220,7 +223,7 @@ definition I_GasAnalysis_i1 where
   })
 "
 
-paragraph \<open> NoGas \<close>
+paragraph \<open> NoGas \<close>text\<open>\mbox{}\<close>
 definition CS_GasAnalysis_NoGas_sync where
 "CS_GasAnalysis_NoGas_sync = 
   set (
@@ -335,7 +338,7 @@ definition State_GasAnalysis_NoGas_R where
    skip
 "
 
-paragraph \<open> Analysis \<close>
+paragraph \<open> Analysis \<close>text\<open>\mbox{}\<close>
 definition CS_GasAnalysis_Analysis_sync where
 "CS_GasAnalysis_Analysis_sync = 
   set (
@@ -424,7 +427,7 @@ definition State_GasAnalysis_Analysis_R where
    skip
 "
 
-paragraph \<open> GasDetected \<close>
+paragraph \<open> GasDetected \<close>text\<open>\mbox{}\<close>
 definition CS_GasAnalysis_GasDetected_sync where
 "CS_GasAnalysis_GasDetected_sync = 
   set (
@@ -519,7 +522,7 @@ definition State_GasAnalysis_GasDetected_R where
    skip
 "
 
-paragraph \<open> Final \<close>
+paragraph \<open> Final \<close>text\<open>\mbox{}\<close>
 definition CS_GasAnalysis_j1_sync where
 "CS_GasAnalysis_j1_sync = 
   set (
@@ -562,7 +565,7 @@ definition State_GasAnalysis_j1_R where
    skip
 "
 
-paragraph \<open> Reading \<close>
+paragraph \<open> Reading \<close>text\<open>\mbox{}\<close>
 definition CS_GasAnalysis_Reading_sync where
 "CS_GasAnalysis_Reading_sync = 
   set (

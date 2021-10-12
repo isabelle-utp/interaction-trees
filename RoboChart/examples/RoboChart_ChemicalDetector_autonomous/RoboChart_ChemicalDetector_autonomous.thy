@@ -1,3 +1,4 @@
+section \<open> Module \label{sec:chem_module}\<close>
 
 theory RoboChart_ChemicalDetector_autonomous
   imports "RoboChart_ChemicalDetector_autonomous_general"
@@ -5,7 +6,6 @@ theory RoboChart_ChemicalDetector_autonomous
     "RoboChart_ChemicalDetector_autonomous_microcontroller"
 begin
 
-subsection \<open> Module \label{ssec:chem_module}\<close>
 text \<open>For the channel name in the channel type for the module of a RoboChart model, we use a simple 
 name without adding a suffix. This is to make the events in the animation of the model have the 
 same name as the event name in the platform. \<close>

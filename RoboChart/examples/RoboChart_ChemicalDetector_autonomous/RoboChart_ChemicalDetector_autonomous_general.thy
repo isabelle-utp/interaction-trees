@@ -1,78 +1,96 @@
-section \<open> Animation of the autonomous chemical detector RoboChart model \<close>
+section \<open> Introduction \<close>
 text \<open> This theory aims for animation of the autonomous chemical detector RoboChart model 
 (Version 4.0)
 \footnote{
 @{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4"}
 }
 based on its CSP semantics. This model is obsolete and cannot be supported in the current 
-RoboTool v2.0, and so we have updated it. The update includes a correction of an error in the 
-definition of the @{text intensity} function, a removal of the unnecessary transition from 
-@{text Avoiding} to @{text Going} in the @{text Movement} state machine, and other changes are minor.
+RoboTool v2.0, and so we have updated it. The update includes 
+\begin{itemize}
+  \item a correction (@{verbatim "result==gs[x].i"} to @{verbatim "result==gs[y].i"}) of an error 
+    in the definition of the @{text intensity} function, 
+  \item a removal of the unnecessary transition (with trigger @{text "resume"}) from 
+    @{text Avoiding} to @{text Going} in the @{text Movement} state machine, and 
+  \item other changes are minor.
+\end{itemize}
 \<close>
 
 text \<open> 
-\begin{figure}
-  \includegraphics[scale=0.25]{images/Module.pdf}
+The complete model is displayed in Figs.~\ref{fig:robochart_autonomous_module}-
+\ref{fig:robochart_autonomous_movement}.
+﻿\begin{figure}
+	\centering
+  \includegraphics[scale=0.75]{images/Module.pdf}
   \caption{The RoboChart model of an autonomous chemical detector example}
   \label{fig:robochart_autonomous_module}
 \end{figure}
 
 \begin{figure}
-  \includegraphics[scale=0.25]{images/Chemical.pdf}
+	\centering
+  \includegraphics[scale=0.80]{images/Chemical.pdf}
   \caption{The Chemical package}
   \label{fig:robochart_autonomous_chemical}
 \end{figure}
 
 \begin{figure}
-  \includegraphics[scale=0.25]{images/Location.pdf}
+	\centering
+  \includegraphics[scale=1.0]{images/Location.pdf}
   \caption{The Location package}
   \label{fig:robochart_autonomous_location}
 \end{figure}
 
 \begin{figure}
-  \includegraphics[scale=0.25]{images/MainController.pdf}
+	\centering
+  \includegraphics[scale=1.0]{images/MainController.pdf}
   \caption{The MainController package}
   \label{fig:robochart_autonomous_maincontroller}
 \end{figure}
 
 \begin{figure}
-  \includegraphics[scale=0.25]{images/GasAnalysis.pdf}
+	\centering
+  \includegraphics[scale=0.8]{images/GasAnalysis.pdf}
   \caption{The GasAnalysis state machine}
   \label{fig:robochart_autonomous_gasanalysis}
 \end{figure}
 
 \begin{figure}
-  \includegraphics[scale=0.25]{images/MicroController.pdf}
+	\centering
+  \includegraphics[scale=0.9]{images/MicroController.pdf}
   \caption{The MicroController package}
   \label{fig:robochart_autonomous_microcontroller}
 \end{figure}
 
 \begin{figure}
-  \includegraphics[scale=0.25]{images/Movement.pdf}
+	\centering
+  \includegraphics[scale=0.45]{images/Movement.pdf}
   \caption{The Movement state machine}
   \label{fig:robochart_autonomous_movement}
 \end{figure}
 \<close>
 
-text \<open>We structure the theory as follows. In Sect.~\ref{ssec:chem_general}, we give the general 
+text \<open>We structure the theory as follows. In Sect.~\ref{sec:chem_general}, we give the general 
 definitions. Sects.~\ref{ssec:chem_chemical} and~\ref{ssec:chem_location} define types and 
-functions in the @{text Chemical} and @{text Location} packages of the model. The @{text GasAnalysis} 
-state machine and the @{text MainController} controller are defined in 
-Sects.~\ref{ssec:chem_gasanalysis} and~\ref{ssec:chem_maincontroller}. Then we present general 
+functions in the @{text Chemical} and @{text Location} packages of the model. 
+Two controllers are defined in Sects.~\ref{sec:chem_maincontroller} and 
+\ref{sec:chem_microcontroller}.
+The @{text GasAnalysis} state machine and the @{text MainController} controller are defined in 
+Sects.~\ref{ssec:chem_gasanalysis} and~\ref{ssec:chem_maincontroller}. Then we give an overview of 
+the @{text MicroController} in Sect.~\ref{ssec:chem_movement_overview}, present general 
 definitions of the @{text Movement} state machine, including the state machine defined operation 
 @{text changeDirection}, in Sect.~\ref{ssec:chem_movement_general}. 
 Afterwards, the operation and @{text Movement} are defined in 
 Sects.~\ref{ssec:chem_changedirection_op} and~\ref{ssec:chem_movement}, and @{text MicroController} 
 is defined in Sect.~\ref{ssec:chem_microcontroller}. Finally, the module @{text mod0} is defined in 
-Sect.~\ref{ssec:chem_module}.
+Sect.~\ref{sec:chem_module}.
 \<close>
+
+section \<open> General definitions \label{sec:chem_general}\<close>
 
 theory RoboChart_ChemicalDetector_autonomous_general
   imports "ITree_RoboChart.ITree_RoboChart" "RoboChart_Simulation"
           "Z_Toolkit.Bounded_List"
 begin
 
-subsection \<open> General definitions \label{ssec:chem_general}\<close>
 text \<open>The values below for the instantiation of @{term robochart_confs} come from the 
 @{verbatim "instantiation.csp"}.
 \<close>
@@ -91,8 +109,8 @@ and should start from RoboChart models.
 
 Here, we introduce a generic way to define finite primitive types (as for model checking of CSP 
 semantics). The type variable @{typ 'a} is finite, and such one example is the numeral type @{typ 2}
- (@{text "2 Chemical_Chem"}) which contains two elements: @{term "0::2"} and @{term "1::2"}. 
-And @{value "2::2"} is just equal to @{value "0::2"}.
+ (@{text "2 Chemical_Chem"}) which contains two elements: @{text "0::2"} and @{text "1::2"}. 
+And @{text "2::2"} is just equal to @{text "0::2"}.
 
 Similar to the CSP representation of named types, the use of a numeral type for @{typ 'a} also 
 enables the elements of this type can be compared.
@@ -132,7 +150,8 @@ fun Chemical_goreq :: "2 Chemical_Intensity \<Rightarrow> 2 Chemical_Intensity \
 
 text \<open> In CSP, @{verbatim "LSeq(T,n)"} from @{verbatim "core_defs.csp"} can be used as a type or 
 an expression. In this RoboChart model, it is used as a type, parametrised by $n$. We use 
-@{term Bounded_List} to implement it, such as @{typ "int blist[2]"} for @{verbatim "LSeq(int, 2)"}. 
+@{theory Z_Toolkit.Bounded_List} to implement it, such as @{text "int blist[2]"} for 
+@{verbatim "LSeq(int, 2)"}. 
 
 The @{term "lseq s n"} function below gives a list of the all bounded lists of which each contains 
 elements from the list @{term s} only and has its length equal to @{term n}. 
