@@ -78,4 +78,10 @@ lemma Collect_List_member [code_unfold]: "Collect (List.member xs) = set xs"
 
 declare image_ident [code_unfold]
 
+lemma all_mem_Ball [code_unfold]: "(\<forall> x. x \<in> A \<longrightarrow> P x) \<longleftrightarrow> (\<forall> x\<in>A. P x)"
+  by auto
+
+lemma ex_mem_Bex [code_unfold]: "(\<exists> x. x \<in> A \<and> P x) \<longleftrightarrow> (\<exists>x\<in>A. P x)"
+  by auto
+
 end
