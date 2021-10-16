@@ -344,6 +344,13 @@ lemma bind_SilsE:
   shows R
   using assms(1) assms(2) assms(3) bind_Sils_dest by blast  
 
+lemma bind_SilsE':
+  assumes "Sils n X = (P \<bind> Q)"
+    "\<And> P'. \<lbrakk> P = Sils n P'; P' \<bind> Q = X \<rbrakk> \<Longrightarrow> R"
+    "\<And> x m. \<lbrakk> m \<le> n; P = Sils m (Ret x); Q x = Sils (n - m) X \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) bind_SilsE)
+
 lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
   by (metis Sils.simps(1) is_Ret_Sils itree.disc(1))
 

@@ -198,7 +198,8 @@ lemmas T1 = T1a T1b
 
 subsection \<open> Divergences \<close>
 
-definition "divergences P = {s @ t | s t. set s \<subseteq> range Ev \<and> set t \<subseteq> range Ev \<and> (\<exists> Q. P \<Midarrow>s\<Rightarrow> Q \<and> Q\<Up>)}"
+definition divergences :: "('a, 'b) itree \<Rightarrow> ('a, 'b) trace set" where
+"divergences P = {s @ t | s t. set s \<subseteq> range Ev \<and> set t \<subseteq> range Ev \<and> (\<exists> Q. P \<Midarrow>s\<Rightarrow> Q \<and> Q\<Up>)}"
 
 lemma divergences_alt_def: 
   "divergences P = {map Ev (s @ t) | s t. (\<exists> Q. P \<midarrow>s\<leadsto> Q \<and> Q\<Up>)}"
@@ -284,6 +285,16 @@ lemma divergences_diverge: "divergences diverge = lists (range Ev)"
 
 lemma divergences_Ret: "divergences (Ret x) = {}"
   by (simp add: divergences_alt_def)
+
+lemma divergences_Vis: "divergences (Vis F) = {[Ev e] @ s | e s. e \<in> pdom(F) \<and> s \<in> divergences(F(e)\<^sub>p)}" 
+  apply (auto simp add: divergences_alt_def)
+  apply (metis (no_types, lifting) append_Cons diverge_not_Vis diverges_diverge diverges_implies_equal list.simps(9) trace_to_VisE)
+  apply (metis Vis_Cons_trns append_Cons list.simps(9))
+  done
+
+lemma divergences_Sil: "divergences (Sil P) = divergences P"
+  by (auto simp add: divergences_alt_def)
+     (metis stabilises_Sil trace_to_Nil trace_to_SilE)
 
 subsection \<open> Failures \<close>
 
@@ -556,5 +567,131 @@ lemma div_free_is_determinsitic:
   apply (meson trace_to_Ret_excl_Vis)
   apply (metis event.simps(4) trace_last_Ev)+  
   done
+hide_const Map.dom
+
+lemma has_Nil_divergence_unstable: "[] \<in> divergences Q \<Longrightarrow> unstable Q"
+  by (auto simp add: divergences_def diverges_implies_unstable diverges_then_diverge mstep_to_def trace_to_Nil_diverges)
+
+lemma divergences_has_Nil_is_diverge:
+  "[] \<in> divergences P \<Longrightarrow> P = diverge"
+proof (coinduction arbitrary: P rule: itree_strong_coind')
+case RetF
+  then show ?case by (simp add: has_Nil_divergence_unstable itree.distinct_disc(2))
+next
+  case SilF
+  then show ?case by (simp add: has_Nil_divergence_unstable)
+next
+  case VisF
+  then show ?case by (simp, meson has_Nil_divergence_unstable itree.distinct_disc(6))
+next
+  case Ret
+  then show ?case by (auto)
+next
+  case Sil
+  then show ?case by (auto simp add: divergences_Sil, metis diverge.code itree.inject(2))
+next
+  case Vis
+  then show ?case by (auto simp add: divergences_Vis)
+qed
+
+lemma dom_Vis_ref: "dom F = - (\<Union> {E. Vis F ref (Ev ` E)})"
+  by (auto simp add: refuses_def)
+
+lemma dom_from_failures: "dom F = {a. \<forall> E. ([], E) \<in> failures (Vis F) \<longrightarrow> Ev a \<notin> E}"
+  apply (simp only: dom_Vis_ref)
+  apply (simp add: failures_def mstep_to_def refuses_def )
+  apply safe
+    apply (erule trace_to_VisE)
+  apply (simp)
+  apply (metis (no_types, hide_lams) Int_insert_left_if0 disjoint_iff image_empty image_insert inf_bot_left singletonI)
+    apply (auto)
+  done
+ 
+theorem wbisim_implies_fd_equiv:
+  assumes "failures(P) = failures(Q) \<and> divergences(P) = divergences(Q)"
+  shows "P \<approx> Q"
+  using assms
+proof (coinduction arbitrary: P Q rule: wbisim_strong_Sil_coind)
+  case (2 P Q)
+  then show ?case
+    using divergences_has_Nil_is_diverge by (auto simp add: failures_diverge divergences_diverge)
+next
+  case (3 P' P Q)
+  then show ?case
+    by (metis Sil_wbisim_iff2 failures_Sil wbisim_eq_divergences wbisim_refl)
+next
+  case (4 P Q)
+  then show ?case
+    by (metis failure_Ret_neq_Vis is_Ret_def is_VisE itree.exhaust_disc) 
+next
+  case (5 F G P Q)
+
+  hence 1: "failures (Vis F) = failures (Vis G)"
+    by auto
+
+  have 2: "divergences (Vis F) = divergences (Vis G)"
+    using 5 by auto
+
+  thm set_eq_iff
+
+  have dom: "dom F = dom G"
+    by (simp add: 5 dom_from_failures)
+
+  have fd: "(\<forall>e\<in>dom F. (\<exists>P Q. F(e)\<^sub>p = P \<and> G(e)\<^sub>p = Q \<and> failures P = failures Q \<and> divergences P = divergences Q))"
+  proof
+    fix e
+    assume a: "e \<in> dom F"
+    show "\<exists>P Q. F(e)\<^sub>p = P \<and> G(e)\<^sub>p = Q \<and> failures P = failures Q \<and> divergences P = divergences Q"
+    proof -
+      have "failures (F(e)\<^sub>p) = failures (G(e)\<^sub>p)"
+      proof (auto simp add: set_eq_iff)
+        fix tr E
+        assume "(tr, E) \<in> failures (F(e)\<^sub>p)"
+        hence i: "([Ev e] @ tr, E) \<in> failures (Vis F)"
+          by (simp add: failures_Vis a)
+        with 1 have "([Ev e] @ tr, E) \<in> failures (Vis G)"
+          by auto
+        thus "(tr, E) \<in> failures (G(e)\<^sub>p) "
+          by (simp add: failures_Vis)
+      next
+        fix tr E
+        assume "(tr, E) \<in> failures (G(e)\<^sub>p)"
+        with dom[THEN sym] have i: "([Ev e] @ tr, E) \<in> failures (Vis G)"
+          by (simp add: failures_Vis a)
+        with 1 have "([Ev e] @ tr, E) \<in> failures (Vis F)"
+          by auto
+        thus "(tr, E) \<in> failures (F(e)\<^sub>p) "
+          by (simp add: failures_Vis)
+      qed
+      moreover have "divergences(F(e)\<^sub>p) = divergences(G(e)\<^sub>p)"
+      proof (auto simp add: set_eq_iff)
+        fix tr
+        assume "tr \<in> divergences (F(e)\<^sub>p)"
+        hence i: "[Ev e] @ tr \<in> divergences (Vis F)"
+          by (simp add: divergences_Vis a)
+        with 2 have "[Ev e] @ tr \<in> divergences (Vis G)"
+          by auto
+        thus "tr \<in> divergences (G(e)\<^sub>p) "
+          by (simp add: divergences_Vis)
+      next
+        fix tr
+        assume "tr \<in> divergences (G(e)\<^sub>p)"
+        with dom[THEN sym] have i: "[Ev e] @ tr \<in> divergences (Vis G)"
+          by (simp add: divergences_Vis a)
+        with 2 have "[Ev e] @ tr \<in> divergences (Vis F)"
+          by auto
+        thus "tr \<in> divergences (F(e)\<^sub>p) "
+          by (simp add: divergences_Vis)
+      qed
+      ultimately show ?thesis
+        by auto
+    qed
+  qed
+  with dom show ?case by simp
+next
+  case (6 x y P Q)
+  then show ?case 
+    by (force simp add: failures_Ret divergences_Ret)
+qed (simp)
 
 end

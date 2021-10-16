@@ -83,7 +83,7 @@ lemma wbisim_to_ndiv2 [elim]: "P \<approx>\<^bsub>\<R>\<^esub> diverge \<Longrig
   done
 
 coinductive wbisim :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>" 50) where
-wbisim_divI: "diverge \<approx> diverge" |
+wbisim_divI: "diverge \<approx> diverge" | \<comment> \<open> Can we eliminate this? \<close>
 wbisimI: "P \<approx>\<^bsub>(\<approx>)\<^esub> Q \<Longrightarrow> P \<approx> Q"
   
 lemma diverge_wbisim1: "diverge \<approx> Q \<Longrightarrow> Q = diverge"
@@ -262,6 +262,29 @@ proof (rule wbisim.coinduct[of \<R>, OF assms(1)], simp)
   qed
 qed
 
+lemma wbisim_coind_Sil: 
+  assumes 
+    "\<R> P Q"
+    "\<And> P Q. \<R> P Q \<Longrightarrow> \<R> Q P"
+    "\<And> P. \<R> diverge P \<Longrightarrow> P = diverge"
+    "\<And> P Q. \<R> (Sil P) Q \<Longrightarrow> \<R> P Q"
+    "\<And> P Q. \<lbrakk> \<R> P Q; stable P; stable Q \<rbrakk> \<Longrightarrow> (is_Vis P \<longleftrightarrow> is_Vis Q) \<and> (is_Ret P \<longleftrightarrow> is_Ret Q)"
+    "\<And> F G. \<R> (Vis F) (Vis G) \<Longrightarrow> pdom F = pdom G \<and> (\<forall> e \<in> pdom(F). \<R> (F e) (G e))"
+    "\<And> x y. \<R> (Ret x) (Ret y) \<Longrightarrow> x = y"
+  shows "P \<approx> Q"
+  using assms
+  apply (rule_tac wbisim_coind[of \<R>])
+        apply (assumption)
+       apply (assumption)
+      apply (assumption)
+  subgoal premises prems for n P Q
+    using prems(4,8)
+    apply (induct n)
+     apply (simp_all)
+    done
+    apply assumption+
+  done
+
 lemma wbisim_strong_coind: 
   assumes 
     "\<R> P Q"
@@ -273,6 +296,27 @@ lemma wbisim_strong_coind:
     "\<And> x y. \<R> (Ret x) (Ret y) \<Longrightarrow> x = y"
   shows "P \<approx> Q"
   apply (rule wbisim_coind[of "\<lambda> x y. \<R> x y \<or> x \<approx> y"])
+  apply (simp_all add: assms)
+  apply (metis (mono_tags, lifting) assms(2) wbisim_sym)
+  apply (metis (full_types) assms(3) diverge_wbisim1)
+  apply (metis (mono_tags, lifting) assms(4))
+  apply (metis (no_types, lifting) assms(5) itree.case_eq_if itree.disc(5) itree.disc(9) itree.disc_eq_case(3) wbisim.cases wbisim_to.simps)
+  apply (metis assms(6) wbisim_both_VisE)
+  apply (metis (no_types, lifting) assms(7) itree.distinct(1) itree.inject(1) wbisim.cases wbisim_RetE)
+  done
+
+
+lemma wbisim_strong_Sil_coind: 
+  assumes 
+    "\<R> P Q"
+    "\<And> P Q. \<R> P Q \<Longrightarrow> \<R> Q P"
+    "\<And> P. \<R> diverge P \<Longrightarrow> P = diverge"
+    "\<And> P Q. \<R> (Sil P) Q \<Longrightarrow> \<R> P Q \<or> P \<approx> Q"
+    "\<And> P Q. \<lbrakk> \<R> P Q; stable P; stable Q \<rbrakk> \<Longrightarrow> (is_Vis P \<longleftrightarrow> is_Vis Q) \<and> (is_Ret P \<longleftrightarrow> is_Ret Q)"
+    "\<And> F G. \<R> (Vis F) (Vis G) \<Longrightarrow> pdom F = pdom G \<and> (\<forall> e \<in> pdom(F). \<R> (F e) (G e) \<or> (F e) \<approx> (G e))"
+    "\<And> x y. \<R> (Ret x) (Ret y) \<Longrightarrow> x = y"
+  shows "P \<approx> Q"
+  apply (rule wbisim_coind_Sil[of "\<lambda> x y. \<R> x y \<or> x \<approx> y"])
   apply (simp_all add: assms)
   apply (metis (mono_tags, lifting) assms(2) wbisim_sym)
   apply (metis (full_types) assms(3) diverge_wbisim1)
@@ -359,7 +403,13 @@ lemma wbisim_step_stable:
 
 lemma "(\<And>s. Q\<^sub>1 s \<approx> Q\<^sub>2 s) \<Longrightarrow> P \<bind> Q\<^sub>1 \<approx> P \<bind> Q\<^sub>2"
   apply (rule wbisim_strong_coind[of "\<lambda> x y. \<exists> P Q. x = P \<bind> Q\<^sub>1 \<and> y = P \<bind> Q\<^sub>2 \<or> y = P \<bind> Q\<^sub>1 \<and> x = P \<bind> Q\<^sub>2"])
-  oops
+        apply auto[1]
+       apply auto[1]
+      apply (metis (no_types, lifting) bind_Ret bind_Sils bind_diverge bind_divergeE' diverge_wbisim1 diverge_wbisim2)
+     apply (auto)
+                   apply (erule bind_SilsE')
+  subgoal premises prems for n P Q P'
+    oops
 
   
 text \<open> For CCS, weak bisimulation is not a congruence with respect to choice. Hence, Milner creates
