@@ -933,7 +933,7 @@ primcorec exception :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, '
                 \<comment> \<open> No synchronisation\<close> 
                 {} 
                 \<comment> \<open> Exceptional behaviours: events in @{term A} enables by @{term P}, leading to @{term Q}\<close>
-                (pfun_entries (A \<inter> pdom(F)) ((\<lambda> _. Q))))))"
+                (pfun_entries (A \<inter> pdom(F)) (\<lambda> _. True) ((\<lambda> _. Q))))))"
 
 subsection \<open> Renaming \<close>
 
