@@ -1,8 +1,8 @@
 section \<open> Introduction \<close>
 text \<open> This theory aims for animation of the autonomous chemical detector RoboChart model 
-(Version 4.0)
+(Version 3.0)
 \footnote{
-@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4"}
+@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version3"}
 }
 based on its CSP semantics. This model is obsolete and cannot be supported in the current 
 RoboTool v2.0, and so we have updated it. The update includes 
@@ -173,7 +173,6 @@ text \<open> The @{term "mk_blist n s"} defines a list of the all bounded lists 
 to @{text n}.\<close>
 definition mk_blist :: "'n itself \<Rightarrow> 'a list \<Rightarrow> ('a blist['n::finite]) list" where
 "mk_blist _ xs = map (bmake TYPE('n)) (lseqn xs CARD('n))"
-
 
 datatype Chemical_Status = 
   Chemical_Status_noGas | Chemical_Status_gasD

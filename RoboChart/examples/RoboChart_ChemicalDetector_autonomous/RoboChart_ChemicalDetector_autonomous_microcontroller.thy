@@ -11,8 +11,8 @@ text \<open> The @{text Movement} state machine in the @{text MicroController} d
 a standard state machine.
 
 We also note that the machine @{text Movement} encoded in this theory differs from the original 
-version 4.0\footnote{
-@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version4"}
+version 3.0\footnote{
+@{url "https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version3"}
 }
  in that the transition @{text t21} from @{text Avoiding} to @{text Going} with a trigger 
 @{text resume} should not be here and so removed in this theory. \<close>
