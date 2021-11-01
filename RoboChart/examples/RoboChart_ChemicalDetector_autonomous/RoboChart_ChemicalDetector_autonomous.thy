@@ -88,12 +88,9 @@ connected to the input of the event in @{text MicroController} asynchronously.
 \<close>
 definition buffer0 :: "Chemical_Angle list \<Rightarrow> (Chan_ChemicalDetector, Chemical_Angle list) itree"  where
 "buffer0 = loop (\<lambda>la. 
-  do {guard(length la = 0); 
+  do {guard(length la \<ge> 0 \<and> length la \<le> 1); 
       v \<leftarrow> inp_in turn (set [(dout, a). a \<leftarrow> Chemical_Angle_list]); 
       Ret [snd v]} \<box>
-  do {guard(length la > 0); 
-      x \<leftarrow> inp_in turn (set [(dout, a). a \<leftarrow> Chemical_Angle_list]); 
-      Ret [snd x]}  \<box>
   do {guard(length la > 0); outp turn (din, hd la); Ret []}
 )"
 

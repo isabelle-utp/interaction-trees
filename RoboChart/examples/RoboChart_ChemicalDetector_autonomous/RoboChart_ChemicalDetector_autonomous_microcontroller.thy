@@ -213,7 +213,7 @@ text \<open>Because this state machine requires three undefined operations @{tex
 extra channels @{text randomWalkCall_Movement}, @{text moveCall_Movement}, and 
 @{text shortRandomWalkCall_Movement} to record calls of these operations. 
 
-Additionally, the state machine also requiresa state machine defined operation 
+Additionally, the state machine also requires state machine defined operation 
 @{text changeDirection}. The usual channels, such as @{text internal}, @{text terminate}, 
 flow channels, variables, and events, in the channel type for a state machine are also present for 
 this operation @{text changeDirection}. But these channels are not inside a separate channel type 
