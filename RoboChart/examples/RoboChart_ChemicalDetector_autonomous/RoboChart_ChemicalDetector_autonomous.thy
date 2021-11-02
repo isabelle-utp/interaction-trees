@@ -18,7 +18,7 @@ chantype Chan_ChemicalDetector =
   resume :: "InOut"
   turn :: "InOut \<times> Chemical_Angle"
   stop :: "InOut"
-  randomeWalkCall :: unit
+  randomWalkCall :: unit
   moveCall :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall :: unit
   (* timeout *)
@@ -61,7 +61,7 @@ definition rename_ChemicalDetector_D__MicroController_events where
   (enumchansp2_2 [(obstacle_MicroController_C, obstacle_C)] InOut_list Location_Loc_list) @
   (enumchansp2_2 [(odometer_MicroController_C, odometer_C)] InOut_list rc.core_real_list) @
   (enumchansp2_1 [(flag_MicroController_C, flag_C)] InOut_list) @
-  (enumchansp2_1 [(randomeWalkCall_MicroController_C, randomeWalkCall_C),
+  (enumchansp2_1 [(randomWalkCall_MicroController_C, randomWalkCall_C),
       (shortRandomWalkCall_MicroController_C, shortRandomWalkCall_C)] [()]) @
   (enumchansp2_2 [(moveCall_MicroController_C, moveCall_C)]
       rc.core_real_list Chemical_Angle_list) @
@@ -145,9 +145,9 @@ export_code
 
 generate_file \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close> = 
 \<open>module Simulate (simulate) where
-import qualified Interaction_Trees;
-import qualified Partial_Fun;
-import qualified Bounded_List;
+import Interaction_Trees;
+import Partial_Fun;
+import System.IO;
 import qualified Data.List.Split;
 import qualified Data.List;
 
@@ -192,26 +192,44 @@ renameGasEvent gas =
   (\e -> removeSubstr "Chemical_GasSensor_ext" e);
 -}
 
-simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Interaction_Trees.Itree e s -> Prelude.IO ();
-simulate_cnt n (Interaction_Trees.Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
-simulate_cnt n (Interaction_Trees.Sil p) =
+simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
+simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
+simulate_cnt n (Sil p) = 
   do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
-       if (n >= 2000) then do { Prelude.putStr "Many steps (> 2000); Continue? [Y/N]"; q <- Prelude.getLine;
+       if (n >= 2000) then do { Prelude.putStr "Many steps (> 2000); Continue? [Y/N]"; q <- Prelude.getLine; 
                               if (q == "Y") then simulate_cnt 0 p else Prelude.putStrLn "Ended early.";
                             }
                     else simulate_cnt (n + 1) p
      };
-simulate_cnt n (Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
-simulate_cnt n t@(Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist m)) =
+simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
   do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ renameGasEvent e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
+{-  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
+-}     
+       Prelude.putStr ("[Choose: 1-" ++ Prelude.show (Prelude.length m) ++ "]: ");
        e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
        case (Prelude.reads e) of
          []       -> if (Prelude.length m == 1)
-                       then simulate_cnt 0 (snd (m !! (0)))
+                       then do { Prelude.putStrLn (renameGasEvent (Prelude.show (fst (m !! 0)))) ; simulate_cnt 0 (snd (m !! (0)))}
                        else do { Prelude.putStrLn "No parse"; simulate_cnt n t }
          [(v, _)] -> if (v > Prelude.length m)
                        then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
-                       else simulate_cnt 0 (snd (m !! (v - 1)))
+                       else do { Prelude.putStrLn (renameGasEvent (Prelude.show (fst (m !! (v-1))))) ; simulate_cnt 0 (snd (m !! (v - 1)))}
+     };
+simulate_cnt n t@(Vis (Pfun_of_map f)) = 
+  do { Prelude.putStr ("Enter an event:");
+       e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
+       case (Prelude.reads e) of
+         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t } 
+         [(v, _)] -> case f v of
+                       Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       Just t' -> simulate_cnt 0 t'
      };
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Interaction_Trees.Itree e s -> Prelude.IO ();
@@ -219,10 +237,10 @@ simulate = simulate_cnt 0;
 \<close>
 
 generate_file \<open>code/RoboChart_ChemicalDetector/Main.hs\<close> = 
-\<open>import qualified Interaction_Trees;
-import qualified Partial_Fun;
-import qualified Simulate;
-import qualified RoboChart_ChemicalDetector_autonomous;
+\<open>import Interaction_Trees;
+import Partial_Fun;
+import Simulate;
+import RoboChart_ChemicalDetector_autonomous;
 
 main :: IO ()
 main =

@@ -21,7 +21,7 @@ subsection \<open> Movement general definitions\label{ssec:chem_movement_general
 subsubsection \<open> Constants \<close>
 text \<open>The values of these constants are from @{verbatim "instantiation.csp"}. \<close>
 abbreviation const_Movement_lv :: "core_real" where
-"const_Movement_lv \<equiv> 0"
+"const_Movement_lv \<equiv> 1"
 
 abbreviation const_Movement_evadeTime :: "core_nat" where
 "const_Movement_evadeTime \<equiv> 0"
@@ -256,7 +256,7 @@ chantype Chan_Movement =
   flag_Movement :: "InOut"
 (* Call events for undefined operations *)
   (* changeDirectionCall_Movement :: "Location_Loc" *)
-  randomeWalkCall_Movement :: unit
+  randomWalkCall_Movement :: unit
   moveCall_Movement :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall_Movement :: unit
 
@@ -281,7 +281,7 @@ operation. \<close>
 (* Call events for undefined operations. In the operation, use the channel (moveCall_Movement) 
   from Movement *)
   (* 
-  randomeWalkCall_changeDirection :: unit
+  randomWalkCall_changeDirection :: unit
   moveCall_changeDirection :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall_changeDirection :: unit
   *)
@@ -309,7 +309,7 @@ text \<open>Calls to the platform provided operations @{text randomWalk}, @{text
 @{term CALL__move_Movement}, and @{term CALL__shortRandomWalk_Movement} below. Each function outputs 
 the operation parameters on its corresponding channel event.\<close>
 definition CALL__randomWalk_Movement :: "integer \<Rightarrow> (Chan_Movement, unit) itree" where
-"CALL__randomWalk_Movement idd = do {outp randomeWalkCall_Movement ()}"
+"CALL__randomWalk_Movement idd = do {outp randomWalkCall_Movement ()}"
 
 definition CALL__move_Movement :: "integer \<Rightarrow> core_real \<Rightarrow> Chemical_Angle \<Rightarrow> (Chan_Movement, unit) itree" where
 "CALL__move_Movement idd lv a = do {outp moveCall_Movement (lv, a)}"
@@ -2044,7 +2044,7 @@ definition rename_Movement_events_others where
   (enumchansp2 [enter_Movement_C, entered_Movement_C, exit_Movement_C, exited_Movement_C] 
     SIDS_Movement_list SIDS_Movement_list) @
   (enumchansp1 [internal_Movement_C] TIDS_Movement_list) @
-  (enumchansp1 [randomeWalkCall_Movement_C, shortRandomWalkCall_Movement_C] [()]) @
+  (enumchansp1 [randomWalkCall_Movement_C, shortRandomWalkCall_Movement_C] [()]) @
   (enumchansp2 [moveCall_Movement_C] rc.core_real_list Chemical_Angle_list)
 "
 
@@ -2091,7 +2091,7 @@ chantype Chan_MicroCtrl =
   stop_MicroController :: "InOut"
   flag_MicroController :: "InOut"
 (* operation call events *)
-  randomeWalkCall_MicroController :: unit
+  randomWalkCall_MicroController :: unit
   moveCall_MicroController :: "core_real \<times> Chemical_Angle"
   shortRandomWalkCall_MicroController :: unit
 (* timeout *)
@@ -2113,7 +2113,7 @@ definition rename_MicroController_Movement_events where
   (enumchansp2_2 [(odometer_Movement_C, odometer_MicroController_C)] InOut_list rc.core_real_list) @
   (enumchansp2_1 [(stop_Movement_C, stop_MicroController_C)] InOut_list) @
   (enumchansp2_1 [(flag_Movement_C, flag_MicroController_C)] InOut_list) @
-  (enumchansp2_1 [(randomeWalkCall_Movement_C, randomeWalkCall_MicroController_C), 
+  (enumchansp2_1 [(randomWalkCall_Movement_C, randomWalkCall_MicroController_C), 
       (shortRandomWalkCall_Movement_C, shortRandomWalkCall_MicroController_C)] [()]) @
   (enumchanp2_2 (moveCall_Movement_C, moveCall_MicroController_C) rc.core_int_list 
     Chemical_Angle_list)

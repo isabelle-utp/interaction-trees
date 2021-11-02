@@ -73,18 +73,19 @@ simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
 simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
   do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ renameGasEvent e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
 {-  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
--}       
+-}     
+       Prelude.putStr ("[Choose: 1-" ++ Prelude.show (Prelude.length m) ++ "]: ");
        e <- Prelude.getLine;
        if (e == "q" || e == "Q") then
          Prelude.putStrLn "Simulation terminated"
        else
        case (Prelude.reads e) of
          []       -> if (Prelude.length m == 1)
-                       then simulate_cnt 0 (snd (m !! (0)))
+                       then do { Prelude.putStrLn (renameGasEvent (Prelude.show (fst (m !! 0)))) ; simulate_cnt 0 (snd (m !! (0)))}
                        else do { Prelude.putStrLn "No parse"; simulate_cnt n t }
          [(v, _)] -> if (v > Prelude.length m)
                        then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
-                       else simulate_cnt 0 (snd (m !! (v - 1)))
+                       else do { Prelude.putStrLn (renameGasEvent (Prelude.show (fst (m !! (v-1))))) ; simulate_cnt 0 (snd (m !! (v - 1)))}
      };
 simulate_cnt n t@(Vis (Pfun_of_map f)) = 
   do { Prelude.putStr ("Enter an event:");
