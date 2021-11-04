@@ -16,7 +16,7 @@ fun exec_res :: "('e, 'r) itree \<Rightarrow> 'r execres" where
 "exec_res (Ret x) = TermEx x" |
 "exec_res _ = TimeoutEx MAX_SIL_STEPS"
 
-definition itree_exec :: "('b::default \<Rightarrow> (unit, 's) itree) \<Rightarrow> 's execres" where
+definition itree_exec :: "('b::default \<Rightarrow> ('e, 's) itree) \<Rightarrow> 's execres" where
 "itree_exec P = exec_res (rem_Sils (P default))"
 
 ML \<open> 
