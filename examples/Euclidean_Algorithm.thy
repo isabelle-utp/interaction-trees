@@ -1,26 +1,24 @@
 theory Euclidean_Algorithm
-  imports "Interaction_Trees.ITree_Simulation"
+  imports "ITree_UTP.ITree_UTP"
 begin lit_vars
 
-alphabet gcd = 
+def_consts MAX_SIL_STEPS = 100
+
+zstore gcd_st = 
   a :: integer
   b :: integer
 
-record_default gcd
+procedure eucl "(A::integer, B::integer)" over gcd_st =
+"(a, b) := (A, B) \<Zcomp> 
+ while a \<noteq> b inv a > 0 \<and> b > 0 \<and> gcd a b = gcd A B do 
+   if a > b 
+     then a := a - b 
+     else b := b - a 
+   fi 
+ od"
 
-definition eucl :: "integer \<times> integer \<Rightarrow> ('e, gcd) htree" where
-  "eucl \<equiv>
-   (\<lambda> (A, B). 
-    (a, b) := (A, B) \<Zcomp> 
-    while a \<noteq> b inv a > 0 \<and> b > 0 \<and> gcd a b = gcd A B do 
-      if a > b 
-        then a := a - b 
-        else b := b - a 
-      fi 
-    od)"
-
-definition eucl_proc :: "('e, (integer \<times> integer), integer, gcd) procedure" where
-"eucl_proc = (proc (A, B). (eucl(A, B) \<Zcomp> return a) \<box> Stop)"
+execute "eucl (2, 8)"
+execute "eucl (12, 30)"
 
 lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a = gcd A B\<^bold>}"
   unfolding eucl_def
@@ -30,10 +28,7 @@ lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a
   apply (metis (mono_tags, hide_lams) abs_integer_code add.right_neutral gcd_add2 gcd_code_integer gcd_integer.rep_eq integer_eq_iff not_less_iff_gr_or_eq zero_integer.rep_eq)
   done
 
-definition eucl_gcd where "eucl_gcd = procproc eucl_proc"
 
-value "exec_proc eucl_proc (6, 33)"
 
-export_code eucl_gcd in Haskell module_name Euclidean_Algorithm (string_classes)
 
 end
