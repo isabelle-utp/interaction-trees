@@ -57,13 +57,20 @@ lemma test_false: "\<exclamdown>False! = Stop"
 definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "cond_itree P b Q = (\<lambda> s. if b s then P s else Q s)"
 
+definition for_itree :: "('i list, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i \<Zcomp> Q) (I s) Skip) s)"
+
 syntax 
-  "_cond_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
+  "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
+  "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ fi")
   "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
+  "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
 
 translations
   "_cond_itree b P Q" == "CONST cond_itree P (b)\<^sub>e Q"
+  "_cond_itree1 b P " == "CONST cond_itree P (b)\<^sub>e (CONST Skip)"
   "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
+  "_for_itree i I P" == "CONST for_itree (I)\<^sub>e (\<lambda> i. P)"
 
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
@@ -82,6 +89,9 @@ lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<exclamdown>b!
 
 lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
+
+lemma for_empty: "for x in [] do P x od = Skip"
+  by (simp add: for_itree_def)
 
 text \<open> Hide the state of an action to produce a process \<close>
 

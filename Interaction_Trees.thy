@@ -141,7 +141,7 @@ lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind
 definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 
 syntax
-  "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixl "\<Zcomp>" 54)
+  "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixr "\<Zcomp>" 54)
 
 translations
   "P \<Zcomp> Q" == "CONST kleisli_comp (CONST bind) P Q"

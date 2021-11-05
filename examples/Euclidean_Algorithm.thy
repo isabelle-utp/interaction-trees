@@ -5,10 +5,10 @@ begin lit_vars
 def_consts MAX_SIL_STEPS = 100
 
 zstore gcd_st = 
-  a :: integer
-  b :: integer
+  a :: int
+  b :: int
 
-procedure eucl "(A::integer, B::integer)" over gcd_st =
+procedure eucl "(A::int, B::int)" over gcd_st =
 "(a, b) := (A, B) \<Zcomp> 
  while a \<noteq> b inv a > 0 \<and> b > 0 \<and> gcd a b = gcd A B do 
    if a > b 
@@ -24,11 +24,7 @@ lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a
   unfolding eucl_def
   apply (hoare_auto)
   apply (simp add: gcd_diff1 gcd_integer.rep_eq integer_eq_iff)
-  apply (metis gcd.commute gcd_diff1 gcd_integer.rep_eq integer_eq_iff minus_integer.rep_eq)
-  apply (metis (mono_tags, hide_lams) abs_integer_code add.right_neutral gcd_add2 gcd_code_integer gcd_integer.rep_eq integer_eq_iff not_less_iff_gr_or_eq zero_integer.rep_eq)
+  apply (metis gcd.commute gcd_diff1)
   done
-
-
-
 
 end
