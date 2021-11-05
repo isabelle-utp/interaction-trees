@@ -48,6 +48,15 @@ lemma hoare_cond [hoare_safe]:
 lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{P\<^bold>}"
   by (auto simp add: hoare_triple_def seq_rel spec_def)
 
+(* FIXME: Correctly specify and prove the following *)
+
+lemma hoare_for:
+  assumes "\<And> m n i. \<lbrakk> m \<le> i; i < n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i+1))\<^bold>}"
+  "`P \<longrightarrow> @(R m)`" "`@(R (n - 1)) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for i in [e\<^sub>1..<e\<^sub>2] do S i od \<^bold>{Q\<^bold>}"
+  apply (simp add: hoare_triple_def itree_rel_def retvals_def for_itree_def)
+  oops
+
 lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
   shows "\<^bold>{P\<^bold>}while B do S od\<^bold>{\<not> B \<and> P\<^bold>}"
