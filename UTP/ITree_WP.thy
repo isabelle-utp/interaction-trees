@@ -50,6 +50,9 @@ lemma wp_seq [wp]: "wp (S \<Zcomp> R) P = wp S (wp R P)"
 lemma wlp_seq [wp]: "wlp (S \<Zcomp> R) P = wlp S (wlp R P)"
   by (auto simp add: wlp_itree_def seq_rel)
 
+lemma wlp_let [wp]: "wlp (let x \<leftarrow> e in S x) b = (wlp (S (e \<s>)) b)\<^sub>e"
+  by (auto simp add: wlp_itree_def let_itree_def itree_rel_def retvals_def SEXP_def)
+
 lemma wlp_true [wp]: "wlp P True = (True)\<^sub>e"
   by (expr_simp add: wlp_itree_def)
 

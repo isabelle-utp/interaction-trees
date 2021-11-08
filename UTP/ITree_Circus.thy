@@ -57,20 +57,27 @@ lemma test_false: "\<exclamdown>False! = Stop"
 definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "cond_itree P b Q = (\<lambda> s. if b s then P s else Q s)"
 
-definition for_itree :: "('i list, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i \<Zcomp> Q) (I s) Skip) s)"
+text \<open> Similar to @{const Let} in HOL, but it evaluates the assigned expression on the initial state. \<close>
+
+definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"let_itree e S = (\<lambda> s. S (e s) s)"
+
+definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i \<Zcomp> Q) I Skip) s)"
 
 syntax 
   "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
   "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ fi")
   "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
+  "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
   "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
 
 translations
   "_cond_itree b P Q" == "CONST cond_itree P (b)\<^sub>e Q"
   "_cond_itree1 b P " == "CONST cond_itree P (b)\<^sub>e (CONST Skip)"
   "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
-  "_for_itree i I P" == "CONST for_itree (I)\<^sub>e (\<lambda> i. P)"
+  "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
+  "_for_itree i I P" == "CONST for_itree I (\<lambda> i. P)"
 
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"

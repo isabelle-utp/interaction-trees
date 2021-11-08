@@ -48,18 +48,24 @@ lemma hoare_cond [hoare_safe]:
 lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{P\<^bold>}"
   by (auto simp add: hoare_triple_def seq_rel spec_def)
 
+lemma hoare_let [hoare_safe]:
+  assumes "\<And> s. \<^bold>{P \<and> \<guillemotleft>s\<guillemotright> = \<^bold>v\<^bold>} (S (e s)) \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} let x \<leftarrow> e in S x \<^bold>{Q\<^bold>}"
+  using assms by (auto simp add: hoare_alt_def let_itree_def lens_defs)
+
 (* FIXME: Correctly specify and prove the following *)
 
 lemma hoare_for:
-  assumes "\<And> m n i. \<lbrakk> m \<le> i; i < n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i+1))\<^bold>}"
+  assumes "\<And> i. \<lbrakk> m \<le> i; i < n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i+1))\<^bold>}"
   "`P \<longrightarrow> @(R m)`" "`@(R (n - 1)) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for i in [e\<^sub>1..<e\<^sub>2] do S i od \<^bold>{Q\<^bold>}"
-  apply (simp add: hoare_triple_def itree_rel_def retvals_def for_itree_def)
+  shows "\<^bold>{P\<^bold>} for i in [m..<n] do S i od \<^bold>{Q\<^bold>}"
+  using assms
+  apply (simp add: for_itree_def)
   oops
 
 lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
-  shows "\<^bold>{P\<^bold>}while B do S od\<^bold>{\<not> B \<and> P\<^bold>}"
+  shows "\<^bold>{P\<^bold>} while B do S od \<^bold>{\<not> B \<and> P\<^bold>}"
 proof (rule hoareI)
   fix s s' tr
   assume while: "P s" "while B do S od s \<midarrow>tr\<leadsto> \<checkmark> s'"
