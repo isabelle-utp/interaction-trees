@@ -100,6 +100,9 @@ lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondow
 lemma for_empty: "for x in [] do P x od = Skip"
   by (simp add: for_itree_def)
 
+lemma for_Cons: "for_itree (x # xs) P = P x \<Zcomp> for_itree xs P"
+  by (simp add: for_itree_def)
+
 text \<open> Hide the state of an action to produce a process \<close>
 
 definition process :: "'s::default subst \<Rightarrow> ('e, 's, 'a) ktree \<Rightarrow> 'e process" where

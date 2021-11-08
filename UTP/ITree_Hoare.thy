@@ -25,6 +25,9 @@ lemma hoare_conseq:
   shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
   using assms by (auto simp add: hoare_alt_def, expr_auto)
 
+lemma hoare_skip: "\<^bold>{P\<^bold>} Skip \<^bold>{P\<^bold>}"
+  by (auto simp add: hoare_alt_def Skip_def)
+
 lemma hoare_assigns: "\<^bold>{\<sigma> \<dagger> P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}"
   by (auto intro!: hoareI simp add: assigns_def, expr_simp)
 
@@ -42,26 +45,56 @@ lemma hoare_fwd_assign [hoare_safe]:
 
 lemma hoare_cond [hoare_safe]:
   assumes "\<^bold>{B \<and> P\<^bold>} S \<^bold>{Q\<^bold>}" "\<^bold>{\<not>B \<and> P\<^bold>} T \<^bold>{Q\<^bold>}"
-  shows "\<^bold>{P\<^bold>}if B then S else T fi\<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def cond_itree_def)
 
-lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{P\<^bold>}"
+lemma hoare_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{R\<^bold>}"
   by (auto simp add: hoare_triple_def seq_rel spec_def)
+
+lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{P\<^bold>}"
+  by (simp add: hoare_seq)
 
 lemma hoare_let [hoare_safe]:
   assumes "\<And> s. \<^bold>{P \<and> \<guillemotleft>s\<guillemotright> = \<^bold>v\<^bold>} (S (e s)) \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} let x \<leftarrow> e in S x \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def let_itree_def lens_defs)
 
-(* FIXME: Correctly specify and prove the following *)
-
 lemma hoare_for:
-  assumes "\<And> i. \<lbrakk> m \<le> i; i < n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i+1))\<^bold>}"
-  "`P \<longrightarrow> @(R m)`" "`@(R (n - 1)) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for i in [m..<n] do S i od \<^bold>{Q\<^bold>}"
+  assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
+  shows "\<^bold>{@(R 0)\<^bold>} for i in xs do S i od \<^bold>{@(R (length xs))\<^bold>}"
   using assms
-  apply (simp add: for_itree_def)
-  oops
+proof (induct xs arbitrary: R)
+  case Nil
+  show ?case
+    by (simp add: for_empty hoare_skip del: SEXP_apply)
+next
+  case (Cons x xs)
+
+  from Cons(2)[of 0] have 1: "\<^bold>{@(R 0)\<^bold>} S x \<^bold>{@(R 1)\<^bold>}"
+    by (simp del: SEXP_apply)
+
+  from Cons(1)[of "\<lambda> n. R (Suc n)"] have 2: "\<^bold>{@(R 1)\<^bold>} for_itree xs S \<^bold>{@(R (Suc (length xs)))\<^bold>}"
+    by (simp del: SEXP_apply)
+       (metis Cons.prems One_nat_def Suc_eq_plus1 Suc_less_eq list.size(4) nth_Cons_Suc)
+
+  show ?case
+    by (simp add: for_Cons del: SEXP_apply, meson "1" "2" hoare_seq)
+qed
+
+term for_itree
+
+definition for_inv :: "'i list \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_inv I P S = for_itree I S"
+
+syntax "_for_inv_itree" :: "id \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ inv _. _ do _ od")
+translations "_for_inv_itree x I i P S" == "CONST for_inv I (\<lambda> i. (P)\<^sub>e) (\<lambda> x. S)"
+
+lemma hoare_for_inv [hoare_safe]:
+  assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
+    "`P \<longrightarrow> @(R 0)`" "`@(R (length xs)) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for x in xs inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
+  unfolding for_inv_def
+  by (meson assms hoare_conseq hoare_for)
 
 lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
