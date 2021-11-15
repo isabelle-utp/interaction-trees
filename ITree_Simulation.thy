@@ -80,7 +80,7 @@ structure ISim_Path = Theory_Data
 fun simulator_setup thy = 
   let open Isabelle_System; val tmp = Path.expand (create_tmp_path "itree-simulate" "")
   in case (ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
-    mkdir tmp; (tmp, ISim_Path.put (SOME tmp) thy)
+    make_directory tmp; (tmp, ISim_Path.put (SOME tmp) thy)
   end
 
 fun sim_files_cp thy tmp = 
@@ -115,6 +115,7 @@ fun prep_simulation model thy ctx =
   end
 
 fun run_simulation thy =
+  
   case ISim_Path.get thy of
     NONE => error "No animation" |
     SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./Simulation") "Start animation")

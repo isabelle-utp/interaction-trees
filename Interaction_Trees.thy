@@ -60,7 +60,7 @@ lemma is_VisE [elim]: "\<lbrakk> is_Vis P; \<And> x. P = Vis x \<Longrightarrow>
   using is_Vis_def by blast
 
 lemma is_RetE [elim]: "\<lbrakk> is_Ret P; \<And> x. P = Ret x \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
-  by (metis (mono_tags, hide_lams) is_Ret_def)
+  by (metis (mono_tags, opaque_lifting) is_Ret_def)
 
 theorem itree_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes "\<phi> P Q" and
@@ -152,7 +152,7 @@ text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term 
 lemma bind_RetE [elim]:
   assumes "P \<bind> Q = Ret x"
   obtains y where "P = Ret y" "Q y = Ret x"
-  by (metis (no_types, hide_lams) assms bind_Ret bind_itree.disc_iff(1) is_Ret_def)
+  by (metis (no_types, opaque_lifting) assms bind_Ret bind_itree.disc_iff(1) is_Ret_def)
   
 lemma bind_RetE' [elim]:
   assumes "Ret x = P \<bind> Q"
@@ -230,7 +230,7 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
     Sil t \<Rightarrow> Sil (bind_itree t k) | 
     Vis t \<Rightarrow> Vis (map_pfun (\<lambda> x. bind_itree x k) t))"
    apply (simp add: bind_itree.code)
-   apply (metis (no_types, hide_lams) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.collapse(3) itree.exhaust_disc)
+   apply (metis (no_types, opaque_lifting) itree.case_eq_if itree.collapse(1) itree.collapse(2) itree.collapse(3) itree.exhaust_disc)
   apply transfer_prover
   done
 
@@ -333,7 +333,7 @@ lemma bind_Sils_dest:
    apply (auto)[1]
   apply (simp)
   apply (erule bind_SilE)
-   apply (metis (no_types, hide_lams) Sils.simps(2) Suc_le_mono diff_Suc_Suc)
+   apply (metis (no_types, opaque_lifting) Sils.simps(2) Suc_le_mono diff_Suc_Suc)
   apply (metis Sils.simps(1) Sils.simps(2) diff_zero zero_le)
   done
 
@@ -713,7 +713,7 @@ lemma evalpha_bind: "\<^bold>A(P \<bind> Q) = \<^bold>A(P) \<union> \<Union> {\<
      apply blast
     apply blast
    apply (metis trace_to_bind_left)
-  apply (metis (no_types, hide_lams) append.assoc bind_Ret in_set_conv_decomp trace_to_bind_left trace_to_trans)
+  apply (metis (no_types, opaque_lifting) append.assoc bind_Ret in_set_conv_decomp trace_to_bind_left trace_to_trans)
   done
 
 end
