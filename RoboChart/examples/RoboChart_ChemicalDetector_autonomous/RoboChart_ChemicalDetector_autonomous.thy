@@ -139,7 +139,7 @@ subsubsection \<open> Export code \<close>
 export_code
   D__ChemicalDetector
   in Haskell 
-  (* module_name RoboChart_ChemicalDetector *)
+  module_name RoboChart_ChemicalDetector
   file_prefix RoboChart_ChemicalDetector 
   (string_classes)
 
@@ -161,7 +161,7 @@ removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
 replace :: String -> String -> String -> String;
-replace old new = Data.List.intercalate new . Data.List.Split.splitOn old
+replace old new = Data.List.intercalate new . Data.List.Split.splitOn old;
 
 renameGasEvent :: String -> String;
 renameGasEvent gas = 

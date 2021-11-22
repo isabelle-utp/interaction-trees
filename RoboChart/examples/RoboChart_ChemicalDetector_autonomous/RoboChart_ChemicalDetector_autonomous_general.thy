@@ -115,13 +115,20 @@ And @{text "2::2"} is just equal to @{text "0::2"}.
 Similar to the CSP representation of named types, the use of a numeral type for @{typ 'a} also 
 enables the elements of this type can be compared.
 \<close>
+(*
 datatype ('a::finite) Chemical_Chem = Chemical_ChemC 'a
+*)
+typedef Chemical_ChemT = "{()}" by auto
+type_synonym ('a) Chemical_Chem = "(Chemical_ChemT, 'a) PrimType"
+abbreviation Chemical_ChemC::"('a::finite \<Rightarrow> 'a Chemical_Chem)"
+  where "Chemical_ChemC \<equiv> PrimTypeC"
 
 text \<open>@{term Chemical_Chem2_set} corresponds to the named type @{verbatim Chem} in CSP. It is also a 
 set contains two elements: 0 and 1, through an implementation of sets by lists 
 (@{term Chemical_Chem2_list}). 
 \<close>
-abbreviation "Chemical_Chem2_list \<equiv> [Chemical_ChemC (0::2), Chemical_ChemC (1::2)]"
+(* abbreviation "Chemical_Chem2_list \<equiv> [Chemical_ChemC (0::2), Chemical_ChemC (1::2)]"*)
+abbreviation "Chemical_Chem2_list \<equiv> enum_class.enum:: (2 Chemical_Chem) list"
 \<comment> \<open> Use abbreviation (instead of definition) here, otherwise it cannot pattern match a list based 
 set\<close>
 abbreviation "Chemical_Chem2_set \<equiv> set Chemical_Chem2_list"
@@ -135,50 +142,15 @@ definition Chemical_Chem_is_zero::"(2 Chemical_Chem) \<Rightarrow> bool" where
 value "Chemical_Chem_is_zero (Chemical_ChemC (3::2))"
 
 text \<open>The definition of the @{text Intensity} type is similar to that of @{text Chem}. \<close>
-datatype ('a::finite) Chemical_Intensity = Chemical_IntensityC (un_intensity:'a)
+(* datatype ('a::finite) Chemical_Intensity = Chemical_IntensityC (un_intensity:'a) *)
 
-term "Chemical_IntensityC"
-term "un_intensity"
+typedef Chemical_IntensityT = "{()}" by auto
+type_synonym ('a) Chemical_Intensity = "(Chemical_IntensityT, 'a) PrimType"
+abbreviation Chemical_IntensityC::"('a::finite \<Rightarrow> 'a Chemical_Intensity)" 
+  where "Chemical_IntensityC \<equiv> PrimTypeC"
 
-declare [[show_types]]
-
-lemma distinct_Chemical_Intensity: "distinct x \<longrightarrow> distinct (map Chemical_IntensityC x)"
-  by (simp add: distinct_conv_nth)
-
-instantiation Chemical_Intensity :: (enum) enum
-begin
-
-definition enum_Chemical_Intensity :: "'a Chemical_Intensity list" where
-"enum_Chemical_Intensity = map Chemical_IntensityC Enum.enum"
-
-definition enum_all_Chemical_Intensity :: "('a Chemical_Intensity \<Rightarrow> bool) \<Rightarrow> bool" where
-"enum_all_Chemical_Intensity P = (\<forall>b :: 'a Chemical_Intensity \<in> set enum_class.enum. P b)"
-
-definition enum_ex_Chemical_Intensity :: "('a Chemical_Intensity \<Rightarrow> bool) \<Rightarrow> bool" where
-"enum_ex_Chemical_Intensity P = (\<exists>b :: 'a Chemical_Intensity \<in> set enum_class.enum. P b)"
-
-instance
-proof (intro_classes)
-  show "distinct (enum_class.enum :: 'a Chemical_Intensity list)"
-    apply (simp add: enum_Chemical_Intensity_def)
-    by (simp add: enum_distinct distinct_Chemical_Intensity)
-
-  show univ_eq: "(UNIV :: 'a Chemical_Intensity set) = set enum_class.enum"
-    apply (auto simp add: enum_Chemical_Intensity_def image_iff)
-    apply (rule_tac x="un_intensity x" in bexI, auto)
-    apply (auto simp add: lists_eq_set enum_UNIV)
-    done
-
-  fix P :: "'a Chemical_Intensity \<Rightarrow> bool"
-  show "enum_class.enum_all P = Ball UNIV P"
-    and "enum_class.enum_ex P = Bex UNIV P"
-    by(simp_all add: enum_all_Chemical_Intensity_def enum_ex_Chemical_Intensity_def univ_eq)
-qed
-end
-
-value "Enum.enum::(2 Chemical_Intensity) list"
-abbreviation "Chemical_Intensity2_list' \<equiv> Enum.enum::(2 Chemical_Intensity) list"
-abbreviation "Chemical_Intensity2_list \<equiv> [Chemical_IntensityC (0::2), Chemical_IntensityC 1]"
+(*abbreviation "Chemical_Intensity2_list \<equiv> [Chemical_IntensityC (0::2), Chemical_IntensityC 1]"*)
+abbreviation "Chemical_Intensity2_list \<equiv> enum_class.enum::(2 Chemical_Intensity) list"
 abbreviation "Chemical_Intensity2_set \<equiv> set Chemical_Intensity2_list"
 
 definition Chemical_Intensity_is_zero::"(2 Chemical_Intensity) \<Rightarrow> bool" where
@@ -246,6 +218,8 @@ text \<open>The @{term lseq_gassensor_enum} defines a list of the all bounded li
 up to 2 records of type @{term Chemical_GasSensor2}.\<close>
 abbreviation "lseq_gassensor_enum \<equiv> mk_blist TYPE(2) Chemical_GasSensor2_list"
 
+term "blists 2 Chemical_GasSensor2_list"
+
 text \<open>The function @{text analysis} is not specified in the model, but an implemented is defined in 
 the CSP semantics. The definition of @{term Chemical_analysis} is based on the implementation. Since 
 it is defined as a general recursive function, we need to prove its termination. \<close>
@@ -274,44 +248,57 @@ proof -
     by (metis a1 blist_remove_head f1 list.sel(3))
 qed
 
+(* We can also use pre- and post-conditions to define the analysis function. *)
+(*
+fun Chemical_analysis' :: "2 Chemical_GasSensor blist[2] \<Rightarrow> Chemical_Status" where
+"Chemical_analysis' gs = "
+*)
+
 value "Chemical_analysis (bmake TYPE(2) [])"
 value "Chemical_analysis (bmake TYPE(2) [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
+value "Chemical_analysis (bmake TYPE(2) [\<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
 
 text \<open> The @{text intensity} function in the model is defined using precondition and postconditions. 
 The precondition is evaluated by @{text pre_Chemical_intensity} and its postconditions are 
-established by the function @{term Chemical_intensity} defined below.
+established by the function @{term Chemical_intensity} defined below. For this kind of function, 
+the CSP semantics is 
+@{verbatim "(pre_Chemical_intensity gs) & (a process with the expression (Chemical_intensity gs))"}. 
+So if the preconditions is not satisfied, it deadlocks.
 \<close>
 definition pre_Chemical_intensity :: "2 Chemical_GasSensor blist[2] \<Rightarrow> bool" where
 "pre_Chemical_intensity gs = (blength gs > 0)"
 
-fun Chemical_intensity' :: "2 Chemical_GasSensor blist[2] \<Rightarrow> (2 Chemical_Intensity)" where
-"Chemical_intensity' (gs) = (THE result. 
+fun Chemical_intensity :: "2 Chemical_GasSensor blist[2] \<Rightarrow> (2 Chemical_Intensity)" where
+"Chemical_intensity (gs) = (THE result. 
   (\<forall>x::nat < blength gs. Chemical_goreq result (gs_i (bnth gs x))) \<and>
   (\<exists>x::nat < blength gs. result = (gs_i (bnth gs x))))"
 
-value "Chemical_intensity' (bmake TYPE(2) [])"
-value "Chemical_intensity' (bmake TYPE(2) 
+(* Error: gs must be not empty, otherwise bnth 
+value "Chemical_intensity (bmake TYPE(2) [])"*)
+value "Chemical_intensity (bmake TYPE(2) 
   [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (1::2)\<rparr>,
    \<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
 
-function Chemical_intensity :: "2 Chemical_GasSensor blist[2] \<Rightarrow> (2 Chemical_Intensity)" where
-"Chemical_intensity (gs) = 
+text \<open>Alternative definition of the intensity function as a recursive function, and this is consistent 
+with the implementation in RoboTool.\<close>
+function Chemical_intensity' :: "2 Chemical_GasSensor blist[2] \<Rightarrow> (2 Chemical_Intensity)" where
+"Chemical_intensity' (gs) = 
   (case list_of_blist gs of
     []      \<Rightarrow> Chemical_IntensityC (0::2) |
-    (p#ps)  \<Rightarrow> (if Chemical_goreq (gs_i p) (Chemical_intensity (bmake TYPE(2) ps)) 
+    (p#ps)  \<Rightarrow> (if Chemical_goreq (gs_i p) (Chemical_intensity' (bmake TYPE(2) ps)) 
                 then gs_i p
-                else Chemical_intensity (bmake TYPE(2) ps))
+                else Chemical_intensity' (bmake TYPE(2) ps))
   )"
   by auto
 
-termination Chemical_intensity 
+termination Chemical_intensity'
   apply (relation "measure (\<lambda> gs. blength gs)")
   apply (auto)
   by (metis add_Suc_right blength.rep_eq blist_remove_head less_nat_zero_code linorder_cases 
       list.sel(3) list.size(4) nat.simps(3))+
 
-value "Chemical_intensity (bmake TYPE(2) [])"
-value "Chemical_intensity (bmake TYPE(2) 
+value "Chemical_intensity' (bmake TYPE(2) [])"
+value "Chemical_intensity' (bmake TYPE(2) 
   [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (1::2)\<rparr>,
    \<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
 

@@ -825,7 +825,11 @@ definition D__MainController where
     (discard_state (Memory_MainController idd))
   ) \<lbrakk> set [terminate_MainController_C ()] \<Zrres> skip
 "
-
+(*
+definition "D__MainController_sim = D__MainController 0"
+text \<open>Uncomment the line below to animate @{term AUX_opt_Movement}.\<close>
+animate1 D__MainController_sim
+*)
 subsubsection \<open> Export code \<close>
 export_code
   GasAnalysis_Memory_opt_gs
@@ -846,7 +850,7 @@ export_code
   D__GasAnalysis
   D__MainController
 in Haskell 
-  (* module_name GasAnalysis *)
+  module_name GasAnalysis
   file_prefix RoboChart_ChemicalDetector 
   (string_classes) 
 
@@ -868,7 +872,7 @@ removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
 replace :: String -> String -> String -> String;
-replace old new = Data.List.intercalate new . Data.List.Split.splitOn old
+replace old new = Data.List.intercalate new . Data.List.Split.splitOn old;
 
 renameGasEvent :: String -> String;
 renameGasEvent gas = 

@@ -28,6 +28,44 @@ type_synonym core_int = integer
 type_synonym core_real = integer
 type_synonym core_string = String.literal
 
+subsubsection \<open> Primitive types \<close>
+datatype ('sm, 'a::finite) PrimType = PrimTypeC (un_prim:'a)
+
+lemma distinct_PrimType: "distinct x \<longrightarrow> distinct (map PrimTypeC x)"
+  by (simp add: distinct_conv_nth)
+
+instantiation PrimType :: (type, enum) enum
+begin
+
+definition enum_PrimType :: "('a, 'b) PrimType list" where
+"enum_PrimType = map PrimTypeC Enum.enum"
+
+definition enum_all_PrimType :: "(('a, 'b) PrimType \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_all_PrimType P = (\<forall>b :: ('a, 'b) PrimType \<in> set enum_class.enum. P b)"
+
+definition enum_ex_PrimType :: "(('a, 'b) PrimType \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_ex_PrimType P = (\<exists>b :: ('a, 'b) PrimType \<in> set enum_class.enum. P b)"
+
+instance
+proof (intro_classes)
+  show "distinct (enum_class.enum :: ('a, 'b) PrimType list)"
+    apply (simp add: enum_PrimType_def)
+    by (simp add: enum_distinct distinct_PrimType)
+
+  show univ_eq: "(UNIV :: ('a, 'b) PrimType set) = set enum_class.enum"
+    apply (auto simp add: enum_PrimType_def image_iff)
+    apply (rule_tac x="un_prim x" in bexI, auto)
+    apply (auto simp add: lists_eq_set enum_UNIV)
+    done
+
+  fix P :: "('a,'b) PrimType \<Rightarrow> bool"
+  show "enum_class.enum_all P = Ball UNIV P"
+    and "enum_class.enum_ex P = Bex UNIV P"
+    by(simp_all add: enum_all_PrimType_def enum_ex_PrimType_def univ_eq)
+qed
+end
+
+subsection \<open> Locale \<close>
 text \<open> A locale for reuse of RoboChart configurations (corresponding to instantiation.csp). 
 This will be extended and interpreted in theories for each RoboChart model. 
 We add common types and definitions here.
