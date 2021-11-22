@@ -190,15 +190,74 @@ definition mk_blist :: "'n itself \<Rightarrow> 'a list \<Rightarrow> ('a blist[
 datatype Chemical_Status = 
   Chemical_Status_noGas | Chemical_Status_gasD
 
-abbreviation "Chemical_Status_list \<equiv> [Chemical_Status_noGas, Chemical_Status_gasD]"
+instantiation Chemical_Status :: enum
+begin
+definition enum_Chemical_Status :: "Chemical_Status list" where
+"enum_Chemical_Status = [Chemical_Status_noGas, Chemical_Status_gasD]"
+
+definition enum_all_Chemical_Status :: "(Chemical_Status \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_all_Chemical_Status P = (\<forall>b :: Chemical_Status \<in> set enum_class.enum. P b)"
+
+definition enum_ex_Chemical_Status :: "(Chemical_Status \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_ex_Chemical_Status P = (\<exists>b ::  Chemical_Status \<in> set enum_class.enum. P b)"
+
+instance
+proof (intro_classes)
+  show "distinct (enum_class.enum :: Chemical_Status list)"
+    by (simp add: enum_Chemical_Status_def)
+
+  show univ_eq: "UNIV = set (enum_class.enum:: Chemical_Status list)"
+    apply (simp add: enum_Chemical_Status_def)
+    apply (auto simp add: enum_UNIV)
+    by (meson Chemical_Status.exhaust)
+
+  fix P :: "Chemical_Status \<Rightarrow> bool"
+  show "enum_class.enum_all P = Ball UNIV P"
+    and "enum_class.enum_ex P = Bex UNIV P" 
+    by (simp_all add: univ_eq enum_all_Chemical_Status_def enum_ex_Chemical_Status_def)
+qed
+end
+
+(*abbreviation "Chemical_Status_list \<equiv> [Chemical_Status_noGas, Chemical_Status_gasD]"*)
+abbreviation "Chemical_Status_list \<equiv> enum_class.enum :: Chemical_Status list"
 abbreviation "Chemical_Status_set \<equiv> set Chemical_Status_list"
 
 datatype Chemical_Angle = 
   Chemical_Angle_Left | Chemical_Angle_Right | 
   Chemical_Angle_Back | Chemical_Angle_Front
 
-abbreviation "Chemical_Angle_list \<equiv> [Chemical_Angle_Left, Chemical_Angle_Right,
-  Chemical_Angle_Back, Chemical_Angle_Front]"
+instantiation Chemical_Angle :: enum
+begin
+definition enum_Chemical_Angle :: "Chemical_Angle list" where
+"enum_Chemical_Angle = [Chemical_Angle_Left, Chemical_Angle_Right,  Chemical_Angle_Back, 
+  Chemical_Angle_Front]"
+
+definition enum_all_Chemical_Angle :: "(Chemical_Angle \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_all_Chemical_Angle P = (\<forall>b :: Chemical_Angle \<in> set enum_class.enum. P b)"
+
+definition enum_ex_Chemical_Angle :: "(Chemical_Angle \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_ex_Chemical_Angle P = (\<exists>b ::  Chemical_Angle \<in> set enum_class.enum. P b)"
+
+instance
+proof (intro_classes)
+  show "distinct (enum_class.enum :: Chemical_Angle list)"
+    by (simp add: enum_Chemical_Angle_def)
+
+  show univ_eq: "UNIV = set (enum_class.enum:: Chemical_Angle list)"
+    apply (simp add: enum_Chemical_Angle_def)
+    apply (auto simp add: enum_UNIV)
+    by (meson Chemical_Angle.exhaust)
+
+  fix P :: "Chemical_Angle \<Rightarrow> bool"
+  show "enum_class.enum_all P = Ball UNIV P"
+    and "enum_class.enum_ex P = Bex UNIV P" 
+    by (simp_all add: univ_eq enum_all_Chemical_Angle_def enum_ex_Chemical_Angle_def)
+qed
+end
+
+(*abbreviation "Chemical_Angle_list \<equiv> [Chemical_Angle_Left, Chemical_Angle_Right,
+  Chemical_Angle_Back, Chemical_Angle_Front]"*)
+abbreviation "Chemical_Angle_list \<equiv> enum_class.enum :: Chemical_Angle list"
 abbreviation "Chemical_Angle_set \<equiv> set Chemical_Angle_list"
 
 definition Chemical_angle :: "nat \<Rightarrow> Chemical_Angle" where
@@ -218,11 +277,20 @@ text \<open>The @{term lseq_gassensor_enum} defines a list of the all bounded li
 up to 2 records of type @{term Chemical_GasSensor2}.\<close>
 abbreviation "lseq_gassensor_enum \<equiv> mk_blist TYPE(2) Chemical_GasSensor2_list"
 
-term "blists 2 Chemical_GasSensor2_list"
+text \<open>The function @{text analysis} is not specified in the original model, but an implemented is defined in 
+the CSP semantics.
+We give a specification for the function in the model and define below.\<close>
+definition Chemical_analysis :: "2 Chemical_GasSensor blist[2] \<Rightarrow> Chemical_Status" where
+"Chemical_analysis gs = (if blength gs > 0 
+then (if (\<exists>x::nat < blength (gs). \<not> (Chemical_Chem_is_zero (gs_c (bnth gs x))))
+      then Chemical_Status_gasD
+      else Chemical_Status_noGas)
+else Chemical_Status_noGas)"
 
-text \<open>The function @{text analysis} is not specified in the model, but an implemented is defined in 
-the CSP semantics. The definition of @{term Chemical_analysis} is based on the implementation. Since 
+(*
+text \<open>An alternative definition of @{term Chemical_analysis} is based on the implementation. Since
 it is defined as a general recursive function, we need to prove its termination. \<close>
+
 function Chemical_analysis :: "2 Chemical_GasSensor blist[2] \<Rightarrow> Chemical_Status" where
 "Chemical_analysis (gs) = 
   (case list_of_blist gs of
@@ -247,6 +315,7 @@ proof -
   show "blength (bmake TYPE(2) x22) < blength gs"
     by (metis a1 blist_remove_head f1 list.sel(3))
 qed
+*)
 
 (* We can also use pre- and post-conditions to define the analysis function. *)
 (*
@@ -257,6 +326,10 @@ fun Chemical_analysis' :: "2 Chemical_GasSensor blist[2] \<Rightarrow> Chemical_
 value "Chemical_analysis (bmake TYPE(2) [])"
 value "Chemical_analysis (bmake TYPE(2) [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
 value "Chemical_analysis (bmake TYPE(2) [\<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
+value "Chemical_analysis (bmake TYPE(2) [
+  \<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (0::2)\<rparr>,
+  \<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (1::2)\<rparr>
+])"
 
 text \<open> The @{text intensity} function in the model is defined using precondition and postconditions. 
 The precondition is evaluated by @{text pre_Chemical_intensity} and its postconditions are 
@@ -268,7 +341,11 @@ So if the preconditions is not satisfied, it deadlocks.
 definition pre_Chemical_intensity :: "2 Chemical_GasSensor blist[2] \<Rightarrow> bool" where
 "pre_Chemical_intensity gs = (blength gs > 0)"
 
-fun Chemical_intensity :: "2 Chemical_GasSensor blist[2] \<Rightarrow> (2 Chemical_Intensity)" where
+text \<open>The original model has a problem: @{text "x \<le> size(gs)"} is incorrect and it should be 
+@{text "x < size(gs)"}. Following the model, the definition of this function will cause a problem 
+when this function is called: @{verbatim "exception Match raised (line 595 of 'generated code')"}
+\<close>
+definition Chemical_intensity :: "2 Chemical_GasSensor blist[2] \<Rightarrow> (2 Chemical_Intensity)" where
 "Chemical_intensity (gs) = (THE result. 
   (\<forall>x::nat < blength gs. Chemical_goreq result (gs_i (bnth gs x))) \<and>
   (\<exists>x::nat < blength gs. result = (gs_i (bnth gs x))))"
@@ -279,6 +356,7 @@ value "Chemical_intensity (bmake TYPE(2)
   [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (1::2)\<rparr>,
    \<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
 
+(*
 text \<open>Alternative definition of the intensity function as a recursive function, and this is consistent 
 with the implementation in RoboTool.\<close>
 function Chemical_intensity' :: "2 Chemical_GasSensor blist[2] \<Rightarrow> (2 Chemical_Intensity)" where
@@ -301,12 +379,22 @@ value "Chemical_intensity' (bmake TYPE(2) [])"
 value "Chemical_intensity' (bmake TYPE(2) 
   [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (1::2)\<rparr>,
    \<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (0::2)\<rparr>])"
+*)
 
 text \<open> The definition of the @{text location} function in the model is similar to that of the 
 @{text intensity} function.\<close>
 definition pre_Chemical_location :: "2 Chemical_GasSensor blist[2] \<Rightarrow> bool" where
 "pre_Chemical_location gs = (blength gs > 0)"
 
+definition Chemical_location:: "2 Chemical_GasSensor blist[2] \<Rightarrow> Chemical_Angle" where
+"Chemical_location gs = (THE result. \<exists>x::nat < blength gs. (
+    Chemical_intensity(gs) = (gs_i (bnth gs x)) \<and>  
+    (\<not> (\<exists>y::nat < x. Chemical_intensity(gs) = (gs_i (bnth gs y)))) \<and>
+    (result = Chemical_angle(x)))
+)"
+
+(*
+\text \<open>An alternative definition of the function @{text "location"} \<close>
 function Chemical_location' :: "2 Chemical_GasSensor blist[2] \<Rightarrow> nat \<Rightarrow> (Chemical_Angle)" where
 "Chemical_location' (gs) x = 
   (case list_of_blist gs of
@@ -325,8 +413,11 @@ termination Chemical_location'
       list.sel(3) list.size(4) nat.simps(3))+
 
 abbreviation "Chemical_location gs \<equiv> Chemical_location' gs 0"
-
-value "Chemical_location (bmake TYPE(2) [])"
+*)
+(* value "Chemical_location (bmake TYPE(2) [])" *)
+value "Chemical_location (bmake TYPE(2) 
+  [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (1::2)\<rparr>,
+   \<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (1::2)\<rparr>])"
 value "Chemical_location (bmake TYPE(2) 
   [\<lparr>gs_c = Chemical_ChemC (0::2), gs_i = Chemical_IntensityC (0::2)\<rparr>,
    \<lparr>gs_c = Chemical_ChemC (1::2), gs_i = Chemical_IntensityC (1::2)\<rparr>])"
