@@ -1,7 +1,7 @@
 subsection \<open> Simulation Harness \<close>
 
 theory ITree_Simulation
-  imports ITree_Extraction
+  imports "Interaction_Trees.ITree_Extraction"
   keywords "animate" "ghc_path" :: "thy_defn"
 begin
 
