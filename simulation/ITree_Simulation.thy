@@ -1,8 +1,8 @@
 subsection \<open> Simulation Harness \<close>
 
 theory ITree_Simulation
-  imports ITree_Extraction
-  keywords "animate" :: "thy_defn"
+  imports "Interaction_Trees.ITree_Extraction"
+  keywords "animate" "ghc_path" :: "thy_defn"
 begin
 
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
@@ -62,6 +62,12 @@ simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Start
 \<close>
 
 ML \<open> 
+structure GHC_Path = Theory_Data
+  (type T = string
+   val empty = "isabelle ghc_stack ghc"
+   val extend = I
+   val merge = fn (_, y) => y);
+
 structure ITree_Simulator =
 struct
 
@@ -77,9 +83,9 @@ fun simulator_setup thy =
     mkdir tmp; (tmp, ISim_Path.put (SOME tmp) thy)
   end
 
-fun sim_files_cp tmp = 
+fun sim_files_cp thy tmp = 
   "(fn path => let open Isabelle_System; val path' = Path.append path (Path.make [\"code\", \"simulate\"])" ^
-  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; ghc Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
+  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; " ^ GHC_Path.get thy ^ " Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
 
 open Named_Target
 
@@ -104,11 +110,8 @@ fun prep_simulation model thy ctx =
                  [([], (Local_Theory.exit_global ctx')), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] 
                  [] [([Path.binding0 (Path.make ["code", "simulate", "Simulation"])], SOME true)]
                  (Path.binding0 (Path.make []))
-                 (Input.string (sim_files_cp (Path.implode tmp)))
+                 (Input.string (sim_files_cp thy' (Path.implode tmp)))
     in ctx' end)
-
-
-(*  (fn ctx => let val _ = export_generated_files ctx [([], Local_Theory.exit_global ctx), ([], @{theory})] in ctx end) *)
   end
 
 fun run_simulation thy =
@@ -129,7 +132,10 @@ end;
 
 ML \<open>
   Outer_Syntax.command @{command_keyword animate} "animate an ITree"
-  (Parse.name >> (fn model => Toplevel.theory (ITree_Simulator.simulate model)))
+  (Parse.name >> (fn model => Toplevel.theory (ITree_Simulator.simulate model)));
+
+  Outer_Syntax.command @{command_keyword ghc_path} "set location for GHC"
+  (Parse.string >> (fn path => Toplevel.theory (GHC_Path.put path)))
 \<close>
 
 end

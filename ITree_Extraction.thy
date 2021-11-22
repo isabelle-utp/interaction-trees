@@ -11,7 +11,7 @@ declare deadlock_def [code_unfold]
 text \<open> Configuring the code generator; either partial functions or associative lists can be used
   in specifying choice functions. Partial injections are also supported using lists. \<close>
 
-code_datatype pfun_of_alist pfun_of_map pfun_of_pinj 
+code_datatype pfun_of_alist pfun_of_map pfun_of_pinj pfun_entries
 code_datatype pinj_of_alist
 
 declare pinv_pinj_of_alist [code]
@@ -64,6 +64,12 @@ definition "default_ffun = ({}\<^sub>f :: ('a, 'b) ffun)"
 instance ..
 end
 
+instantiation pinj :: (type, type) default
+begin
+definition default_pinj :: "'a \<Zpinj> 'b" where "default_pinj = 0"
+instance ..
+end
+
 declare UNIV_I [code_unfold]
 declare bool_simps [code_unfold]
 
@@ -71,5 +77,11 @@ lemma Collect_List_member [code_unfold]: "Collect (List.member xs) = set xs"
   using in_set_member by fastforce
 
 declare image_ident [code_unfold]
+
+lemma all_mem_Ball [code_unfold]: "(\<forall> x. x \<in> A \<longrightarrow> P x) \<longleftrightarrow> (\<forall> x\<in>A. P x)"
+  by auto
+
+lemma ex_mem_Bex [code_unfold]: "(\<exists> x. x \<in> A \<and> P x) \<longleftrightarrow> (\<exists>x\<in>A. P x)"
+  by auto
 
 end

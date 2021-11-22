@@ -84,7 +84,6 @@ theorem itree_coind'[elim, consumes 1, case_names RetF SilF VisF Ret Sil Vis, in
   using assms
   by (coinduct rule: itree.coinduct, auto simp add: relt_pfun_iff)
 
-
 theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induct pred: "HOL.eq"]:
   assumes phi: "\<phi> P Q" and
   "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q) \<and> (is_Sil P \<longleftrightarrow> is_Sil Q) \<and> (is_Vis P \<longleftrightarrow> is_Vis Q)" and
@@ -94,6 +93,18 @@ theorem itree_strong_coind[elim, consumes 1, case_names wform Ret Sil Vis, induc
   shows "P = Q"
   using assms
   by (coinduct rule: itree.coinduct_strong, auto elim!: is_VisE simp add: relt_pfun_iff)
+
+theorem itree_strong_coind'[elim, consumes 1, case_names RetF SilF VisF Ret Sil Vis, induct pred: "HOL.eq"]:
+  assumes phi: "\<phi> P Q" and
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Ret P \<longleftrightarrow> is_Ret Q)"
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Sil P \<longleftrightarrow> is_Sil Q)"
+  "\<And> P Q. \<phi> P Q \<Longrightarrow> (is_Vis P \<longleftrightarrow> is_Vis Q)"
+  "\<And> x y. \<phi> (Ret x) (Ret y) \<Longrightarrow> x = y" and
+  "\<And> P Q. \<phi> (Sil P) (Sil Q) \<Longrightarrow> \<phi> P Q \<or> P = Q" and
+  "\<And> F G. \<phi> (Vis F) (Vis G) \<Longrightarrow> (pdom(F) = pdom(G) \<and> (\<forall> x\<in>pdom(F). \<phi> (F x) (G x) \<or> F x = G x))"
+  shows "P = Q"
+  using assms
+  by (erule_tac itree_strong_coind, auto)
 
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
  cf. "Coinduction all the way up". Davide Sangiorgi. Replace @{term "R \<subseteq> F(R)"} prove @{term "R \<subseteq> C(F(R))"}. \<close>
@@ -188,14 +199,25 @@ lemma bind_itree_right_unit:
 lemma bind_itree_assoc:
   fixes P :: "('e, 's) itree"
   shows "P \<bind> (\<lambda> x. (Q x \<bind> R)) = (P \<bind> Q) \<bind> R"
-  apply (coinduction arbitrary: P Q R rule: itree_strong_coind)
-     apply (smt (verit, best) bind_Ret bind_itree.disc(2) bind_itree.disc_iff(3) itree.collapse(1) itree.distinct_disc(1) itree.distinct_disc(3) itree.distinct_disc(6) itree.exhaust_disc)
-    apply force
-   apply (auto elim!: bind_SilE')
-   apply (metis itree.inject(2))
-  apply (auto elim!: bind_VisE')
-  apply metis
-  done
+proof (coinduction arbitrary: P Q R rule: itree_strong_coind')
+  case RetF
+  then show ?case by auto
+next
+  case SilF
+  then show ?case by auto
+next
+  case VisF
+  then show ?case by auto
+next
+  case Ret
+  then show ?case by auto
+next
+  case Sil
+  then show ?case by (auto elim!: bind_SilE', metis itree.sel(2))
+next
+  case Vis
+  then show ?case by (force elim!: bind_VisE')
+qed
 
 friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "bind_itree u k = 
@@ -322,6 +344,13 @@ lemma bind_SilsE:
   shows R
   using assms(1) assms(2) assms(3) bind_Sils_dest by blast  
 
+lemma bind_SilsE':
+  assumes "Sils n X = (P \<bind> Q)"
+    "\<And> P'. \<lbrakk> P = Sils n P'; P' \<bind> Q = X \<rbrakk> \<Longrightarrow> R"
+    "\<And> x m. \<lbrakk> m \<le> n; P = Sils m (Ret x); Q x = Sils (n - m) X \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) assms(3) bind_SilsE)
+
 lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
   by (metis Sils.simps(1) is_Ret_Sils itree.disc(1))
 
@@ -399,6 +428,9 @@ lemma trace_to_NilE [elim]:
   assumes "P \<midarrow>[]\<leadsto> P'" 
   obtains n where "P = Sils n P'"
   using assms trace_to_Nil_Sils by auto
+
+lemma trace_to_Nil_iff: "P \<midarrow>[]\<leadsto> P' \<longleftrightarrow> (\<exists> n. P = Sils n P')"
+  by (meson trace_of_Sils trace_to_NilE)
 
 lemma trace_to_ConsE:
   assumes "P \<midarrow>x # xs\<leadsto> Q" 
@@ -585,6 +617,16 @@ lemma trace_to_Ret_excl_Vis:
   apply (metis Sils_Vis_trns Vis_Cons_trns trace_to_ConsE trace_to_singleE)
   done
 
+lemma trace_to_Sil_dest [dest]: "P \<midarrow>tr\<leadsto> \<tau> P' \<Longrightarrow> P \<midarrow>tr\<leadsto> P'"
+  by (metis append.right_neutral trace_to_Nil trace_to_Sil trace_to_trans)
+
+lemma trace_to_post_Sil_iff:
+  "(P \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>es\<leadsto> \<checkmark> x \<longleftrightarrow> P \<midarrow>es\<leadsto> \<checkmark> x"
+  apply (auto)
+   apply (force elim: trace_to_bindE)
+  apply (metis bind_Ret comp_eq_dest_lhs trace_to_Sil_dest trace_to_bind_left)
+  done
+
 text \<open> Termination is deterministic. \<close>
 
 lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P \<midarrow>tr\<leadsto> Ret y \<rbrakk> \<Longrightarrow> x = y"
@@ -661,7 +703,7 @@ lemma evalpha_Ret [simp]: "\<^bold>A(Ret x) = {}"
 
 lemma evalpha_Vis [simp]: "\<^bold>A(Vis F) = pdom(F) \<union> (\<Union> (\<^bold>A ` pran(F)))"
   apply (auto simp add: evalpha_def)
-  using pran_pdom apply fastforce
+  apply (metis Vis_Cons_trns image_eqI list.set_cases pran_pdom)
    apply (metis list.set_intros(1) trace_to_Nil trace_to_Vis)
   apply (metis (no_types, lifting) imageE list.set_intros(2) pran_pdom trace_to_Vis)
   done

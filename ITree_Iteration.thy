@@ -219,9 +219,6 @@ proof -
     done
 qed
 
-lemma trace_to_Sil_dest [dest]: "P \<midarrow>tr\<leadsto> \<tau> P' \<Longrightarrow> P \<midarrow>tr\<leadsto> P'"
-  by (metis append.right_neutral trace_to_Nil trace_to_Sil trace_to_trans)
-
 lemma iterate_trace_to:
   assumes "P s \<midarrow>es \<leadsto> Ret s'" "b s"
   shows "iterate b P s \<midarrow>es\<leadsto> iterate b P s'"
