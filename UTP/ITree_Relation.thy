@@ -28,6 +28,9 @@ lemma test_rel [rel]: "itree_rel (test P) = {(s, s'). s' = s \<and> P s}"
   using nonterminates_iff apply force
   done
 
+lemma Skip_rel [rel]: "itree_rel Skip = Id"
+  by (auto simp add: itree_rel_def retvals_def Skip_def)
+
 lemma assigns_rel [rel]: "itree_rel \<langle>\<sigma>\<rangle>\<^sub>a = {(s, s'). s' = \<sigma> s}"
   by (auto simp add: itree_rel_def retvals_def assigns_def)
 
@@ -39,6 +42,11 @@ lemma Stop_rel [rel]: "itree_rel Stop = {}"
 
 lemma seq_rel [rel]: "itree_rel (P \<Zcomp> Q) = itree_rel P O itree_rel Q"
   by (auto simp add: kleisli_comp_def itree_rel_def relcomp_unfold)
+
+lemma cond_rel [rel]: 
+  "itree_rel (if B then C\<^sub>1 else C\<^sub>2 fi) 
+    = {(s\<^sub>1, s\<^sub>2). if (B s\<^sub>1) then (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>1 else (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>2}"
+  by (auto simp add: cond_itree_def itree_rel_def)
 
 lemma input_in_rel [rel]: 
   "wb_prism c \<Longrightarrow> itree_rel (input_in c A P) = {(s, s'). \<exists> v \<in> A s. (s, s') \<in> itree_rel (P v)}" 

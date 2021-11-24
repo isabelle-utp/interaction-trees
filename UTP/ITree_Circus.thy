@@ -82,6 +82,13 @@ translations
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
 
+syntax
+  "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 61)
+
+translations
+  "_assignment x e" == "CONST assigns (CONST subst_upd (CONST subst_id) x (e)\<^sub>e)"
+  "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
+
 lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
   by (simp add: assigns_def Skip_def)
 
@@ -97,6 +104,11 @@ lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<exclamdown>b!
 lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
 
+lemma assign_combine: 
+  assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
+  shows "x := e \<Zcomp> y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
+  using assms by (simp add: kleisli_comp_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
+
 lemma for_empty: "for x in [] do P x od = Skip"
   by (simp add: for_itree_def)
 
@@ -109,13 +121,6 @@ definition process :: "'s::default subst \<Rightarrow> ('e, 's, 'a) ktree \<Righ
 "process I A = (\<langle>(\<lambda> _. default)\<rangle>\<^sub>a \<Zcomp> \<langle>I\<rangle>\<^sub>a \<Zcomp> A \<Zcomp> assigns (\<lambda> s. ())) ()"
 
 abbreviation "abs_st P \<equiv> P \<Zcomp> assigns (\<lambda> s. ())"
-
-syntax
-  "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 61)
-
-translations
-  "_assignment x e" == "CONST assigns (CONST subst_upd (CONST subst_id) x (e)\<^sub>e)"
-  "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
 
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<checkmark> v] | v. True}" 
   apply (simp add: inp_in_where_def traces_Vis traces_Ret)
