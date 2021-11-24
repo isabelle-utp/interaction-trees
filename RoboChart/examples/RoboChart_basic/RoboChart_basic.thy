@@ -34,7 +34,7 @@ This theory, on the contrary, is built from the bottom up because the definition
 relies on the definitions of other processes in the top process. 
 \<close>
 theory RoboChart_basic
-  imports "ITree_RoboChart.ITree_RoboChart" "Interaction_Trees.ITree_Simulation"
+  imports "ITree_RoboChart.ITree_RoboChart" "ITree_Simulation.ITree_Simulation"
 begin
 
 text \<open>We, therefore, structure the theory as follows. In Sect.~\ref{ssec:basic_general}, we give 
@@ -350,7 +350,7 @@ definition State_stm0_s0 where
                       (set tids_stm0_s0);
                     y \<leftarrow> inp_in exit_stm0 (set 
                       [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
-                      outp exit_stm0 (fst y, SID_stm0_s0);
+                      outp exited_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), SID_stm0_s0)
                     } \<box>
                 \<comment> \<open> @{text e1__stm0} \<close>
@@ -361,7 +361,7 @@ definition State_stm0_s0 where
                         l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
                         [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
-                      outp exit_stm0 (fst y, SID_stm0_s0);
+                      outp exited_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), SID_stm0_s0)
                     } \<box>
                 \<comment> \<open> @{text e3__stm0} \<close>
@@ -372,7 +372,7 @@ definition State_stm0_s0 where
                         l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm0 (set 
                         [(s, SID_stm0_s0) . s \<leftarrow> (removeAll SID_stm0_s0 SIDS_stm0_list)]);
-                      outp exit_stm0 (fst y, SID_stm0_s0);
+                      outp exited_stm0 (fst y, SID_stm0_s0);
                       Ret (False, fst (snd s), SID_stm0_s0)
                     }
                 )
@@ -676,7 +676,7 @@ definition State_stm1_s0 where
                     x \<leftarrow> inp_in internal_stm1(set tids_stm1_s0);
                     y \<leftarrow> inp_in exit_stm1 (set 
                       [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]);
-                      outp exit_stm1 (fst y, SID_stm1_s0);
+                      outp exited_stm1 (fst y, SID_stm1_s0);
                       Ret (False, fst (snd s), SID_stm1_s0)
                     } \<box>
                 do {
@@ -685,7 +685,7 @@ definition State_stm1_s0 where
                         d \<leftarrow> InOut_list]) ;
                     y \<leftarrow> inp_in exit_stm1 (set 
                         [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]);
-                      outp exit_stm1 (fst y, SID_stm1_s0);
+                      outp exited_stm1 (fst y, SID_stm1_s0);
                       Ret (False, fst (snd s), SID_stm1_s0)
                     } \<box>
                 do {
@@ -695,7 +695,7 @@ definition State_stm1_s0 where
                         l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_stm1 (set 
                         [(s, SID_stm1_s0) . s \<leftarrow> (removeAll SID_stm1_s0 SIDS_stm1_list)]);
-                      outp exit_stm1 (fst y, SID_stm1_s0);
+                      outp exited_stm1 (fst y, SID_stm1_s0);
                       Ret (False, fst (snd s), SID_stm1_s0)
                     }
                 )

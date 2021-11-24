@@ -394,7 +394,7 @@ definition Chemical_location:: "2 Chemical_GasSensor blist[2] \<Rightarrow> Chem
 )"
 
 (*
-\text \<open>An alternative definition of the function @{text "location"} \<close>
+text \<open>An alternative definition of the function @{text "location"} \<close>
 function Chemical_location' :: "2 Chemical_GasSensor blist[2] \<Rightarrow> nat \<Rightarrow> (Chemical_Angle)" where
 "Chemical_location' (gs) x = 
   (case list_of_blist gs of

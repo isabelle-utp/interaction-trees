@@ -26,6 +26,7 @@ session "RoboChart_basic" in "RoboChart/examples/RoboChart_basic" = "ITree_RoboC
   options [timeout = 600, document = pdf, document_output = "output"]
   sessions
     "ITree_RoboChart"
+    "ITree_Simulation"
   theories
     RoboChart_basic 
   document_files
