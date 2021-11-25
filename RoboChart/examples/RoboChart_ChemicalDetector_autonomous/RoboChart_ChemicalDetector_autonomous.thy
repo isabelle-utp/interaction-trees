@@ -257,13 +257,7 @@ instance (Prelude.Show a, Prelude.Show b) => Prelude.Show (Bounded_List.Blist a 
 *)
 
 generate_file \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close> = 
-\<open>---------- Please copy and insert two imports below into the line after import of Prelude -------
------------in the generated RoboChart_ChemicalDetector.hs ------------------------------
-import qualified Data.List.Split;
-import qualified Data.List;
-
------------ Copy the rest and insert into the line before the last line (}) of the generated -----
------------ RoboChart_ChemicalDetector.hs --------
+\<open>
 isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
 isPrefixOf [] _         =  True;
 isPrefixOf _  []        =  False;
@@ -355,11 +349,18 @@ simulate_cnt n t@(Vis (Pfun_of_map f)) =
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
 simulate = simulate_cnt 0;
+\<close>
+
+generate_file \<open>code/RoboChart_ChemicalDetector/Main.hs\<close> = 
+\<open>module Main where {
+import RoboChart_ChemicalDetector;
 
 main = simulate (d_ChemicalDetector 0);
+}
 \<close>
 
 export_generated_files 
   \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close>
+  \<open>code/RoboChart_ChemicalDetector/Main.hs\<close>
 
 end
