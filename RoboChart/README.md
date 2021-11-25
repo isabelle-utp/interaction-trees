@@ -45,3 +45,5 @@ $ ghci main.hs
 $ ghc -g main.hs
 $ ./main
 ```
+
+Please note that we do have a customised Isabelle2021 version on which the animation process is very much simplified. All work is done in Isabelle. The only thing users need to do is to click an **animate1** command for animation, which will automatically export Haskell, compile into an executable, and then execute the animation on console of jedit. However, this particular version is for experiment only.
