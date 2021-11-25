@@ -143,6 +143,7 @@ export_code
   file_prefix RoboChart_ChemicalDetector 
   (string_classes)
 
+(*
 generate_file \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close> = 
 \<open>module Simulate (simulate) where
 import Interaction_Trees;
@@ -253,9 +254,112 @@ instance (Prelude.Show a, Prelude.Show b) => Prelude.Show (Bounded_List.Blist a 
   show (Bounded_List.Bmake a b) = Prelude.show b;
 };
 *)
+*)
+
+generate_file \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close> = 
+\<open>---------- Please copy and insert two imports below into the line after import of Prelude -------
+-----------in the generated RoboChart_ChemicalDetector.hs ------------------------------
+import qualified Data.List.Split;
+import qualified Data.List;
+
+----------- Copy the rest and insert into the line before the last line (}) of the generated -----
+----------- RoboChart_ChemicalDetector.hs --------
+isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
+isPrefixOf [] _         =  True;
+isPrefixOf _  []        =  False;
+isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
+
+removeSubstr :: String -> String -> String;
+removeSubstr w "" = "";
+removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
+
+replace :: String -> String -> String -> String;
+replace old new = Data.List.intercalate new . Data.List.Split.splitOn old;
+
+renameGasEvent :: String -> String;
+renameGasEvent gas = 
+  (
+  replace " ()]" "]" (
+    replace " ()," "," (
+      removeSubstr "Chemical_GasSensor_ext " (
+        replace "(PrimTypeC 0) (PrimTypeC 0)" "(0, 0)" (
+        replace "(PrimTypeC 0) (PrimTypeC 1)" "(0, 1)" (
+        replace "(PrimTypeC 1) (PrimTypeC 0)" "(1, 0)" (
+        replace "(PrimTypeC 1) (PrimTypeC 1)" "(1, 1)" (
+        replace "(Chemical_IntensityC 1)" "1)" (
+          replace "(Chemical_IntensityC 0)" "0)" (
+            replace "(Chemical_ChemC 1)" "(1," (
+              replace "(Chemical_ChemC 0)" "(0," (
+                replace "(Abs_bit0 (Pos One))" "1" (
+                  replace "(Abs_bit0 Zero_int)" "0" (
+                    removeSubstr "Chemical_GasSensor_ext " (
+                      removeSubstr "Bmake Type" (
+                        removeSubstr "_C" gas)))
+                  )
+                )
+              )
+            )
+          )
+          )
+          )
+          )
+          )
+        )
+      )
+    )
+  );
+{-  (removeSubstr "_C" gas) >>=
+  (\e -> removeSubstr "Bmake Type" e) >>=
+  (\e -> removeSubstr "Chemical_GasSensor_ext" e);
+-}
+
+simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
+simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
+simulate_cnt n (Sil p) = 
+  do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
+       if (n >= 2000) then do { Prelude.putStr "Many steps (> 2000); Continue? [Y/N]"; q <- Prelude.getLine; 
+                              if (q == "Y") then simulate_cnt 0 p else Prelude.putStrLn "Ended early.";
+                            }
+                    else simulate_cnt (n + 1) p
+     };
+simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
+  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ renameGasEvent e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
+{-  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
+-}     
+       Prelude.putStr ("[Choose: 1-" ++ Prelude.show (Prelude.length m) ++ "]: ");
+       e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
+       case (Prelude.reads e) of
+         []       -> if (Prelude.length m == 1)
+                       then do { Prelude.putStrLn (renameGasEvent (Prelude.show (fst (m !! 0)))) ; simulate_cnt 0 (snd (m !! (0)))}
+                       else do { Prelude.putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > Prelude.length m)
+                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       else do { Prelude.putStrLn (renameGasEvent (Prelude.show (fst (m !! (v-1))))) ; simulate_cnt 0 (snd (m !! (v - 1)))}
+     };
+simulate_cnt n t@(Vis (Pfun_of_map f)) = 
+  do { Prelude.putStr ("Enter an event:");
+       e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
+       case (Prelude.reads e) of
+         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t } 
+         [(v, _)] -> case f v of
+                       Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       Just t' -> simulate_cnt 0 t'
+     };
+
+simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
+simulate = simulate_cnt 0;
+
+main = simulate (d_ChemicalDetector 0);
+\<close>
 
 export_generated_files 
   \<open>code/RoboChart_ChemicalDetector/Simulate.hs\<close>
-  \<open>code/RoboChart_ChemicalDetector/Main.hs\<close>
 
 end
