@@ -1,5 +1,8 @@
+section \<open> Procedures \<close>
+
 theory ITree_Procedure
   imports ITree_Circus
+  keywords "procedure" :: "thy_decl_block" and "over"
 begin
 
 datatype (discs_sels) ('inp, 'outp) methop = Call_C 'inp | Return_C 'outp
@@ -11,7 +14,7 @@ record ('val, 'st) valst =
   vval :: 'val
   vst  :: 'st
 
-type_synonym ('e, 'inp, 'outp, 'st) procedure = "('e, ('inp, 'st) valst, ('outp, 'st) valst) ktree"
+type_synonym ('e, 'inp, 'outp, 'st) "procedure" = "('e, ('inp, 'st) valst, ('outp, 'st) valst) ktree"
 
 translations
   (type) "('e, 'inp, 'outp, 'st) procedure" <= (type) "('inp, 'st) valst \<Rightarrow> ('e, ('outp, 'st') valst) itree" 
@@ -27,7 +30,7 @@ lemma Return_wb_prism [simp, code_unfold]: "wb_prism Return" by (unfold_locales,
 
 definition "proc_ret e = (\<lambda> s. Ret \<lparr> vval = e s, vst = s \<rparr>)"
 
-definition procedure :: "('inp \<Rightarrow> 'st \<Rightarrow> ('e, ('outp, 'st) valst) itree) \<Rightarrow> ('e, 'inp, 'outp, 'st) procedure" where
+definition "procedure" :: "('inp \<Rightarrow> 'st \<Rightarrow> ('e, ('outp, 'st) valst) itree) \<Rightarrow> ('e, 'inp, 'outp, 'st) procedure" where
 "procedure P = (\<lambda> vs. P (vval vs) (vst vs))"
 
 definition proc_call :: "('o \<Longrightarrow> 's) \<Rightarrow> ('e, 'i, 'o, 'ls::default) procedure \<Rightarrow> ('i, 's) expr \<Rightarrow> ('e, 's) htree" 
@@ -45,5 +48,7 @@ translations
   "_procedure x P" == "CONST procedure (\<lambda> x. P)"
   "_return e" == "CONST proc_ret (e)\<^sub>e"
   "_call x P e" == "CONST proc_call x P (e)\<^sub>e"
+
+ML_file \<open>ITree_Procedure.ML\<close>
 
 end

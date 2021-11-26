@@ -28,7 +28,9 @@ lemma trres_Sils:
   by (induct m arbitrary: n tr P, auto)
      (metis Sils_Sil_shift Suc_diff_le Suc_leD Suc_le_D diff_Suc_Suc trres'.simps(2))
 
-abbreviation "MAX_SIL_STEPS \<equiv> (20::nat)"
+text \<open> We fix this as a constant, which can be instantiated later. \<close>
+
+consts MAX_SIL_STEPS :: nat
 
 definition "after_tr P tr = trres tr MAX_SIL_STEPS P"
 

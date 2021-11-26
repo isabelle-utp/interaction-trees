@@ -430,4 +430,21 @@ lemma stable_un_Sils [simp]: "stable P \<Longrightarrow> un_Sils (Sils n P) = P"
 lemma diverge_un_Sils [simp]: "un_Sils diverge = diverge"
   by (simp add: un_Sils_def)
 
+fun un_Sils_n :: "nat \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
+"un_Sils_n 0 P = P" |
+"un_Sils_n (Suc n) (Sil P') = un_Sils_n n P'" |
+"un_Sils_n (Suc n) Q = un_Sils_n n Q" 
+
+lemma stable_un_Sils_n: "stable P \<Longrightarrow> un_Sils_n m P = P"
+  by (induct m) (auto, cases P, simp_all)
+
+lemma un_Sils_n_Sils_stable: "\<lbrakk> n \<le> m; stable P \<rbrakk> \<Longrightarrow> un_Sils_n m (Sils n P) = P"
+  apply (induct arbitrary: m rule: un_Sils_n.induct)
+  apply (simp_all add: stable_un_Sils_n)
+  apply (metis Suc_le_D Suc_le_lessD less_Suc_eq_le un_Sils_n.simps(2))+
+  done
+
+lemma stabilises_un_Sils_n: "stabilises P \<Longrightarrow> \<exists> n. un_Sils P = un_Sils_n n P"
+  by (metis lessI less_Suc_eq_le stabilises_def stable_un_Sils un_Sils_n_Sils_stable)
+
 end

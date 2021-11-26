@@ -34,6 +34,12 @@ definition "default_bool = False"
 instance ..
 end
 
+instantiation nat :: default
+begin
+definition "default_nat = (0 :: nat)"
+instance ..
+end
+
 instantiation int :: default
 begin
 definition "default_int = (0 :: int)"
