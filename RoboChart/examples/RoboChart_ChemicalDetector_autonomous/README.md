@@ -1,3 +1,11 @@
+[The autonomous chemical detector](https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html) example has been studied for untimed and timed analyses with FDR. Here, we animate the example using ITrees.
+
+# The RoboChart model
+The model for animation is based on [Version 3](https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version3), but has been adapted. The complete model is displayed below and then we discuss the changes made on Version 3.
+
+![Alt text](document/images/ChemicalNew.svg?raw=true&sanitize=true "Chemical package")
+
+
 # Animate the chemical detector RoboChart model
 
 1. Open `RoboChart_ChemicalDetector_autonomous.thy`.
