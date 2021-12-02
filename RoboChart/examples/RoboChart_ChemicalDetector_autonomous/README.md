@@ -2,9 +2,27 @@
 
 # The RoboChart model
 The model for animation is based on [Version 3](https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version3), but has been adapted. The complete model is displayed below and then we discuss the changes made on Version 3.
+-----
+![Module](document/images/Module.svg?raw=true&sanitize=true "Module")
+-----
+![Chemical](document/images/ChemicalNew.svg?raw=true&sanitize=true "Chemical package")
+-----
+![Location](document/images/Location.svg?raw=true&sanitize=true "Location package")
+-----
+![MainController](document/images/MainController.svg?raw=true&sanitize=true "MainController")
+-----
+![GasAnalysis](document/images/GasAnalysis.svg?raw=true&sanitize=true "GasAnalysis")
+-----
+![MicroController](document/images/MicroController.svg?raw=true&sanitize=true "MicroController")
+-----
+![Movement](document/images/Movement.svg?raw=true&sanitize=true "Movement")
+-----
 
-![Alt text](document/images/ChemicalNew.svg?raw=true&sanitize=true "Chemical package")
-
+## Changes made
+We have
+- specified all functions in the `Chemical` package with preconditions and postconditions (because our animation can solve these conditions);
+- updated the postconditions of `intensity` and `location` functions (because of errors detected during animation); and
+- removed the transition from `Going` to `Avoiding` in the state machine `Movement` (because the transition is not necessary and has been removed in [Version 8](https://robostar.cs.york.ac.uk/case_studies/autonomous-chemical-detector/autonomous-chemical-detector.html#version8)). 
 
 # Animate the chemical detector RoboChart model
 
