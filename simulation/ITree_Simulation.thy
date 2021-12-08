@@ -118,7 +118,9 @@ fun run_simulation thy =
   
   case ISim_Path.get thy of
     NONE => error "No animation" |
-    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./Simulation") "Start animation")
+    SOME f => 
+      let val p = Path.append f (Path.make ["simulate"])
+      in writeln (Active.run_system_shell_command (SOME (Path.implode p)) ("./Simulation") "Start animation") end
 
 fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
