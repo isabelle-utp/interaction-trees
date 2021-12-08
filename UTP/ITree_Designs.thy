@@ -6,7 +6,9 @@ begin
 
 named_theorems dpre
 
-text \<open> The design precondition captures the initial states that do not give the possibility of divergence. \<close>
+text \<open> The design precondition captures the initial states that do not give the possibility of divergence. 
+  This is different to the weakest precondition, which expresses the related property of the precondition
+  under which the program terminates. \<close>
 
 definition itree_pre :: "('e, 'r, 's) ktree \<Rightarrow> ('r \<Rightarrow> bool)" where
 "itree_pre P = (\<lambda> s. \<not> (\<exists> es. P s \<midarrow>es\<leadsto> diverge))"

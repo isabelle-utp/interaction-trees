@@ -8,12 +8,13 @@ begin
 definition rem_Sils :: "('e, 's) itree \<Rightarrow> ('e, 's) itree" where
 "rem_Sils P = un_Sils_n MAX_SIL_STEPS P"
 
-datatype 'r execres = TermEx 'r  | TimeoutEx nat 
+datatype 'r execres = TermEx 'r  | Abort | Visible | TimeoutEx nat 
 
-notation (output) TermEx ("Terminates: _") and TimeoutEx ("Timed out '(_ steps')")
+notation (output) TermEx ("Terminates: _") and Abort ("Aborted") and Visible ("Visible event") and TimeoutEx ("Timed out '(_ steps')")
 
 fun exec_res :: "('e, 'r) itree \<Rightarrow> 'r execres" where
 "exec_res (Ret x) = TermEx x" |
+"exec_res (Vis F) = (if F = {\<mapsto>} then Abort else Visible)" |
 "exec_res _ = TimeoutEx MAX_SIL_STEPS"
 
 definition itree_exec :: "('b::default \<Rightarrow> ('e, 's) itree) \<Rightarrow> 's execres" where
@@ -29,6 +30,5 @@ Outer_Syntax.command @{command_keyword execute} "execute an ITree procedure"
   (Parse.term >> (Toplevel.local_theory NONE NONE o execute_cmd))
 end
 \<close>
-
  
 end
