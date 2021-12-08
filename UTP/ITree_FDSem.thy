@@ -82,7 +82,7 @@ definition traces :: "('e, 's) itree \<Rightarrow> ('e, 's) trace set" where
 lemma wbisim_eq_traces: "P \<approx> Q \<Longrightarrow> traces(P) = traces(Q)"
   apply (auto simp add: traces_def)
   apply (metis wbisim_step)
-  apply (metis (no_types, hide_lams) wbisim_step_terminate)
+  apply (metis (no_types, opaque_lifting) wbisim_step_terminate)
   apply (metis (no_types, lifting) wbisim_step wbisim_sym)
   apply (metis (mono_tags, lifting) wbisim_step_terminate wbisim_sym)
   done
@@ -145,7 +145,7 @@ lemma traces_bind:
   apply (auto simp add: traces_def)
   apply (metis (no_types, lifting) Nil_is_map_conv append_Nil2 image_subset_iff list.set_map map_of_Ev_append range_eqI)
   apply (smt (z3) Ev_subset_image UNIV_I bind_RetE list.set_map list.simps(8) map_of_Ev_append self_append_conv2 subsetI trace_to_Nil)
-  apply (metis (no_types, hide_lams) List.map.id append.simps(1) id_apply image_subset_iff list.set_map list.simps(8) map_map of_Ev_Ev rangeI trace_to_Nil)
+  apply (metis (no_types, opaque_lifting) List.map.id append.simps(1) id_apply image_subset_iff list.set_map list.simps(8) map_map of_Ev_Ev rangeI trace_to_Nil)
   apply (metis (mono_tags, lifting) Ev_subset_image append.right_neutral list.set_map list.simps(8) map_of_Ev_append top_greatest)
   apply (metis (no_types, lifting) append.right_neutral list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest)
   apply (meson trace_to_bind_left)
@@ -190,7 +190,7 @@ next
         by (force elim:trace_to_appendE simp add: butlast_append)
     qed
     thus ?thesis
-      by (metis (no_types, hide_lams) UNIV_I a(1) butlast_append butlast_snoc in_tracesI1 le_sup_iff list.set_map map_Ev_of_Ev map_map set_append subsetI subset_image_iff t\<^sub>2)
+      by (metis (no_types, opaque_lifting) UNIV_I a(1) butlast_append butlast_snoc in_tracesI1 le_sup_iff list.set_map map_Ev_of_Ev map_map set_append subsetI subset_image_iff t\<^sub>2)
   qed
 qed
 
@@ -485,14 +485,14 @@ lemma failures_bind:
   apply (simp add: in_failures_iff)
   apply (auto elim!: trace_to_bindE bind_VisE' bind_RetE')
               apply (meson Vis_refuses refuses_Term_iff)
-             apply (metis (no_types, hide_lams) List.map.id append.right_neutral id_apply image_subset_iff list.set_map list.simps(8) map_map of_Ev_Ev rangeI trace_to_Nil)
+             apply (metis (no_types, opaque_lifting) List.map.id append.right_neutral id_apply image_subset_iff list.set_map list.simps(8) map_map of_Ev_Ev rangeI trace_to_Nil)
             apply (metis (no_types, lifting) image_subset_iff list.set_map map_Ev_eq_iff map_Ev_of_Ev map_map rangeI)
            apply (smt (verit, del_insts) append.right_neutral list.set_map map_append map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)
-          apply (metis (no_types, hide_lams) append.right_neutral list.set_map map_append map_of_Ev_append subset_image_iff top_greatest)
-         apply (metis (no_types, hide_lams) append_Nil list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)
-        apply (metis (no_types, hide_lams) append_Nil list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)
-       apply (metis (no_types, hide_lams) append.right_neutral list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest)
-      apply (metis (no_types, hide_lams) Ev_subset_image append_Nil list.set_map map_append map_of_Ev_append top_greatest)
+          apply (metis (no_types, opaque_lifting) append.right_neutral list.set_map map_append map_of_Ev_append subset_image_iff top_greatest)
+         apply (metis (no_types, opaque_lifting) append_Nil list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)
+        apply (metis (no_types, opaque_lifting) append_Nil list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)
+       apply (metis (no_types, opaque_lifting) append.right_neutral list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest)
+      apply (metis (no_types, opaque_lifting) Ev_subset_image append_Nil list.set_map map_append map_of_Ev_append top_greatest)
      apply (rename_tac b F tr')
      apply (drule_tac x="map_pfun (\<lambda> x. bind_itree x Q) F" in spec)
      apply (simp)
@@ -603,7 +603,7 @@ lemma dom_from_failures: "dom F = {a. \<forall> E. ([], E) \<in> failures (Vis F
   apply safe
     apply (erule trace_to_VisE)
   apply (simp)
-  apply (metis (no_types, hide_lams) Int_insert_left_if0 disjoint_iff image_empty image_insert inf_bot_left singletonI)
+  apply (metis (no_types, opaque_lifting) Int_insert_left_if0 disjoint_iff image_empty image_insert inf_bot_left singletonI)
     apply (auto)
   done
  
