@@ -62,9 +62,10 @@ simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Start
 \<close>
 
 ML \<open> 
-structure GHC_Path = Theory_Data
+structure GHC_Path = 
+  Theory_Data
   (type T = string
-   val empty = "isabelle ghc_stack ghc"
+   val empty = ""
    val extend = I
    val merge = fn (_, y) => y);
 
@@ -84,8 +85,18 @@ fun simulator_setup thy =
   end
 
 fun sim_files_cp thy tmp = 
+  (* Attempt to autodetect GHC location, unless an explicit location is configured. Default to using
+     built-in Stack version. *)
+  let open Isabelle_System; open Process_Result;
+      val ghc_path = GHC_Path.get thy
+      val ghc = if (ghc_path = "") then
+                case out_lines (bash_process (Bash.script "command -v ghc")) of
+                [] => "isabelle ghc_stack ghc" |
+                (p :: _) => p 
+                else ghc_path in
   "(fn path => let open Isabelle_System; val path' = Path.append path (Path.make [\"code\", \"simulate\"])" ^
-  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; " ^ GHC_Path.get thy ^ " Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
+  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; " ^ ghc ^ " Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
+  end
 
 open Named_Target
 
