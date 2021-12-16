@@ -48,7 +48,7 @@ lemma wbisim_to_SilD1: "(\<tau> P \<approx>\<^bsub>\<R>\<^esub> Q) \<Longrightar
   apply (erule wbisim_toE)
   apply (auto)
   apply (metis (no_types, lifting) Sils.elims itree.distinct(1) itree.sel(2) wbisim_to_Ret wbisim_to_Sils1 wbisim_to_Sils2)
-  apply (metis (no_types, hide_lams) itree.disc(8) itree.disc(9) wbisim_SilE wbisim_to_Sils1 wbisim_to_Sils2 wbisim_to_Vis)
+  apply (metis (no_types, opaque_lifting) itree.disc(8) itree.disc(9) wbisim_SilE wbisim_to_Sils1 wbisim_to_Sils2 wbisim_to_Vis)
   done
 
 lemma wbisim_to_Sil_iff1 [simp]: "(\<tau> P \<approx>\<^bsub>\<R>\<^esub> Q) \<longleftrightarrow> (P \<approx>\<^bsub>\<R>\<^esub> Q)"
@@ -73,13 +73,13 @@ lemma wbisim_to_Sils_iff2 [simp]: "(P \<approx>\<^bsub>\<R>\<^esub> Sils n Q) \<
 lemma wbisim_to_ndiv1 [elim]: "diverge \<approx>\<^bsub>\<R>\<^esub> P \<Longrightarrow> False"
   apply (erule wbisim_toE)
   apply (metis div_free_Ret div_free_Sils div_free_diverge)
-  apply (metis (no_types, hide_lams) Sils_diverge Sils_injective diverge_not_Vis)
+  apply (metis (no_types, opaque_lifting) Sils_diverge Sils_injective diverge_not_Vis)
   done
 
 lemma wbisim_to_ndiv2 [elim]: "P \<approx>\<^bsub>\<R>\<^esub> diverge \<Longrightarrow> False"
   apply (erule wbisim_toE)
   apply (metis div_free_Ret div_free_Sils div_free_diverge)
-  apply (metis (no_types, hide_lams) Sils_diverge Sils_injective diverge_not_Vis)
+  apply (metis (no_types, opaque_lifting) Sils_diverge Sils_injective diverge_not_Vis)
   done
 
 coinductive wbisim :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> bool" (infix "\<approx>" 50) where
@@ -106,7 +106,7 @@ lemma wbisim_refl [intro]: "P \<approx> P"
 proof (cases "divergent P")
   case True
   then show ?thesis
-    by (metis (mono_tags, hide_lams) diverges_then_diverge wbisim_divI) 
+    by (metis (mono_tags, opaque_lifting) diverges_then_diverge wbisim_divI) 
 next
   case False
   then show ?thesis
@@ -120,10 +120,10 @@ qed
 lemma wbisim_sym [intro]: "P \<approx> Q \<Longrightarrow> Q \<approx> P"
   apply (case_tac "P = diverge")
   apply (simp)
-   apply (metis (no_types, hide_lams) diverge_wbisim1)
+   apply (metis (no_types, opaque_lifting) diverge_wbisim1)
   apply (case_tac "Q = diverge")
    apply (simp)
-   apply (metis (no_types, hide_lams) diverge_wbisim2)
+   apply (metis (no_types, opaque_lifting) diverge_wbisim2)
   apply (coinduction arbitrary: P Q)
   apply (auto elim!: wbisim.cases wbisim_toE intro!: wbisim_to_Sils1 wbisim_to_Sils2 wbisim_to_Vis)
   apply (metis diverge_wbisim1)
@@ -134,7 +134,7 @@ lemma wbisim_SilI1 [intro]: "P \<approx> Q \<Longrightarrow> \<tau> P \<approx> 
   by (metis diverge.code wbisim.cases wbisimI wbisim_to_Sil1)
 
 lemma wbisim_SilI2 [intro]: "P \<approx> Q \<Longrightarrow> P \<approx> \<tau> Q"
-  by (metis (no_types, hide_lams) wbisim_SilI1 wbisim_sym)
+  by (metis (no_types, opaque_lifting) wbisim_SilI1 wbisim_sym)
 
 lemma Sil_wbisim_iff1 [simp]: "\<tau> P \<approx> Q \<longleftrightarrow> P \<approx> Q"
 proof 
@@ -145,11 +145,11 @@ next
   proof (cases "divergent P")
     case True
     with \<tau> show ?thesis
-      by (metis (no_types, hide_lams) diverge.code diverges_then_diverge)
+      by (metis (no_types, opaque_lifting) diverge.code diverges_then_diverge)
   next
     case False
     with \<tau> have stb: "stabilises Q"
-      by (metis (no_types, hide_lams) diverge_wbisim2 diverges_then_diverge stabilises_Sil)
+      by (metis (no_types, opaque_lifting) diverge_wbisim2 diverges_then_diverge stabilises_Sil)
     with \<tau> show ?thesis
       by (metis diverges_then_diverge wbisim.simps wbisim_to_SilD1)
   qed
@@ -162,7 +162,7 @@ lemma wbisim_Sils_iff1 [simp]: "Sils n P \<approx> Q \<longleftrightarrow> P \<a
   by (metis Sils_diverge Sils_injective wbisim.simps wbisim_to_Sils_iff1)
 
 lemma wbisim_Sils_iff2 [simp]: "P \<approx> Sils n Q \<longleftrightarrow> P \<approx> Q"
-  by (metis (mono_tags, hide_lams) wbisim_Sils_iff1 wbisim_sym)
+  by (metis (mono_tags, opaque_lifting) wbisim_Sils_iff1 wbisim_sym)
 
 lemma wbisim_Sils [intro]: "P \<approx> Q \<Longrightarrow> Sils n P \<approx> Q"
   by (induct n, auto)
@@ -193,14 +193,14 @@ proof (cases "divergent P")
 next
   case False
   with assms have stbs: "stabilises P" "stabilises Q" "stabilises R"
-    apply (metis (no_types, hide_lams))
+    apply (metis (no_types, opaque_lifting))
     apply (metis (mono_tags, lifting) False assms(1) diverge_wbisim2 diverges_then_diverge)
     apply (metis (mono_tags, lifting) False assms(1) assms(2) diverge_wbisim2 diverges_then_diverge)
     done
   with assms show ?thesis 
     apply (coinduction arbitrary: P Q R)
     apply (auto elim!: wbisim.cases wbisim_toE intro!: wbisim_to_Sils1 wbisim_to_Sils2 wbisim_to_Vis)
-    apply (metis (no_types, hide_lams) diverge_wbisim1 diverge_wbisim2 diverges_then_diverge)
+    apply (metis (no_types, opaque_lifting) diverge_wbisim1 diverge_wbisim2 diverges_then_diverge)
     apply (metis diverge_wbisim1 diverge_wbisim2 diverges_then_diverge)
     done
 qed
@@ -249,7 +249,7 @@ proof (rule wbisim.coinduct[of \<R>, OF assms(1)], simp)
     next
       case (Ret m x)
       then obtain n y where "Q = Sils n (Ret y)"
-        by (metis (no_types, hide_lams) PQ assms(2) assms(4) assms(5) itree.disc(4) itree.disc(7) itree.disc(9) itree.distinct_disc(6) itree_disj_cases ndiv)
+        by (metis (no_types, opaque_lifting) PQ assms(2) assms(4) assms(5) itree.disc(4) itree.disc(7) itree.disc(9) itree.distinct_disc(6) itree_disj_cases ndiv)
       with Ret show ?thesis
         by (metis (no_types, lifting) PQ assms(2) assms(4) assms(7) wbisim_to_Ret wbisim_to_Sils1 wbisim_to_Sils2)
     next
@@ -351,7 +351,7 @@ lemma wbisim_step: "\<lbrakk> P \<approx> Q; P \<midarrow>tr\<leadsto> P' \<rbra
   apply (erule trace_to_ConsE)
   apply (erule trace_to_ConsE)
   apply (auto elim!: wbisim_VisE)
-  apply (metis (no_types, hide_lams) trace_to_NilE wbisim_Sils_iff1)
+  apply (metis (no_types, opaque_lifting) trace_to_NilE wbisim_Sils_iff1)
   done
 
 lemma wbisim_silent_step_terminate: "\<lbrakk> P \<approx> Q; P \<midarrow>[]\<leadsto> Ret x \<rbrakk> \<Longrightarrow> Q \<midarrow>[]\<leadsto> Ret x"
@@ -361,17 +361,17 @@ lemma wbisim_silent_step_terminate: "\<lbrakk> P \<approx> Q; P \<midarrow>[]\<l
 lemma wbisim_single_step_terminate: "\<lbrakk> P \<approx> Q; P \<midarrow>[e]\<leadsto> Ret x \<rbrakk> \<Longrightarrow> Q \<midarrow>[e]\<leadsto> Ret x"
   apply (erule trace_to_singleE)
   apply (auto elim!: trace_to_singleE wbisim_VisE)
-  apply (metis (no_types, hide_lams) Sils_Vis_not_Ret termination_determinsitic trace_of_Sils wbisim.cases wbisim_toD)
+  apply (metis (no_types, opaque_lifting) Sils_Vis_not_Ret termination_determinsitic trace_of_Sils wbisim.cases wbisim_toD)
   done
 
 lemma wbisim_step_terminate: "\<lbrakk> P \<approx> Q; P \<midarrow>tr\<leadsto> Ret x \<rbrakk> \<Longrightarrow> Q \<midarrow>tr\<leadsto> Ret x"
   apply (induct tr arbitrary: P Q)
-  apply (metis (mono_tags, hide_lams) wbisim_silent_step_terminate)
+  apply (metis (mono_tags, opaque_lifting) wbisim_silent_step_terminate)
   apply (smt (verit, ccfv_SIG) trace_to_Cons trace_to_ConsE wbisim_step)
   done
 
 lemma wbisim_silent_step_stable: "\<lbrakk> P \<approx> Q; P \<midarrow>[]\<leadsto> P'; stable P' \<rbrakk> \<Longrightarrow> \<exists> Q'. Q \<midarrow>[]\<leadsto> Q' \<and> stable Q' \<and> P' \<approx> Q'"
-  by (metis (no_types, hide_lams) diverges_then_diverge stabilises_def trace_of_Sils wbisim.cases wbisim_sym wbisim_to_ndiv2 wbisim_trace_to_Nil wbisim_trans)
+  by (metis (no_types, opaque_lifting) diverges_then_diverge stabilises_def trace_of_Sils wbisim.cases wbisim_sym wbisim_to_ndiv2 wbisim_trace_to_Nil wbisim_trans)
  
 lemma wbisim_single_step_stable: 
   assumes "P \<approx> Q" "P \<midarrow>[e]\<leadsto> P'" "stable P'"

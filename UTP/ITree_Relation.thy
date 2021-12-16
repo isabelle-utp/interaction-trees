@@ -40,7 +40,7 @@ lemma Div_rel [rel]: "itree_rel Div = {}"
 lemma Stop_rel [rel]: "itree_rel Stop = {}"
   by (simp add: itree_rel_def)
 
-lemma seq_rel [rel]: "itree_rel (P \<Zcomp> Q) = itree_rel P O itree_rel Q"
+lemma seq_rel [rel]: "itree_rel (P ;; Q) = itree_rel P O itree_rel Q"
   by (auto simp add: kleisli_comp_def itree_rel_def relcomp_unfold)
 
 lemma cond_rel [rel]: 

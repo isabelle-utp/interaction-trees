@@ -215,7 +215,7 @@ proof -
     apply (unfold_locales, auto)
     using chn.last_st apply auto[1]
     using chn.chain_iter hd_conv_nth apply fastforce
-    apply (metis (no_types, hide_lams) One_nat_def Suc_eq_plus1 Suc_less_eq Suc_pred assms(2) chn.chain_iter diff_Suc_Suc diff_zero list.size(4) nth_Cons_Suc)
+    apply (metis (no_types, opaque_lifting) One_nat_def Suc_eq_plus1 Suc_less_eq Suc_pred assms(2) chn.chain_iter diff_Suc_Suc diff_zero list.size(4) nth_Cons_Suc)
     done
 qed
 

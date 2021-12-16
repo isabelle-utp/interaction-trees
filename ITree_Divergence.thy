@@ -160,7 +160,7 @@ lemma Sil_Sil_drop: "\<tau> (\<tau> P) = P \<Longrightarrow> \<tau> P = P"
 
 lemma Sils_fp_diverge: "\<lbrakk> Sils n P = P; n > 0 \<rbrakk> \<Longrightarrow> P = diverge"
   apply (coinduction arbitrary: P, auto)
-  apply (metis (mono_tags, hide_lams) gr_implies_not_zero is_Ret_Sils)
+  apply (metis (mono_tags, opaque_lifting) gr_implies_not_zero is_Ret_Sils)
   apply (metis is_Sil_Sils)
   apply (metis (no_types, lifting) Sils_Sil_shift is_Sil_def itree.sel(2))
   done
@@ -325,7 +325,7 @@ proof (rule div_free_coind[of \<phi>, OF assms(1)], safe)
   next
     case (Ret n x)
     then show ?thesis
-      by (metis (mono_tags, hide_lams) stabilises_to_Sils_RetI) 
+      by (metis (mono_tags, opaque_lifting) stabilises_to_Sils_RetI) 
   next
     case diverge
     then show ?thesis
@@ -335,7 +335,7 @@ qed
   
 lemma div_free_run: "div_free (run E)"
   apply (coinduction rule: div_free_coinduct)
-  apply (metis (no_types, hide_lams) is_Vis_diverge run.disc_iff)
+  apply (metis (no_types, opaque_lifting) is_Vis_diverge run.disc_iff)
   apply (metis Vis_Sils map_pfun_apply pdom_map_pfun run.code)
   done
 
@@ -418,7 +418,7 @@ next
     using diverges_then_diverge by auto
   then show ?thesis
     by (auto simp add: un_Sils_def)
-       (metis (mono_tags, hide_lams) Sils.simps(1) Sils.simps(2) itree.disc(5) itree.sel(2) un_Sil_Sils)
+       (metis (mono_tags, opaque_lifting) Sils.simps(1) Sils.simps(2) itree.disc(5) itree.sel(2) un_Sil_Sils)
 qed
 
 lemma un_Sils_Sils [simp]: "un_Sils (Sils n P) = un_Sils P"

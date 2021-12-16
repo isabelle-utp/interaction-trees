@@ -14,6 +14,7 @@ session "ITree_UTP" in "UTP" = "Interaction_Trees" +
   options [timeout = 600, document = false]
   theories
     ITree_UTP
+	ITree_VCG
 
 session "ITree_RoboChart" in "RoboChart" = "ITree_UTP" +
   options [timeout = 600, document = pdf, document_output = "output"]

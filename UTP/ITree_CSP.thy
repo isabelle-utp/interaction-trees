@@ -84,7 +84,7 @@ definition inp_map :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> 
 lemma inp_in_where_map_code [code_unfold]:
   "wb_prism c \<Longrightarrow> inp_in_where c A P = inp_map_in_where c A P"
   apply (auto simp add: inp_in_where_def inp_map_in_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
-  apply (metis (no_types, hide_lams) imageI option.distinct(1) option.exhaust_sel wb_prism_def)
+  apply (metis (no_types, opaque_lifting) imageI option.distinct(1) option.exhaust_sel wb_prism_def)
   done
 
 lemma inp_in_where_list_code [code_unfold]:
@@ -335,12 +335,12 @@ lemma genchoice_commutative:
 lemma skip_stable_genchoice_left: 
   assumes "stable P"
   shows "genchoice \<M> skip P = skip"
-  by (metis (mono_tags, hide_lams) assms genchoice.disc_iff(1) is_Ret_def itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
+  by (metis (mono_tags, opaque_lifting) assms genchoice.disc_iff(1) is_Ret_def itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
 
 lemma skip_stable_genchoice_right:
   assumes "stable P"
   shows "genchoice \<M> P skip = skip"
-  by (metis (mono_tags, hide_lams) assms genchoice.disc_iff(1) is_Ret_def itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
+  by (metis (mono_tags, opaque_lifting) assms genchoice.disc_iff(1) is_Ret_def itree.exhaust_disc old.unit.exhaust prod.sel(1) prod.sel(2) skip_def)
 
 lemma genchoice_RetE [elim]:
   assumes "genchoice \<M> P Q = \<checkmark> x" 
@@ -371,7 +371,7 @@ lemma map_prod_merge:
   "f(x \<mapsto> v)\<^sub>p \<odot> g = 
   (if (x \<notin> pdom(g)) then (f \<odot> g)(x \<mapsto> v)\<^sub>p else {x} \<Zndres> (f \<odot> g))"
   by (auto simp add: map_prod_def)
-     (metis (no_types, hide_lams) Compl_Un insert_absorb insert_is_Un)
+     (metis (no_types, opaque_lifting) Compl_Un insert_absorb insert_is_Un)
 
 lemma map_prod_as_ovrd:
   assumes "pdom(f) \<inter> pdom(g) = {}"
@@ -581,7 +581,7 @@ lemma genpar_Sil_iff: "Sil R = genpar \<M> P E Q \<longleftrightarrow> ((\<exist
 proof
   assume a:?lhs
   hence sil: "is_Sil (genpar \<M> P E Q)"
-    by (metis (no_types, hide_lams) itree.disc(5))
+    by (metis (no_types, opaque_lifting) itree.disc(5))
   show ?rhs
   proof (cases "unstable P")
     case True
