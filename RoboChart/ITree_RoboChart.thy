@@ -1,7 +1,8 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "Interaction_Trees.ITree_Extraction" "HOL-Library.Numeral_Type" "ITree_UTP.ITree_CSP_Biased"
+  imports "Interaction_Trees.ITree_Extraction" "HOL-Library.Numeral_Type" 
+          "ITree_UTP.ITree_CSP_Biased"
 begin
 
 unbundle Z_Relation_Syntax
@@ -27,6 +28,44 @@ type_synonym core_int = integer
 type_synonym core_real = integer
 type_synonym core_string = String.literal
 
+subsubsection \<open> Primitive types \<close>
+datatype ('sm, 'a::finite) PrimType = PrimTypeC (un_prim:'a)
+
+lemma distinct_PrimType: "distinct x \<longrightarrow> distinct (map PrimTypeC x)"
+  by (simp add: distinct_conv_nth)
+
+instantiation PrimType :: (type, enum) enum
+begin
+
+definition enum_PrimType :: "('a, 'b) PrimType list" where
+"enum_PrimType = map PrimTypeC Enum.enum"
+
+definition enum_all_PrimType :: "(('a, 'b) PrimType \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_all_PrimType P = (\<forall>b :: ('a, 'b) PrimType \<in> set enum_class.enum. P b)"
+
+definition enum_ex_PrimType :: "(('a, 'b) PrimType \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_ex_PrimType P = (\<exists>b :: ('a, 'b) PrimType \<in> set enum_class.enum. P b)"
+
+instance
+proof (intro_classes)
+  show "distinct (enum_class.enum :: ('a, 'b) PrimType list)"
+    apply (simp add: enum_PrimType_def)
+    by (simp add: enum_distinct distinct_PrimType)
+
+  show univ_eq: "(UNIV :: ('a, 'b) PrimType set) = set enum_class.enum"
+    apply (auto simp add: enum_PrimType_def image_iff)
+    apply (rule_tac x="un_prim x" in bexI, auto)
+    apply (auto simp add: lists_eq_set enum_UNIV)
+    done
+
+  fix P :: "('a,'b) PrimType \<Rightarrow> bool"
+  show "enum_class.enum_all P = Ball UNIV P"
+    and "enum_class.enum_ex P = Bex UNIV P"
+    by(simp_all add: enum_all_PrimType_def enum_ex_PrimType_def univ_eq)
+qed
+end
+
+subsection \<open> Locale \<close>
 text \<open> A locale for reuse of RoboChart configurations (corresponding to instantiation.csp). 
 This will be extended and interpreted in theories for each RoboChart model. 
 We add common types and definitions here.
@@ -98,6 +137,14 @@ single (not tuple), based on the list of values @{text "a"}.
 The @{text "enumchans1 chs a"} supports enumerations of multiple channels.
 Other definitions with suffix 2, 3, and 4 are similar, but for the channels whose types are pairs, 
 triples, and quadruples.
+
+We note such functions are not necessary in the future.
+At this moment, we use these functions to explicitly enumerate events. We observe that 
+the CSP-M syntax @{verbatim "{| c |}"} is simpler and more familiar. There is a better syntax 
+(like @{text "\<lbrace> c v. v \<in> T_list \<rbrace>"}) introduced in the beginning of @{verbatim "ITree_CSP.thy"}. 
+However, in order to make this syntax work, we need to instantiate the type of @{term v} for 
+@{class enum} and @{class equal}. Otherwise, an error will be raised: @{verbatim 
+"Type ... not of sort {enum,equal}"} when generating code. So this can be improved.
 \<close>
 abbreviation "enumchan1 ch a \<equiv> mapf [ch] a"
 abbreviation "enumchan2 ch a b \<equiv> mapf (mapfc [ch] a) b"
@@ -119,6 +166,8 @@ definition mapfpc :: "('c \<times> 'a \<Rightarrow> 'b) list \<Rightarrow> 'c li
 definition mapfp :: "('b \<Rightarrow> 'a) list \<Rightarrow> 'b list \<Rightarrow> ('a \<times> 'a) list" where
 "mapfp fs xs = concat (map (\<lambda> f. map f xs) (map (\<lambda>f. \<lambda>x. (f x, f x)) fs))"
 
+text \<open> @{text "enumchanp1"} and @{text "enumchansp1"} are similar to @{text "enumchan1"} and 
+@{text "enumchans1"}, but for pairs, of which the first and the second elements are the same. \<close>
 abbreviation "enumchanp1 ch a \<equiv> mapfp [ch] a"
 abbreviation "enumchanp2 ch a b \<equiv> mapf (mapfpc [ch] a) b"
 abbreviation "enumchanp3 ch a b c \<equiv> mapf (mapfc (mapfpc [ch] a) b) c"
@@ -129,8 +178,8 @@ abbreviation "enumchansp3 chs a b c \<equiv> mapf (mapfc (mapfpc chs a) b) c"
 abbreviation "enumchansp4 chs a b c d \<equiv> mapf (mapfc (mapfc (mapfpc chs a) b) c) d"
 
 text \<open> @{text "forget_first"} maps an event @{text "e_"} to another @{text "e"} by forgetting 
-the first element (a transition id, tid) of @{text "e_"}. This is used for the event renaming 
-like [(e1__stm0.tid.dir.n, e1_stm0.dir.n), ...].
+the first element (a transition id, @{text "tid"}) of @{text "e_"}. This is used for the event 
+renaming like @{text "[(e1__stm0.tid.dir.n, e1_stm0.dir.n), ...]"}.
 \<close>
 definition forget_first where
 "forget_first e_' e xs = (\<lambda>(dir). 
@@ -149,6 +198,15 @@ definition mapfpc2 :: "(('d \<times> 'a \<Rightarrow> 'b) \<times> ('d \<times> 
 
 definition mapfp2 :: "(('c \<Rightarrow> 'a) \<times> ('c \<Rightarrow> 'b)) list \<Rightarrow> 'c list \<Rightarrow> ('a \<times> 'b) list" where
 "mapfp2 fs xs = concat (map (\<lambda> f. map f xs) (map (\<lambda>f. \<lambda>x. ((fst f) x, (snd f) x)) fs))"
+
+text \<open> @{text "enumchanp2_1"} and @{text "enumchansp2_1"} are for pairs, of which the first and 
+the second elements are different. 
+
+Similarly, these functions are also not necessary in the future. A better syntax 
+(@{text "\<lbrace>c1 (v1, v2) \<mapsto> c2 (v1, v2) | (v1, v2). v1 \<in> T1_list \<and> v2 \<in> T2_list \<rbrace>"}) is present. 
+For the same reason, the type (@{term "T1 \<times> T2"}) of @{term c1} should be instantiated for 
+@{class enum} and @{class equal}.
+\<close>
 
 abbreviation "enumchanp2_1 ch a \<equiv> mapfp2 [ch] a"
 abbreviation "enumchanp2_2 ch a b \<equiv> mapf (mapfpc2 [ch] a) b"

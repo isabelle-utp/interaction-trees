@@ -1,7 +1,7 @@
 section \<open> Fibonacci Circus Model \<close>
 
 theory Fib
-  imports "../ITree_Circus"
+  imports "ITree_UTP.ITree_Circus"
 begin lit_vars
 
 alphabet FibState = 
