@@ -40,7 +40,7 @@ lemma Div_bottom: "Div \<sqsubseteq> P"
 lemma Stop_pre [dpre]: "itree_pre Stop = (True)\<^sub>e"
   by (auto simp add: itree_pre_def fun_eq_iff deadlock_def)
 
-lemma seq_pre [dpre]: "itree_pre (P \<Zcomp> Q) = (itree_pre P \<and> wlp P (itree_pre Q))\<^sub>e"
+lemma seq_pre [dpre]: "itree_pre (P ;; Q) = (itree_pre P \<and> wlp P (itree_pre Q))\<^sub>e"
   apply (expr_simp, auto elim!: trace_to_bindE simp add: kleisli_comp_def itree_pre_def wlp_itree_def itree_rel_def retvals_def)
   apply (metis bind_diverge trace_to_bind_left)
   apply (meson trace_to_bind)

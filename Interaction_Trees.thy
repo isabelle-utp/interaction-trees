@@ -141,10 +141,10 @@ lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind
 definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 
 syntax
-  "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixr "\<Zcomp>" 54)
+  "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixr ";;" 54)
 
 translations
-  "P \<Zcomp> Q" == "CONST kleisli_comp (CONST bind) P Q"
+  "P ;; Q" == "CONST kleisli_comp (CONST bind) P Q"
 
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
@@ -236,7 +236,7 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
 
 lemma kcomp_assoc: 
   fixes P :: "('e, 'r, 's) ktree" 
-  shows "(P \<Zcomp> Q) \<Zcomp> R = P \<Zcomp> (Q \<Zcomp> R)"
+  shows "(P ;; Q) ;; R = P ;; (Q ;; R)"
   by (simp add: kleisli_comp_def fun_eq_iff bind_itree_assoc)
 
 subsection \<open> Run \<close>
@@ -477,7 +477,7 @@ lemma trace_to_appendE:
 lemma trace_to_trans:
   "\<lbrakk> P \<midarrow>tr\<leadsto> P'; P' \<midarrow>tr'\<leadsto> P'' \<rbrakk> \<Longrightarrow> P \<midarrow>tr @ tr'\<leadsto> P''"
   apply (induct tr arbitrary: P P' P'' tr')
-   apply (auto  elim: trace_to_NilE trace_to_ConsE)
+   apply (auto elim: trace_to_NilE trace_to_ConsE)
   apply (meson trace_to_Cons trace_to_ConsE)
   done  
 

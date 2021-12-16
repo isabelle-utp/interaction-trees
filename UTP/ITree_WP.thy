@@ -52,21 +52,21 @@ lemma wp_test [wp]: "wp (test S) P = (S \<and> P)\<^sub>e"
 lemma wlp_test [wp]: "wlp (test S) P = (S \<longrightarrow> P)\<^sub>e"
   by (simp add: wlp_itree_def test_rel, expr_simp)
 
-lemma wp_seq [wp]: "wp (S \<Zcomp> R) P = wp S (wp R P)"
+lemma wp_seq [wp]: "wp (S ;; R) P = wp S (wp R P)"
   by (auto simp add: wp_itree_def seq_rel)
 
-lemma wp_seq': "wp (S \<Zcomp> R) = wp S \<circ> wp R"
+lemma wp_seq': "wp (S ;; R) = wp S \<circ> wp R"
   by (auto simp add: wp_itree_def seq_rel fun_eq_iff)
 
-lemma wp_foldr_seq: "wp (foldr (\<lambda> i D. C i \<Zcomp> D) xs Skip) = foldr (\<lambda> i Q. wp (C i) \<circ> Q) xs id"
+lemma wp_foldr_seq: "wp (foldr (\<lambda> i D. C i ;; D) xs Skip) = foldr (\<lambda> i Q. wp (C i) \<circ> Q) xs id"
   by (induct xs, simp_all add: wp_Skip' wp_seq')
 
 lemma wp_foldr_seq_term:
   assumes "\<And> x. pre (C x) = (True)\<^sub>e"
-  shows "pre (foldr (\<lambda> i D. C i \<Zcomp> D) xs Skip) = (True)\<^sub>e"
+  shows "pre (foldr (\<lambda> i D. C i ;; D) xs Skip) = (True)\<^sub>e"
   using assms by (induct xs, simp_all add: wp_Skip' wp_seq')
 
-lemma wlp_seq [wp]: "wlp (S \<Zcomp> R) P = wlp S (wlp R P)"
+lemma wlp_seq [wp]: "wlp (S ;; R) P = wlp S (wlp R P)"
   by (auto simp add: wlp_itree_def seq_rel)
 
 lemma wlp_cond [wp]: "wlp (if B then C\<^sub>1 else C\<^sub>2 fi) P = ((B \<longrightarrow> wlp C\<^sub>1 P) \<and> (\<not> B \<longrightarrow> wlp C\<^sub>2 P))\<^sub>e"

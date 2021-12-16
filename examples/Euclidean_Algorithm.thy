@@ -1,15 +1,13 @@
 theory Euclidean_Algorithm
-  imports "ITree_UTP.ITree_UTP"
+  imports "ITree_UTP.ITree_VCG"
 begin lit_vars
-
-def_consts MAX_SIL_STEPS = 100
 
 zstore gcd_st = 
   a :: int
   b :: int
 
 procedure eucl "(A::int, B::int)" over gcd_st =
-"(a, b) := (A, B) \<Zcomp> 
+"(a, b) := (A, B) ;
  while a \<noteq> b inv a > 0 \<and> b > 0 \<and> gcd a b = gcd A B do 
    if a > b 
      then a := a - b 

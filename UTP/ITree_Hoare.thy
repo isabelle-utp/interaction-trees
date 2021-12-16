@@ -53,7 +53,7 @@ lemma hoare_assigns_impl [hoare_safe]:
 
 lemma hoare_fwd_assign [hoare_safe]:
   assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
-  shows "\<^bold>{P\<^bold>} x := e \<Zcomp> S \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} x := e ;; S \<^bold>{Q\<^bold>}"
   using assms
   by (auto simp add: hoare_alt_def assigns_def kleisli_comp_def, expr_simp)
      (metis (no_types, lifting) mwb_lens_def vwb_lens.put_eq vwb_lens_mwb weak_lens.put_get)
@@ -63,10 +63,10 @@ lemma hoare_cond [hoare_safe]:
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def cond_itree_def)
 
-lemma hl_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{R\<^bold>}"
+lemma hl_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{R\<^bold>}"
   by (auto simp add: hoare_triple_def seq_rel spec_def)
 
-lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 \<Zcomp> S\<^sub>2 \<^bold>{P\<^bold>}"
+lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{P\<^bold>}"
   by (simp add: hl_seq)
 
 lemma hoare_let [hoare_safe]:

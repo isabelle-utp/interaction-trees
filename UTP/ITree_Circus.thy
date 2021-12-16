@@ -63,7 +63,7 @@ definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) 
 "let_itree e S = (\<lambda> s. S (e s) s)"
 
 definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i \<Zcomp> Q) I Skip) s)"
+"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) I Skip) s)"
 
 syntax 
   "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
@@ -92,35 +92,35 @@ translations
 lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
   by (simp add: assigns_def Skip_def)
 
-lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<Zcomp> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P) \<Zcomp> Q"
+lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P ;; Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) ;; Q"
   by (simp add: kleisli_comp_def assigns_def)
 
-lemma assigns_seq_comp: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
+lemma assigns_seq_comp: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def subst_comp_def)
 
-lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
+lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! ;; \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
 
-lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? \<Zcomp> \<langle>\<sigma>\<rangle>\<^sub>a"
+lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? ;; \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
 
 lemma assign_combine: 
   assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
-  shows "x := e \<Zcomp> y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
+  shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
   using assms by (simp add: kleisli_comp_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
 
 lemma for_empty: "for x in [] do P x od = Skip"
   by (simp add: for_itree_def)
 
-lemma for_Cons: "for_itree (x # xs) P = P x \<Zcomp> for_itree xs P"
+lemma for_Cons: "for_itree (x # xs) P = P x ;; for_itree xs P"
   by (simp add: for_itree_def)
 
 text \<open> Hide the state of an action to produce a process \<close>
 
 definition process :: "'s::default subst \<Rightarrow> ('e, 's, 'a) ktree \<Rightarrow> 'e process" where
-"process I A = (\<langle>(\<lambda> _. default)\<rangle>\<^sub>a \<Zcomp> \<langle>I\<rangle>\<^sub>a \<Zcomp> A \<Zcomp> assigns (\<lambda> s. ())) ()"
+"process I A = (\<langle>(\<lambda> _. default)\<rangle>\<^sub>a ;; \<langle>I\<rangle>\<^sub>a ;; A ;; assigns (\<lambda> s. ())) ()"
 
-abbreviation "abs_st P \<equiv> P \<Zcomp> assigns (\<lambda> s. ())"
+abbreviation "abs_st P \<equiv> P ;; assigns (\<lambda> s. ())"
 
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<checkmark> v] | v. True}" 
   apply (simp add: inp_in_where_def traces_Vis traces_Ret)
@@ -191,7 +191,7 @@ translations "c?(x):A|B \<rightarrow> P" == "CONST input_in_where c (A)\<^sub>e 
 translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambda> (x). P)"
 translations "c?(x)|P \<rightarrow> Q" == "CONST input_where c (\<lambda> (x). ((P)\<^sub>e, Q))"
 
-lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P(x))"
+lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a ;; P(x))"
   by (simp add: input_in_where_def kleisli_comp_def assigns_def)
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
@@ -200,7 +200,7 @@ definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow
 syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_!'(_') \<rightarrow> _" [90, 0, 91] 91)
 translations "c!(e) \<rightarrow> P" == "CONST output c (e)\<^sub>e P"
 
-lemma assigns_output: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> c!(e) \<rightarrow> P = c!(\<sigma> \<dagger> e) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P)"
+lemma assigns_output: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c!(e) \<rightarrow> P = c!(\<sigma> \<dagger> e) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a ;; P)"
   by (simp add: assigns_def kleisli_comp_def output_def expr_defs)
 
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
@@ -222,7 +222,7 @@ lemma extchoice_Stop: "Stop \<box> P = P"
 lemma extchoice_Div: "Div \<box> P = Div"
   by (simp add: choice_diverge extchoice_fun_def)
 
-lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a \<Zcomp> Q)"
+lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a ;; Q)"
   by (simp add: kleisli_comp_def extchoice_fun_def expr_defs assigns_def)
 
 no_notation conj  (infixr "&" 35)
@@ -231,7 +231,7 @@ syntax
   "_cguard" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_ & _" [50, 51] 50)
 
 translations
-  "_cguard b P" == "(CONST test (b)\<^sub>e) \<Zcomp> P"
+  "_cguard b P" == "(CONST test (b)\<^sub>e) ;; P"
 
 definition frame :: "'s scene \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "frame a P = (\<lambda> s. P s \<bind> (\<lambda> s'. Ret (s' \<oplus>\<^sub>S s on a)))"
@@ -240,7 +240,7 @@ definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow>
 "frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
 
 definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
-[code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! \<Zcomp> frame_ext a P"
+[code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! ;; frame_ext a P"
 
 syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
 translations "_promote P a" == "CONST promote P a"
