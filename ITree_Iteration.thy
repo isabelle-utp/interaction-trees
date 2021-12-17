@@ -92,7 +92,7 @@ begin
 
 fun itreepow :: "nat \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "itreepow 0 P = Ret" |
-"itreepow (Suc n) P = P \<Zcomp> itreepow n P"
+"itreepow (Suc n) P = P ;; itreepow n P"
 
 end
 
@@ -140,7 +140,7 @@ lemma iterate_body_nonterminates:
   shows "nonterminates (iterate b P s)"
   by (simp add: assms iterate.code)
 
-lemma loop_unfold: "loop P = P \<Zcomp> (\<tau> \<circ> loop P)"
+lemma loop_unfold: "loop P = P ;; (\<tau> \<circ> loop P)"
   by (simp add: kleisli_comp_def fun_eq_iff iterate.code)
 
 lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
