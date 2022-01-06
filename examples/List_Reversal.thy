@@ -1,5 +1,5 @@
 theory List_Reversal
-  imports "ITree_UTP.ITree_VCG"
+  imports "ITree_VCG.ITree_VCG"
 begin 
 
 zstore state =

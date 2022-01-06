@@ -33,6 +33,12 @@ lemma hl_skip':
   shows "\<^bold>{P\<^bold>} Skip \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def Skip_def, expr_simp)
 
+lemma hl_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{R\<^bold>}"
+  by (auto simp add: hoare_triple_def seq_rel spec_def)
+
+lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{P\<^bold>}"
+  by (simp add: hl_seq)
+
 lemma hoare_assigns: "\<^bold>{\<sigma> \<dagger> P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}"
   by (auto intro!: hoareI simp add: assigns_def, expr_simp)
 
@@ -58,16 +64,15 @@ lemma hoare_fwd_assign [hoare_safe]:
   by (auto simp add: hoare_alt_def assigns_def kleisli_comp_def, expr_simp)
      (metis (no_types, lifting) mwb_lens_def vwb_lens.put_eq vwb_lens_mwb weak_lens.put_get)
 
+lemma hl_assigns_bwd [hoare_safe]:
+  assumes "H{P} S {\<sigma> \<dagger> Q}"
+  shows "H{P} S ;; \<langle>\<sigma>\<rangle>\<^sub>a {Q}"
+  by (blast intro: hl_seq[OF assms(1)] hoare_assigns)
+
 lemma hoare_cond [hoare_safe]:
   assumes "\<^bold>{B \<and> P\<^bold>} S \<^bold>{Q\<^bold>}" "\<^bold>{\<not>B \<and> P\<^bold>} T \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def cond_itree_def)
-
-lemma hl_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{R\<^bold>}"
-  by (auto simp add: hoare_triple_def seq_rel spec_def)
-
-lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{P\<^bold>}"
-  by (simp add: hl_seq)
 
 lemma hoare_let [hoare_safe]:
   assumes "\<And> s. \<^bold>{P \<and> \<guillemotleft>s\<guillemotright> = \<^bold>v\<^bold>} (S (e s)) \<^bold>{Q\<^bold>}"
@@ -168,6 +173,11 @@ proof -
     by (simp add: assms(1) hoare_while_partial while_inv_def)
   from hl_conseq[OF 1 assms(2) assms(3)] show ?thesis by simp
 qed
+
+lemma hl_while_inv_init [hoare_safe]:
+  assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> \<sigma> \<dagger> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>}\<langle>\<sigma>\<rangle>\<^sub>a ;; while B inv I do S od\<^bold>{Q\<^bold>}"
+  by (auto intro!: hl_seq[where Q="I"] hl_while_inv hoare_assigns_impl assms)
 
 method hoare = ((simp add: assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe; (simp add: usubst_eval)?))[1]
 

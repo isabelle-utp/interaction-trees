@@ -1,5 +1,5 @@
 theory Collatz_Conjecture
-  imports "ITree_UTP.ITree_VCG"
+  imports "ITree_VCG.ITree_VCG"
 begin
 
 zstore state = 
@@ -24,8 +24,6 @@ execute "collatz 27"
 
 lemma "\<^bold>{True\<^bold>} collatz N \<^bold>{n = 1\<^bold>}"
   unfolding collatz_def
-  apply (hoare)
-  apply (hoare_wlp)
-  done
+  by hoare
 
 end

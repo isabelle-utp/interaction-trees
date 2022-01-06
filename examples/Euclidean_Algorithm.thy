@@ -1,5 +1,5 @@
 theory Euclidean_Algorithm
-  imports "ITree_UTP.ITree_VCG"
+  imports "ITree_VCG.ITree_VCG"
 begin lit_vars
 
 zstore gcd_st = 
