@@ -89,13 +89,15 @@ translations
   "_assignment x e" == "CONST assigns (CONST subst_upd (CONST subst_id) x (e)\<^sub>e)"
   "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
 
+named_theorems assigns_combine
+
 lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
   by (simp add: assigns_def Skip_def)
 
 lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P ;; Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) ;; Q"
   by (simp add: kleisli_comp_def assigns_def)
 
-lemma assigns_seq_comp: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
+lemma assigns_seq_comp [assigns_combine]: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def subst_comp_def)
 
 lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! ;; \<langle>\<sigma>\<rangle>\<^sub>a"
@@ -108,6 +110,12 @@ lemma assign_combine:
   assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
   shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
   using assms by (simp add: kleisli_comp_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
+
+lemma cond_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b \<langle>\<rho>\<rangle>\<^sub>a) = \<langle>expr_if \<sigma> b \<rho>\<rangle>\<^sub>a"
+  by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
+
+lemma cond1_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b Skip) = \<langle>expr_if \<sigma> b [\<leadsto>]\<rangle>\<^sub>a"
+  by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
 
 lemma for_empty: "for x in [] do P x od = Skip"
   by (simp add: for_itree_def)

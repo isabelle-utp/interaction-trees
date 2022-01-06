@@ -155,7 +155,7 @@ proof (rule hoareI)
 qed
 
 definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
-"while_inv B I P = iterate B P"
+[code_unfold]: "while_inv B I P = iterate B P"
 
 syntax "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ do _ od")
 translations "_while_inv_itree B I P" == "CONST while_inv (B)\<^sub>e (I)\<^sub>e P"
@@ -169,7 +169,7 @@ proof -
   from hl_conseq[OF 1 assms(2) assms(3)] show ?thesis by simp
 qed
 
-method hoare = (auto intro!: hoare_safe simp add: usubst_eval)
+method hoare = ((simp add: assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe; (simp add: usubst_eval)?))[1]
 
 method hoare_auto = (hoare; expr_auto)
 
