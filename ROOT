@@ -14,6 +14,12 @@ session "ITree_UTP" in "UTP" = "Interaction_Trees" +
   options [timeout = 600, document = false]
   theories
     ITree_UTP
+
+session "ITree_VCG" in "UTP/VCG" = "ITree_UTP" +
+  options [timeout = 600, document = false]
+  sessions 
+    Explorer
+  theories
     ITree_VCG
 
 session "ITree_RoboChart" in "RoboChart" = "ITree_UTP" +
