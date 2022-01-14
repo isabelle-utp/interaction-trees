@@ -93,7 +93,7 @@ lemma wlp_Stop [wp]: "wlp Stop P = (True)\<^sub>e"
 theorem hoare_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
   by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
 
-method hoare_wlp = (simp add: hoare_via_wlp wp usubst_eval)
-method hoare_wlp_auto = (hoare_wlp; expr_auto)
+method hoare_wlp uses add = (simp add: hoare_via_wlp wp usubst_eval add)
+method hoare_wlp_auto uses add = (hoare_wlp add: add; expr_auto)
 
 end

@@ -179,7 +179,9 @@ lemma hl_while_inv_init [hoare_safe]:
   shows "\<^bold>{P\<^bold>}\<langle>\<sigma>\<rangle>\<^sub>a ;; while B inv I do S od\<^bold>{Q\<^bold>}"
   by (auto intro!: hl_seq[where Q="I"] hl_while_inv hoare_assigns_impl assms)
 
-method hoare = ((simp add: assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe; (simp add: usubst_eval)?))[1]
+named_theorems prog_defs
+
+method hoare = ((simp add: prog_defs assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe; (simp add: usubst_eval)?))[1]
 
 method hoare_auto = (hoare; expr_auto)
 

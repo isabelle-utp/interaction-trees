@@ -1,7 +1,7 @@
 section \<open> Procedures \<close>
 
 theory ITree_Procedure
-  imports ITree_Circus
+  imports ITree_Circus ITree_Hoare
   keywords "procedure" :: "thy_decl_block" and "over"
 begin
 

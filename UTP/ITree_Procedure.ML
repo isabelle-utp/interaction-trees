@@ -8,7 +8,9 @@ fun mk_procedure (((n, p), st), body) ctx =
       val pat' = HOLogic.mk_tuple (map Syntax.free vs)
       val pty = (HOLogic.mk_tupleT (map (snd o dest_Free) (HOLogic.strip_tuple pat)))
       val def = Syntax.check_term ctx (Type.constraint (pty --> dummyT) (HOLogic.tupled_lambda pat' ((Type.constraint ty (Syntax.parse_term ctx body)))))
-  in snd (Local_Theory.define ((Binding.name n, NoSyn), ((Binding.name (n ^ "_def"), [Attrib.check_src @{context} (Token.make_src ("code_unfold", Position.none) [])]), def)) ctx) end;
+      val code_unfold = Attrib.check_src @{context} (Token.make_src ("code_unfold", Position.none) [])
+      val prog_defs = Attrib.check_src @{context} (Token.make_src ("prog_defs", Position.none) [])
+  in snd (Local_Theory.define ((Binding.name n, NoSyn), ((Binding.name (n ^ "_def"), [code_unfold, prog_defs]), def)) ctx) end;
 
 val parse_procedure =
   let open Scan; open Parse in

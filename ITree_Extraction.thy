@@ -28,6 +28,12 @@ definition "default_set = ({} :: 'a set)"
 instance ..
 end
 
+instantiation option :: (type) default
+begin
+definition "default_option = (None :: 'a option)"
+instance ..
+end
+
 instantiation bool :: default
 begin
 definition "default_bool = False"
