@@ -9,10 +9,22 @@ named_theorems hoare_safe
 definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
 
+abbreviation hoare_preserves :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
+"hoare_preserves S P \<equiv> hoare_triple P S P"
+
+abbreviation hoare_establishes :: "'s subst \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
+"hoare_establishes \<sigma> P \<equiv> hoare_triple (True)\<^sub>e (\<langle>\<sigma>\<rangle>\<^sub>a :: (unit, 's) htree) P"
+
 syntax 
   "_hoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>}/ _/ \<^bold>{_\<^bold>}")
   "_hoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("H{_}/ _/ {_}")
-translations "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
+  "_preserves" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "preserves" 55)
+  "_establishes" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "establishes" 55)
+
+translations
+  "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
+  "_preserves S P" == "CONST hoare_preserves S (P)\<^sub>e"
+  "_establishes S P" == "CONST hoare_establishes S (P)\<^sub>e"
 
 lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s')"
   by (auto simp add: hoare_triple_def spec_def itree_rel_def retvals_def subset_iff)
