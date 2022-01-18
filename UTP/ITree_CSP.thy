@@ -50,16 +50,22 @@ subsection \<open> Basic Constructs \<close>
 definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
+abbreviation inp_in_where_choice :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> _" where
+  "inp_in_where_choice c A P \<equiv> (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<checkmark> (the (match\<^bsub>c\<^esub> e)))"
+
 definition inp_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_in_where c A P = Vis (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<checkmark> (the (match\<^bsub>c\<^esub> e)))"
+"inp_in_where c A P = Vis (inp_in_where_choice c A P)"
 
 abbreviation "inp_in c A \<equiv> inp_in_where c A (\<lambda> s. True)"
 
 abbreviation "inp_where c P \<equiv> inp_in_where c UNIV P"
 
-lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
+lemma retvals_inp_in_where: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in_where c A P) = {x \<in> A. P x}"
   by (auto simp add: inp_in_where_def)
-     (metis imageI insertCI option.sel retvals_Ret wb_prism_def)
+     (metis image_insert insertCI insert_Diff option.sel retvals_Ret wb_prism.match_build)
+
+lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
+  by (simp add: retvals_inp_in_where)
 
 lemma div_free_inp_in: "div_free (inp_in c A)"
   by (auto simp add: inp_in_where_def div_free_Vis)
@@ -156,6 +162,8 @@ definition guard :: "bool \<Rightarrow> ('e, unit) itree" where
 "guard b = (if b then Ret () else deadlock)"
 
 subsection \<open> Generalised Choice \<close>
+
+text \<open> Generalised choice is parametric over a function to merge the choice functions. \<close>
 
 primcorec 
   genchoice :: "(('e \<Zpfun> ('e, 'a) itree) \<Rightarrow> ('e \<Zpfun> ('e, 'a) itree) \<Rightarrow> 'e \<Zpfun> ('e, 'a) itree) 
@@ -461,7 +469,6 @@ lemma choice_Sils_stable: "stable P \<Longrightarrow> P \<box> (Sils m Q) = Sils
 
 lemma choice_Sils': "P \<box> (Sils m Q) = Sils m (P \<box> Q)"
   by (simp add: extchoice_itree_def genchoice_Sils')
-
 
 text \<open> External Choice test cases \<close>
 

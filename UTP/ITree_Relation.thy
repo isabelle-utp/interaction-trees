@@ -48,6 +48,10 @@ lemma cond_rel [rel]:
     = {(s\<^sub>1, s\<^sub>2). if (B s\<^sub>1) then (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>1 else (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>2}"
   by (auto simp add: cond_itree_def itree_rel_def)
 
+lemma input_in_where_rel [rel]: 
+  "wb_prism c \<Longrightarrow> itree_rel (input_in_where c A P) = {(s, s'). \<exists> v \<in> A s. fst (P v) s \<and> (s, s') \<in> itree_rel (snd (P v))}" 
+  by (auto simp add: input_in_where_def itree_rel_def retvals_inp_in_where)
+
 lemma input_in_rel [rel]: 
   "wb_prism c \<Longrightarrow> itree_rel (input_in c A P) = {(s, s'). \<exists> v \<in> A s. (s, s') \<in> itree_rel (P v)}" 
   by (auto simp add: input_in_where_def itree_rel_def retvals_inp_in)

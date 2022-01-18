@@ -90,6 +90,14 @@ lemma wp_Stop [wp]: "wp Stop P = (False)\<^sub>e"
 lemma wlp_Stop [wp]: "wlp Stop P = (True)\<^sub>e"
   by (simp add: wlp_itree_def Stop_rel, expr_simp)
 
+lemma wp_input_in_where [wp]: 
+  "wb_prism c \<Longrightarrow> wp_itree (input_in_where c A S) P = [\<lambda> s. \<exists> v\<in>A s. fst (S v) s \<and> wp_itree (snd (S v)) P s]\<^sub>e"
+  by (auto simp add: wp_itree_def rel fun_eq_iff)
+
+lemma wlp_input_in_where [wp]: 
+  "wb_prism c \<Longrightarrow> wlp_itree (input_in_where c A S) P = [\<lambda> s. \<forall> v\<in>A s. fst (S v) s \<longrightarrow> wlp_itree (snd (S v)) P s]\<^sub>e"
+  by (auto simp add: wlp_itree_def rel fun_eq_iff)
+
 theorem hoare_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
   by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
 
