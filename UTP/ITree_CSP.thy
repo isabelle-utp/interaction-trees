@@ -361,7 +361,7 @@ lemma genchoice_RetE [elim]:
   apply (smt (z3) assms(1) genchoice.disc_iff(1) is_Sil_genchoice itree.case_eq_if itree.disc(4) itree.discI(1) itree.distinct(3) itree.expand itree.sel(1) snd_conv)
   apply (metis (no_types, lifting) assms(1) is_Sil_genchoice itree.case_eq_if itree.collapse(1) itree.disc(4) itree.disc(7) itree.disc(9))
   done
-
+ 
 subsection \<open> External Choice \<close>
 
 definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
@@ -524,6 +524,18 @@ lemma choice_RetE [elim]:
 lemma extchoice_Vis_bind:
   "(Vis F \<box> Vis G) \<bind> R = (Vis F \<bind> R) \<box> (Vis G \<bind> R)"
   by (simp add: map_prod_def)
+
+lemma 
+  assumes "is_Vis P" "is_Vis Q" "\<^bold>I(P) \<inter> \<^bold>I(Q) = {}"
+  shows "\<^bold>R(P \<box> Q) = \<^bold>R(P) \<union> \<^bold>R(Q)"
+proof -
+  obtain F G where P: "P = Vis F" and Q: "Q = Vis G"
+    by (meson assms(1) assms(2) is_VisE)
+  hence "pdom(F) \<inter> pdom(G) = {}"
+    using assms(3) by force
+  thus ?thesis
+    by (simp add: P Q map_prod_as_ovrd Un_commute pdom_nres_disjoint)
+qed
 
 subsection \<open> Generalised Parallel Composition \<close>
 
@@ -940,7 +952,7 @@ primcorec exception :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, '
                 \<comment> \<open> No synchronisation\<close> 
                 {} 
                 \<comment> \<open> Exceptional behaviours: events in @{term A} enables by @{term P}, leading to @{term Q}\<close>
-                (pfun_entries (A \<inter> pdom(F)) (\<lambda> _. True) ((\<lambda> _. Q))))))"
+                (pfun_entries (A \<inter> pdom(F)) ((\<lambda> _. Q))))))"
 
 subsection \<open> Renaming \<close>
 

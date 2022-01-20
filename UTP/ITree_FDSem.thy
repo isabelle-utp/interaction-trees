@@ -487,7 +487,7 @@ lemma failures_bind:
               apply (meson Vis_refuses refuses_Term_iff)
              apply (metis (no_types, opaque_lifting) List.map.id append.right_neutral id_apply image_subset_iff list.set_map list.simps(8) map_map of_Ev_Ev rangeI trace_to_Nil)
             apply (metis (no_types, lifting) image_subset_iff list.set_map map_Ev_eq_iff map_Ev_of_Ev map_map rangeI)
-           apply (smt (verit, del_insts) append.right_neutral list.set_map map_append map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)
+           apply (metis (no_types, opaque_lifting) Ev_subset_image UNIV_I append.right_neutral list.map_comp list.set_map list.simps(8) map_Ev_eq_iff map_Ev_of_Ev subsetI trace_to_Nil)
           apply (metis (no_types, opaque_lifting) append.right_neutral list.set_map map_append map_of_Ev_append subset_image_iff top_greatest)
          apply (metis (no_types, opaque_lifting) append_Nil list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)
         apply (metis (no_types, opaque_lifting) append_Nil list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest trace_to_Nil)

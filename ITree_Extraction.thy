@@ -84,6 +84,7 @@ end
 
 declare UNIV_I [code_unfold]
 declare bool_simps [code_unfold]
+declare UNIV_unit [code_unfold]
 
 lemma Collect_List_member [code_unfold]: "Collect (List.member xs) = set xs"
   using in_set_member by fastforce
