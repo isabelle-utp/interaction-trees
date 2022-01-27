@@ -2,7 +2,7 @@ section \<open> Procedures \<close>
 
 theory ITree_Procedure
   imports ITree_Circus ITree_Hoare
-  keywords "procedure" :: "thy_decl_block" and "over"
+  keywords "over"
 begin
 
 datatype (discs_sels) ('inp, 'outp) methop = Call_C 'inp | Return_C 'outp

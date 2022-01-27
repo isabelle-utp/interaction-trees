@@ -1,8 +1,8 @@
 structure ITree_Procedure =
 struct
 
-fun mk_procedure (((n, p), st), body) ctx =
-  let val ty = Syntax.check_typ ctx (Type (@{type_abbrev htree}, [HOLogic.unitT, Syntax.read_typ ctx st]))
+fun mk_procedure evT (((n, p), st), body) ctx =
+  let val ty = Syntax.check_typ ctx (Type (@{type_abbrev htree}, [evT, Syntax.read_typ ctx st]))
       val pat = Syntax.read_term ctx p
       val vs = map (fst o dest_Free) (HOLogic.strip_tuple pat)
       val pat' = HOLogic.mk_tuple (map Syntax.free vs)
@@ -14,12 +14,9 @@ fun mk_procedure (((n, p), st), body) ctx =
 
 val parse_procedure =
   let open Scan; open Parse in
-  ((name -- term) -- 
+  ((name -- (Scan.optional term "()")) -- 
    (Scan.optional (@{keyword "over"} |-- typ) "_") --
    (@{keyword "="} |-- term))
    end;  
 
 end;
-
-Outer_Syntax.command @{command_keyword procedure} "define an ITree procedure"
-  (ITree_Procedure.parse_procedure >> (Toplevel.local_theory NONE NONE o ITree_Procedure.mk_procedure));

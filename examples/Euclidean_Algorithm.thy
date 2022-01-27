@@ -1,6 +1,6 @@
 theory Euclidean_Algorithm
   imports "ITree_VCG.ITree_VCG"
-begin lit_vars
+begin
 
 zstore gcd_st = 
   a :: int
@@ -19,9 +19,8 @@ execute "eucl (2, 8)"
 execute "eucl (12, 30)"
 
 lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a = gcd A B\<^bold>}"
-  unfolding eucl_def
   apply (hoare_auto)
-  apply (simp add: gcd_diff1 gcd_integer.rep_eq integer_eq_iff)
+  apply (simp add: gcd_diff1)
   apply (metis gcd.commute gcd_diff1)
   done
 
