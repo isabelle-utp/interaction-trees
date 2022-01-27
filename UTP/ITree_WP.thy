@@ -73,7 +73,7 @@ lemma wlp_cond [wp]: "wlp (if B then C\<^sub>1 else C\<^sub>2 fi) P = ((B \<long
   by (auto simp add: wlp_itree_def cond_rel fun_eq_iff)
 
 lemma wlp_let [wp]: "wlp (let x \<leftarrow> e in S x) b = (wlp (S (e \<s>)) b)\<^sub>e"
-  by (auto simp add: wlp_itree_def let_itree_def itree_rel_def retvals_def SEXP_def)
+  by (auto simp add: wlp_itree_def let_itree_def itree_rel_defs retvals_def SEXP_def)
 
 lemma wlp_true [wp]: "wlp P True = (True)\<^sub>e"
   by (expr_simp add: wlp_itree_def)
@@ -92,16 +92,16 @@ lemma wlp_Stop [wp]: "wlp Stop P = (True)\<^sub>e"
 
 lemma wp_input_in_where [wp]: 
   "wb_prism c \<Longrightarrow> wp_itree (input_in_where c A S) P = [\<lambda> s. \<exists> v\<in>A s. fst (S v) s \<and> wp_itree (snd (S v)) P s]\<^sub>e"
-  by (auto simp add: wp_itree_def rel fun_eq_iff)
+  by (auto simp add: wp_itree_def itree_rel fun_eq_iff)
 
 lemma wlp_input_in_where [wp]: 
   "wb_prism c \<Longrightarrow> wlp_itree (input_in_where c A S) P = [\<lambda> s. \<forall> v\<in>A s. fst (S v) s \<longrightarrow> wlp_itree (snd (S v)) P s]\<^sub>e"
-  by (auto simp add: wlp_itree_def rel fun_eq_iff)
+  by (auto simp add: wlp_itree_def itree_rel fun_eq_iff)
 
 theorem hoare_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
   by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
 
-method hoare_wlp uses add = (simp add: hoare_via_wlp wp usubst_eval add)
+method hoare_wlp uses add = (simp add: prog_defs hoare_via_wlp wp usubst_eval add)
 method hoare_wlp_auto uses add = (hoare_wlp add: add; expr_auto)
 
 end

@@ -253,4 +253,6 @@ definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longri
 syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
 translations "_promote P a" == "CONST promote P a"
 
+named_theorems prog_defs
+
 end

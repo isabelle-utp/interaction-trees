@@ -10,11 +10,11 @@ definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree
 "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
 
 syntax 
-  "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>}/ _/ \<^bold>{_\<^bold>}")
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("H{_}/ _/ {_}")
-  "_preserves"       :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "preserves" 55)
-  "_preserves_under" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ preserves _ under _" [55, 0, 55] 55)
-  "_establishes"     :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "establishes" 55)
+  "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>}/ _/ \<^bold>{_\<^bold>}")
+  "_preserves"       :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "preserves" 40)
+  "_preserves_under" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ preserves _ under _" [40, 0, 40] 40)
+  "_establishes"     :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "establishes" 40)
 
 translations
   "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
@@ -23,7 +23,7 @@ translations
   "_establishes \<sigma> P" => "H{CONST True} \<langle>\<sigma>\<rangle>\<^sub>a {P}"
 
 lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s')"
-  by (auto simp add: hoare_triple_def spec_def itree_rel_def retvals_def subset_iff)
+  by (auto simp add: hoare_triple_def spec_def itree_rel_defs retvals_def subset_iff)
 
 lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<checkmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (auto simp add: hoare_alt_def)
@@ -31,7 +31,22 @@ lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leads
 lemma hl_conseq:
   assumes "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}" "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "`Q\<^sub>2 \<longrightarrow> Q\<^sub>1`"
   shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
-  using assms by (auto simp add: hoare_alt_def, expr_auto)
+  using assms by (auto simp add: hoare_alt_def, expr_auto) 
+
+lemma hl_conj:
+  assumes "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}" "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}"
+  shows "\<^bold>{P\<^sub>1 \<and> P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>1 \<and> Q\<^sub>2\<^bold>}"
+  using assms by (force simp add: hoare_alt_def)
+
+lemma hl_cut:
+  assumes "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}" "\<^bold>{P\<^sub>2 \<and> P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}"
+  shows "\<^bold>{P\<^sub>1 \<and> P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>1 \<and> Q\<^sub>2\<^bold>}"
+  using assms by (auto intro: hl_conseq hl_conj)
+
+lemma hl_cut_inv:
+  assumes "S preserves P" "S preserves Q under P"
+  shows "S preserves (P \<and> Q)"
+  using assms by (rule hl_cut)
 
 lemma hl_skip: "\<^bold>{P\<^bold>} Skip \<^bold>{P\<^bold>}"
   by (auto simp add: hoare_alt_def Skip_def)
@@ -186,8 +201,6 @@ lemma hl_while_inv_init [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> \<sigma> \<dagger> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>}\<langle>\<sigma>\<rangle>\<^sub>a ;; while B inv I do S od\<^bold>{Q\<^bold>}"
   by (auto intro!: hl_seq[where Q="I"] hl_while_inv hoare_assigns_impl assms)
-
-named_theorems prog_defs
 
 method hoare = ((simp add: prog_defs assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe; (simp add: usubst_eval)?))[1]
 

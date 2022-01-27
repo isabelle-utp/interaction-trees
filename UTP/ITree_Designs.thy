@@ -41,7 +41,7 @@ lemma Stop_pre [dpre]: "itree_pre Stop = (True)\<^sub>e"
   by (auto simp add: itree_pre_def fun_eq_iff deadlock_def)
 
 lemma seq_pre [dpre]: "itree_pre (P ;; Q) = (itree_pre P \<and> wlp P (itree_pre Q))\<^sub>e"
-  apply (expr_simp, auto elim!: trace_to_bindE simp add: kleisli_comp_def itree_pre_def wlp_itree_def itree_rel_def retvals_def)
+  apply (expr_simp, auto elim!: trace_to_bindE simp add: kleisli_comp_def itree_pre_def wlp_itree_def itree_rel_defs retvals_def)
   apply (metis bind_diverge trace_to_bind_left)
   apply (meson trace_to_bind)
   apply (metis trace_of_Sils trace_to_Nil trace_to_trans)
@@ -51,7 +51,7 @@ lemma input_in_pre [dpre]:
   "wb_prism c \<Longrightarrow> itree_pre (input_in c A P) = (\<forall> v \<in> A. itree_pre (P v))\<^sub>e"
   by (expr_simp add: itree_pre_div_free input_in_where_def div_free_bind div_free_inp_in retvals_inp_in)
 
-method refine = (auto simp add: refined_by_def dpre wp usubst_eval unrest rel relcomp_unfold)
+method refine = (auto simp add: refined_by_def dpre wp usubst_eval unrest itree_rel relcomp_unfold)
 method refine_auto = (refine ; expr_auto)
 
 end
