@@ -18,7 +18,7 @@ lemma itree_pre_div_free: "itree_pre P = (\<lambda> s. div_free (P s))"
 
 expr_ctr itree_pre
 
-definition refined_by :: "('e, 'r, 's) ktree \<Rightarrow> ('e, 'r, 's) ktree \<Rightarrow> bool" (infix "\<sqsubseteq>" 50) where
+definition refined_by :: "('e, 'r, 's) ktree \<Rightarrow> ('e, 'r, 's) ktree \<Rightarrow> bool" (infix "\<sqsubseteq>\<^sub>\<D>" 50) where
 "refined_by P Q = (`itree_pre P \<longrightarrow> itree_pre Q` \<and> {(s, s') \<in> itree_rel Q. itree_pre P s} \<subseteq> itree_rel P)"
 
 lemma assume_pre [dpre]: "itree_pre (assume b) = b"
@@ -34,7 +34,7 @@ lemma assigns_pre [dpre]: "itree_pre \<langle>\<sigma>\<rangle>\<^sub>a = (True)
 lemma Div_pre [dpre]: "itree_pre Div = (False)\<^sub>e"
   by (auto simp add: itree_pre_def fun_eq_iff)
 
-lemma Div_bottom: "Div \<sqsubseteq> P"
+lemma Div_bottom: "Div \<sqsubseteq>\<^sub>\<D> P"
   by (simp add: refined_by_def Div_rel Div_pre)
 
 lemma Stop_pre [dpre]: "itree_pre Stop = (True)\<^sub>e"
