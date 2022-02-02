@@ -95,6 +95,11 @@ lemma hl_assigns_bwd [hoare_safe]:
   shows "H{P} S ;; \<langle>\<sigma>\<rangle>\<^sub>a {Q}"
   by (blast intro: hl_seq[OF assms(1)] hoare_assigns)
 
+lemma hl_Stop [hoare_safe]:
+  "\<^bold>{P\<^bold>} Stop \<^bold>{Q\<^bold>}"
+  by (simp add: hoare_alt_def)
+     (meson nonterminates_iff retvals_deadlock)
+
 lemma hoare_cond [hoare_safe]:
   assumes "\<^bold>{B \<and> P\<^bold>} S \<^bold>{Q\<^bold>}" "\<^bold>{\<not>B \<and> P\<^bold>} T \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
