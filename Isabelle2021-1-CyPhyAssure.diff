@@ -1,0 +1,180 @@
+--- Isabelle2021-1/contrib/jedit-20211103/etc/settings	2021-11-02 23:31:23.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/contrib/jedit-20211103/etc/settings	2021-12-15 09:42:57.360337529 +0000
+@@ -4,6 +4,8 @@
+ JEDIT_JARS="$JEDIT_HOME/jars/Code2HTML.jar:$JEDIT_HOME/jars/CommonControls.jar:$JEDIT_HOME/jars/Console.jar:$JEDIT_HOME/jars/ErrorList.jar:$JEDIT_HOME/jars/Highlight.jar:$JEDIT_HOME/jars/Navigator.jar:$JEDIT_HOME/jars/QuickNotepad.jar:$JEDIT_HOME/jars/SideKick.jar:$JEDIT_HOME/jars/jsr305-3.0.2.jar:$JEDIT_HOME/jars/kappalayout.jar"
+ JEDIT_JAR="$JEDIT_HOME/jedit.jar"
+ classpath "$JEDIT_JAR"
++classpath "$JEDIT_HOME/jars/Console.jar"
++classpath "$JEDIT_HOME/jars/ErrorList.jar"
+ 
+ JEDIT_SETTINGS="$ISABELLE_HOME_USER/jedit"
+ JEDIT_OPTIONS="-reuseview -nobackground -nosplash -log=9"
+--- Isabelle2021-1/contrib/jedit-20211103/jedit5.6.0-patched/properties/jEdit.props	2021-12-12 10:08:58.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/contrib/jedit-20211103/jedit5.6.0-patched/properties/jEdit.props	2021-12-14 17:34:43.271283119 +0000
+@@ -11,7 +11,7 @@
+ buffer.undoCount=1000
+ close-docking-area.shortcut2=C+e C+CIRCUMFLEX
+ complete-word.shortcut=
+-console.dock-position=floating
++console.dock-position=bottom
+ console.encoding=UTF-8
+ console.font=Isabelle DejaVu Sans Mono
+ console.fontsize=18
+--- Isabelle2021-1/etc/build.props	2021-12-12 09:44:28.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/etc/build.props	2021-12-14 17:21:02.123628156 +0000
+@@ -1,6 +1,8 @@
+ title = Isabelle/Scala
+ module = $ISABELLE_HOME/lib/classes/isabelle.jar
+ main = isabelle.jedit.Main
++requirements = \
++  env:JEDIT_JARS
+ resources = \
+   lib/services/java.nio.charset.spi.CharsetProvider:META-INF/services/ \
+   lib/logo/isabelle_transparent-32.gif:isabelle/ \
+--- Isabelle2021-1/etc/options	2021-12-12 09:44:28.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/etc/options	2021-12-14 19:10:55.008805962 +0000
+@@ -138,7 +138,7 @@
+ option system_log : string = "" (standard "-")
+   -- "output for system messages (log file or \"-\" for console progress)"
+ 
+-option system_heaps : bool = false
++option system_heaps : bool = true
+   -- "store session heaps in $ISABELLE_HEAPS_SYSTEM, not $ISABELLE_HEAPS"
+ 
+ 
+--- Isabelle2021-1/lib/scripts/Isabelle_app	2021-12-12 10:08:58.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/lib/scripts/Isabelle_app	2021-12-15 09:32:08.889141814 +0000
+@@ -28,6 +28,6 @@
+ 
+ exec "$ISABELLE_JDK_HOME/bin/java" \
+   "-Disabelle.root=$ISABELLE_HOME" "${JAVA_OPTIONS[@]}" \
+-  -classpath "$ISABELLE_HOME/contrib/flatlaf-1.6.4/lib/flatlaf-1.6.4.jar:$ISABELLE_HOME/contrib/isabelle_setup-20211109/lib/isabelle_setup.jar:$ISABELLE_HOME/contrib/jedit-20211103/jedit5.6.0-patched/jedit.jar:$ISABELLE_HOME/contrib/jfreechart-1.5.3/lib/iText-2.1.5.jar:$ISABELLE_HOME/contrib/jfreechart-1.5.3/lib/jfreechart-1.5.3.jar:$ISABELLE_HOME/contrib/jortho-1.0-2/jortho.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/antlr-runtime-3.1.1.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/kodkod-1.5.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/kodkodi-1.5.7.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/sat4j-2.3.jar:$ISABELLE_HOME/contrib/postgresql-42.2.24/postgresql-42.2.24.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/jline-3.19.0.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/jna-5.3.1.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-compiler.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-library.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scalap-2.13.5.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-parallel-collections_2.13-1.0.0.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-parser-combinators_2.13-1.1.2.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-reflect.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-swing_2.13-3.0.0.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-xml_2.13-1.3.0.jar:$ISABELLE_HOME/contrib/sqlite-jdbc-3.36.0.3/sqlite-jdbc-3.36.0.3.jar:$ISABELLE_HOME/contrib/ssh-java-20190323/lib/jsch-0.1.55.jar:$ISABELLE_HOME/contrib/ssh-java-20190323/lib/jzlib-1.1.3.jar:$ISABELLE_HOME/contrib/ssh-java-20190323/lib/jce.jar:$ISABELLE_HOME/contrib/xz-java-1.9/lib/xz-1.9.jar:$ISABELLE_HOME/contrib/naproche-20211211/Isabelle/naproche.jar:$ISABELLE_HOME/lib/classes/isabelle.jar:$ISABELLE_HOME/lib/classes/isabelle_graphbrowser.jar" \
++  -classpath "$ISABELLE_HOME/contrib/edit-20211103/jedit5.6.0-patched/jars/Console.jar:$ISABELLE_HOME/contrib/edit-20211103/jedit5.6.0-patched/jars/ErrorList.jar:$ISABELLE_HOME/contrib/flatlaf-1.6.4/lib/flatlaf-1.6.4.jar:$ISABELLE_HOME/contrib/isabelle_setup-20211109/lib/isabelle_setup.jar:$ISABELLE_HOME/contrib/jedit-20211103/jedit5.6.0-patched/jedit.jar:$ISABELLE_HOME/contrib/jfreechart-1.5.3/lib/iText-2.1.5.jar:$ISABELLE_HOME/contrib/jfreechart-1.5.3/lib/jfreechart-1.5.3.jar:$ISABELLE_HOME/contrib/jortho-1.0-2/jortho.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/antlr-runtime-3.1.1.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/kodkod-1.5.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/kodkodi-1.5.7.jar:$ISABELLE_HOME/contrib/kodkodi-1.5.7/jar/sat4j-2.3.jar:$ISABELLE_HOME/contrib/postgresql-42.2.24/postgresql-42.2.24.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/jline-3.19.0.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/jna-5.3.1.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-compiler.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-library.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scalap-2.13.5.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-parallel-collections_2.13-1.0.0.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-parser-combinators_2.13-1.1.2.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-reflect.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-swing_2.13-3.0.0.jar:$ISABELLE_HOME/contrib/scala-2.13.5/lib/scala-xml_2.13-1.3.0.jar:$ISABELLE_HOME/contrib/sqlite-jdbc-3.36.0.3/sqlite-jdbc-3.36.0.3.jar:$ISABELLE_HOME/contrib/ssh-java-20190323/lib/jsch-0.1.55.jar:$ISABELLE_HOME/contrib/ssh-java-20190323/lib/jzlib-1.1.3.jar:$ISABELLE_HOME/contrib/ssh-java-20190323/lib/jce.jar:$ISABELLE_HOME/contrib/xz-java-1.9/lib/xz-1.9.jar:$ISABELLE_HOME/contrib/naproche-20211211/Isabelle/naproche.jar:$ISABELLE_HOME/lib/classes/isabelle.jar:$ISABELLE_HOME/lib/classes/isabelle_graphbrowser.jar" \
+   "-splash:$ISABELLE_HOME/lib/logo/isabelle.gif" \
+ isabelle.jedit.Main "$@"
+--- Isabelle2021-1/src/Pure/PIDE/active.ML	2021-12-12 09:44:31.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/src/Pure/PIDE/active.ML	2021-12-14 17:19:04.259106547 +0000
+@@ -14,6 +14,8 @@
+   val dialog: unit -> (string -> Markup.T) * string future
+   val dialog_text: unit -> (string -> string) * string future
+   val dialog_result: serial -> string -> unit
++  val run_shell_command: string -> string option -> string -> string -> string
++  val run_system_shell_command: string option -> string -> string -> string
+ end;
+ 
+ structure Active: ACTIVE =
+@@ -60,5 +62,15 @@
+     (fn tab => (Inttab.lookup tab i, Inttab.delete_safe i tab))
+   |> (fn NONE => () | SOME promise => Future.fulfill promise result);
+ 
++fun run_shell_command shell dir cmd = 
++  let val dirprop = (case dir of NONE => [] | SOME d => [(Markup.shell_directoryN, d)])
++  in Markup.markup 
++      (make_markup Markup.run_shell_commandN 
++        {implicit = false
++        ,properties = [(Markup.shell_typeN, shell), (Markup.shell_commandN, cmd)] @ dirprop})
++  end
++
++val run_system_shell_command = run_shell_command "System";
++
+ end;
+ 
+--- Isabelle2021-1/src/Pure/PIDE/markup.ML	2021-12-12 09:44:31.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/src/Pure/PIDE/markup.ML	2021-12-14 17:19:04.259106547 +0000
+@@ -238,6 +238,10 @@
+   val padding_command: Properties.entry
+   val dialogN: string val dialog: serial -> string -> T
+   val jedit_actionN: string
++  val run_shell_commandN: string
++  val shell_commandN: string
++  val shell_typeN: string
++  val shell_directoryN: string
+   val functionN: string
+   val ML_statistics: {pid: int, stats_dir: string} -> Properties.T
+   val commands_accepted: Properties.T
+@@ -751,6 +755,13 @@
+ 
+ val jedit_actionN = "jedit_action";
+ 
++val run_shell_commandN = "run_shell_command"
++
++val shell_commandN = "shell_command"
++
++val shell_typeN = "shell_type"
++
++val shell_directoryN = "shell_directory"
+ 
+ (* protocol message functions *)
+ 
+--- Isabelle2021-1/src/Pure/PIDE/markup.scala	2021-12-12 09:44:31.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/src/Pure/PIDE/markup.scala	2021-12-14 17:19:04.259106547 +0000
+@@ -629,6 +629,10 @@
+ 
+   val JEDIT_ACTION = "jedit_action"
+ 
++  val SHELL_COMMAND = "shell_command"
++  val SHELL_TYPE = "shell_type"
++  val SHELL_DIRECTORY = "shell_directory"
++  val RUN_SHELL_COMMAND = "run_shell_command"
+ 
+   /* protocol message functions */
+ 
+--- Isabelle2021-1/src/Pure/PIDE/rendering.scala	2021-12-12 09:44:31.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/src/Pure/PIDE/rendering.scala	2021-12-14 17:18:56.519073096 +0000
+@@ -219,7 +219,7 @@
+ 
+   val active_elements =
+     Markup.Elements(Markup.DIALOG, Markup.BROWSER, Markup.GRAPHVIEW, Markup.THEORY_EXPORTS,
+-      Markup.SENDBACK, Markup.JEDIT_ACTION, Markup.SIMP_TRACE_PANEL)
++      Markup.SENDBACK, Markup.JEDIT_ACTION, Markup.SIMP_TRACE_PANEL, Markup.RUN_SHELL_COMMAND)
+ 
+   val background_elements =
+     Document_Status.Command_Status.proper_elements + Markup.WRITELN_MESSAGE +
+--- Isabelle2021-1/src/Tools/jEdit/src/active.scala	2021-12-12 09:44:31.000000000 +0000
++++ Isabelle2021-1-CyPhyAssure/src/Tools/jEdit/src/active.scala	2021-12-14 17:19:04.259106547 +0000
+@@ -9,7 +9,7 @@
+ 
+ import isabelle._
+ import org.gjt.sp.jedit.{ServiceManager, View}
+-
++import console.{Console, Shell}
+ 
+ object Active
+ {
+@@ -103,6 +103,36 @@
+           model.session.dialog_result(id, serial, result)
+           true
+ 
++        case XML.Elem(Markup(Markup.RUN_SHELL_COMMAND, props), _) =>
++          val shell_name = Properties.get(props, Markup.SHELL_TYPE).getOrElse("System")
++          Properties.get (props, Markup.SHELL_COMMAND) match { 
++            case None => false
++            case Some(cmd) =>
++              view.getDockableWindowManager().addDockableWindow("console")
++
++              // Obtain the console instance
++              val console = view.getDockableWindowManager().getDockable("console").asInstanceOf[Console]
++
++              // Set the shell to use
++              val shell = Shell.getShell(shell_name)
++
++              shell.stop(console)
++              while (!shell.waitFor(console)) { }
++
++              // Change directory if requested
++              Properties.get(props, Markup.SHELL_DIRECTORY) match {
++                case Some(dir) => shell.chDir(console, dir);
++                case None => {}
++              }
++              while (!shell.waitFor(console)) { }
++
++              // Run the given command
++              console.run(shell, cmd)
++
++              true
++          }
++
++
+         case _ => false
+       }
+     }
