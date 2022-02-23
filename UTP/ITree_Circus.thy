@@ -14,6 +14,15 @@ type_synonym 'e process = "('e, unit) itree"
 definition Skip :: "('e, 'r) htree" where
 "Skip = (\<lambda> s. Ret s)"
 
+lemma Skip_unit [simp]: 
+  "Skip ;; S = S" "S ;; Skip = S"
+  by (simp_all add: Skip_def kleisli_comp_def bind_itree_right_unit)
+
+text \<open> Like @{const Skip}, but do a single silent step. \<close>
+
+definition Step :: "('e, 'r) htree" where
+"Step = \<tau> \<circ> Skip"
+
 expr_ctr subst_id
 
 lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<checkmark> [\<leadsto>]]})\<^sub>e"
@@ -22,11 +31,17 @@ lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<checkmark> [\<leadsto>]]})
 abbreviation Div :: "('e, 'r) htree" where
 "Div \<equiv> (\<lambda> s. diverge)"
 
+lemma Div_left_zero [simp]: "Div ;; P = Div"
+  by (simp add: kleisli_comp_def)
+
 lemma traces_deadlock: "traces(deadlock) = {[]}"
   by (auto simp add: deadlock_def traces_Vis)
 
 abbreviation 
 "Stop \<equiv> (\<lambda> s. deadlock)"
+
+lemma Stop_left_zero [simp]: "Stop ;; S = Stop"
+  by (simp add: kleisli_comp_def)
 
 definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
@@ -68,6 +83,7 @@ definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree)
 syntax 
   "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
   "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ fi")
+  "_cond_itree_infix"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(3_ \<lhd> _ \<rhd>/ _)" [52,0,53] 52)
   "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
   "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
@@ -75,6 +91,7 @@ syntax
 translations
   "_cond_itree b P Q" == "CONST cond_itree P (b)\<^sub>e Q"
   "_cond_itree1 b P " == "CONST cond_itree P (b)\<^sub>e (CONST Skip)"
+  "_cond_itree_infix P b Q" => "_cond_itree b P Q"
   "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
   "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
   "_for_itree i I P" == "CONST for_itree I (\<lambda> i. P)"
@@ -117,11 +134,25 @@ lemma cond_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^
 lemma cond1_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b Skip) = \<langle>expr_if \<sigma> b [\<leadsto>]\<rangle>\<^sub>a"
   by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
 
+lemma cond_simps:
+  "S \<lhd> True \<rhd> T = S"
+  "S \<lhd> \<not> b \<rhd> T = T \<lhd> b \<rhd> S"
+  "S \<lhd> b \<rhd> (T \<lhd> b \<rhd> U) = S \<lhd> b \<rhd> U"
+  "(S \<lhd> b \<rhd> T) ;; U = (S ;; U) \<lhd> b \<rhd> (T ;; U)"
+  "x := e ;; (S \<lhd> b \<rhd> T) = (x := e ;; S) \<lhd> b\<lbrakk>e/x\<rbrakk> \<rhd> (x := e ;; T)"
+   by (simp_all add: cond_itree_def fun_eq_iff kleisli_comp_def assigns_def subst_app_expr_def)
+
 lemma for_empty: "for x in [] do P x od = Skip"
   by (simp add: for_itree_def)
 
 lemma for_Cons: "for_itree (x # xs) P = P x ;; for_itree xs P"
   by (simp add: for_itree_def)
+
+lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"
+  by (auto simp add: fun_eq_iff iterate.code kleisli_comp_def cond_itree_def Step_def Skip_def comp_def)
+
+lemma while_True_Skip: "while True do Skip od = Div"
+  by (simp add: Skip_def SEXP_def loop_Ret)
 
 text \<open> Hide the state of an action to produce a process \<close>
 

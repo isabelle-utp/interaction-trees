@@ -83,6 +83,11 @@ lemma hoare_assigns_impl [hoare_safe]:
   shows "\<^bold>{P\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{Q\<^bold>}"
   using assms by (auto intro: hl_conseq hoare_assigns)
 
+lemma hl_assign':
+  assumes "`P \<longrightarrow> Q\<lbrakk>e/x\<rbrakk>`"
+  shows "\<^bold>{P\<^bold>} x := e \<^bold>{Q\<^bold>}"
+  using assms by (fact hoare_assigns_impl)
+
 lemma hoare_fwd_assign [hoare_safe]:
   assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} x := e ;; S \<^bold>{Q\<^bold>}"
@@ -100,7 +105,7 @@ lemma hl_Stop [hoare_safe]:
   by (simp add: hoare_alt_def)
      (meson nonterminates_iff retvals_deadlock)
 
-lemma hoare_cond [hoare_safe]:
+lemma hl_cond [hoare_safe]:
   assumes "\<^bold>{B \<and> P\<^bold>} S \<^bold>{Q\<^bold>}" "\<^bold>{\<not>B \<and> P\<^bold>} T \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def cond_itree_def)
