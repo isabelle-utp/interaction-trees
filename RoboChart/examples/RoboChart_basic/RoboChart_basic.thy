@@ -495,7 +495,7 @@ text \<open>So the renaming of @{term MemorySTM_opt_stm0} includes the events to
 \<close>
 definition rename_MemorySTM_opt_stm0 where
 "rename_MemorySTM_opt_stm0 idd =
-    ((MemorySTM_opt_stm0 idd) \<lbrakk>(set (rename_stm0_events @ rename_stm0_events_others))\<rbrakk>)
+    ((MemorySTM_opt_stm0 idd) \<lbrace>(set (rename_stm0_events @ rename_stm0_events_others))\<rbrace>)
 "
 
 text \<open>The exception operator allows @{term rename_MemorySTM_opt_stm0} to be terminated by the
@@ -772,7 +772,7 @@ definition rename_stm1_events_others where
 
 definition rename_MemorySTM_opt_stm1 where
 "rename_MemorySTM_opt_stm1 idd = 
-  ((MemorySTM_opt_stm1 idd) \<lbrakk>(set (rename_stm1_events @ rename_stm1_events_others))\<rbrakk>)
+  ((MemorySTM_opt_stm1 idd) \<lbrace>(set (rename_stm1_events @ rename_stm1_events_others))\<rbrace>)
 "
 
 definition AUX_opt_stm1 where
@@ -852,7 +852,7 @@ definition rename_ctr0_stm0_events where
   (enumchansp2_2 [(e1_stm0_C, e1_ctr0_C), (e3_stm0_C, e3_ctr0_C)] InOut_list rc.core_int_list)"
 
 definition rename_D__stm0 where
-"rename_D__stm0 idd = ((D__stm0 idd) \<lbrakk>(set rename_ctr0_stm0_events)\<rbrakk>)"
+"rename_D__stm0 idd = ((D__stm0 idd) \<lbrace>(set rename_ctr0_stm0_events)\<rbrace>)"
 
 text \<open>For @{term D__stm1}, its events are also renamed to the corresponding events in @{term Chan_ctr0}. 
 The renaming relation is defined in @{term rename_ctr0_stm1_events} where the event of 
@@ -872,7 +872,7 @@ definition rename_ctr0_stm1_events where
 "
 
 definition rename_D__stm1 where
-"rename_D__stm1 idd = ((D__stm1 idd) \<lbrakk>(set rename_ctr0_stm1_events)\<rbrakk>)"
+"rename_D__stm1 idd = ((D__stm1 idd) \<lbrace>(set rename_ctr0_stm1_events)\<rbrace>)"
 
 text \<open>The @{term ctr0_stms_events} below gives a set of synchronisation events between @{text stm0} 
 and @{text stm1} which includes termination and @{text e3}.
@@ -946,7 +946,7 @@ definition rename_mod0_ctr0_events where
 "
 
 definition rename_D__ctr0 where
-"rename_D__ctr0 idd = ((D__ctr0 idd) \<lbrakk>(set rename_mod0_ctr0_events)\<rbrakk>)"
+"rename_D__ctr0 idd = ((D__ctr0 idd) \<lbrace>(set rename_mod0_ctr0_events)\<rbrace>)"
 
 definition "mod0_set_x_events = set (
   enumchan1 set_x_mod0_C  rc.core_int_list
