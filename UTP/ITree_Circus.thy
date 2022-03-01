@@ -101,15 +101,20 @@ definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1
 
 syntax
   "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 61)
+  "_swap" :: "svid \<Rightarrow> svid \<Rightarrow> logic" ("swap'(_, _')")
 
 translations
   "_assignment x e" == "CONST assigns (CONST subst_upd (CONST subst_id) x (e)\<^sub>e)"
   "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
+  "_swap x y" => "(x, y) := ($y, $x)"
 
 named_theorems assigns_combine
 
 lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
   by (simp add: assigns_def Skip_def)
+
+lemma assigns_empty: "\<langle>[\<leadsto>]\<rangle>\<^sub>a = Skip"
+  by (simp add: subst_id_def assigns_def Skip_def)
 
 lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P ;; Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) ;; Q"
   by (simp add: kleisli_comp_def assigns_def)
@@ -132,6 +137,9 @@ lemma assign_Stop: "x := e ;; Stop = Stop"
 lemma assigns_Step: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Step = Step ;; \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: assigns_def Step_def kleisli_comp_def Skip_def)
 
+lemma assign_self: "vwb_lens x \<Longrightarrow> x := $x = Skip"
+  by (simp add: usubst assigns_empty)
+
 lemma assign_twice: "vwb_lens x \<Longrightarrow> (x := e;; x := f) = x := f\<lbrakk>e/x\<rbrakk>"
   by (simp add: assigns_combine usubst)
 
@@ -139,6 +147,12 @@ lemma assign_combine:
   assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
   shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
   using assms by (simp add: kleisli_comp_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
+
+lemma swap_self: "vwb_lens x \<Longrightarrow> swap(x, x) = Skip"
+  by (simp add: usubst assigns_empty)
+
+lemma swap_commute: "x \<bowtie> y \<Longrightarrow> swap(x, y) = swap(y, x)"
+  by (simp add: usubst usubst_upd_comm)
 
 lemma cond_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b \<langle>\<rho>\<rangle>\<^sub>a) = \<langle>expr_if \<sigma> b \<rho>\<rangle>\<^sub>a"
   by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
