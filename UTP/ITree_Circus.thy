@@ -123,6 +123,18 @@ lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<exclamdown>b! = \<e
 lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? ;; \<langle>\<sigma>\<rangle>\<^sub>a"
   by (simp add: kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
 
+lemma assigns_Stop: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Stop = Stop"
+  by (simp add: assigns_def kleisli_comp_def)
+
+lemma assign_Stop: "x := e ;; Stop = Stop"
+  by (fact assigns_Stop)
+
+lemma assigns_Step: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Step = Step ;; \<langle>\<sigma>\<rangle>\<^sub>a"
+  by (simp add: assigns_def Step_def kleisli_comp_def Skip_def)
+
+lemma assign_twice: "vwb_lens x \<Longrightarrow> (x := e;; x := f) = x := f\<lbrakk>e/x\<rbrakk>"
+  by (simp add: assigns_combine usubst)
+
 lemma assign_combine: 
   assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
   shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
@@ -134,8 +146,12 @@ lemma cond_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^
 lemma cond1_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b Skip) = \<langle>expr_if \<sigma> b [\<leadsto>]\<rangle>\<^sub>a"
   by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
 
+lemma assign_cond: "if b then x := e else x := f fi = x := (if b then e else f)"
+  by (simp add: assigns_combine usubst, simp add: expr_if_def)
+
 lemma cond_simps:
   "S \<lhd> True \<rhd> T = S"
+  "S \<lhd> False \<rhd> T = T"
   "S \<lhd> \<not> b \<rhd> T = T \<lhd> b \<rhd> S"
   "S \<lhd> b \<rhd> (T \<lhd> b \<rhd> U) = S \<lhd> b \<rhd> U"
   "(S \<lhd> b \<rhd> T) ;; U = (S ;; U) \<lhd> b \<rhd> (T ;; U)"
