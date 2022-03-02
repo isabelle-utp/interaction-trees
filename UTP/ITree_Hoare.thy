@@ -36,6 +36,26 @@ lemma hl_conseq:
   shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
   using assms by (auto simp add: hoare_alt_def, expr_auto) 
 
+corollary hl_weaken:
+  assumes "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^bold>}" "`P\<^sub>1 \<longrightarrow> P\<^sub>2`"
+  shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^bold>}"
+  using hl_conseq[where Q\<^sub>1="Q", OF assms] by simp
+
+corollary hl_strengthen:
+  assumes "\<^bold>{P\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}" "`Q\<^sub>2 \<longrightarrow> Q\<^sub>1`"
+  shows "\<^bold>{P\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
+  using hl_conseq[where P\<^sub>1="P", OF assms(1) _ assms(2)] by simp
+
+corollary hl_conj_pre:
+  assumes "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^sub>1 \<and> P\<^sub>2\<^bold>} S \<^bold>{Q\<^bold>}"
+  by (rule hl_weaken[OF assms], simp)
+
+corollary hl_disj_post:
+  assumes "\<^bold>{P\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
+  shows "\<^bold>{P\<^bold>} S \<^bold>{Q\<^sub>1 \<or> Q2\<^bold>}"
+  by (rule hl_strengthen[OF assms], simp)
+
 lemma hl_conj:
   assumes "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}" "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}"
   shows "\<^bold>{P\<^sub>1 \<and> P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>1 \<and> Q\<^sub>2\<^bold>}"

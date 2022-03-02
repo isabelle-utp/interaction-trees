@@ -31,6 +31,9 @@ expr_ctr pre
 lemma wp_Skip [wp]: "wp Skip P = P"
   by (expr_simp add: wp_itree_def Skip_rel)
 
+lemma wlp_Skip [wp]: "wlp Skip P = P"
+  by (expr_simp add: wlp_itree_def Skip_rel)
+
 lemma wp_Skip' [wp]: "wp Skip = id"
   by (expr_simp add: wp_itree_def Skip_rel)
 
@@ -39,6 +42,9 @@ lemma wp_assigns [wp]: "wp \<langle>\<sigma>\<rangle>\<^sub>a P = (\<sigma> \<da
 
 lemma wlp_assigns [wp]: "wlp \<langle>\<sigma>\<rangle>\<^sub>a P = (\<sigma> \<dagger> (P)\<^sub>e)"
   by (expr_simp add: wlp_itree_def assigns_rel)
+
+lemma wlp_assign: "wlp (x := e) P = P\<lbrakk>e/x\<rbrakk>"
+  by (simp add: wlp_assigns, simp add: SEXP_def)
 
 lemma wp_assume [wp]: "wp (assume S) P = (S \<and> P)\<^sub>e"
   by (simp add: wp_itree_def assume_rel, expr_auto)
