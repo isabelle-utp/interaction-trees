@@ -52,7 +52,7 @@ translations "_assume b" == "CONST assume (b)\<^sub>e"
 lemma assume_true: "\<questiondown>True? = Skip"
   by (simp add: assume_def Skip_def)
 
-lemma assert_false: "\<questiondown>False? = Div"
+lemma assume_false: "\<questiondown>False? = Div"
   by (simp add: assume_def)
 
 definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where

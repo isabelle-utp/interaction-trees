@@ -43,8 +43,8 @@ lemma wp_assigns [wp]: "wp \<langle>\<sigma>\<rangle>\<^sub>a P = (\<sigma> \<da
 lemma wlp_assigns [wp]: "wlp \<langle>\<sigma>\<rangle>\<^sub>a P = (\<sigma> \<dagger> (P)\<^sub>e)"
   by (expr_simp add: wlp_itree_def assigns_rel)
 
-lemma wlp_assign: "wlp (x := e) P = P\<lbrakk>e/x\<rbrakk>"
-  by (simp add: wlp_assigns, simp add: SEXP_def)
+lemma wlp_assign: "wlp (x := e) P = (P)\<^sub>e\<lbrakk>e/x\<rbrakk>"
+  by (simp add: wlp_assigns)
 
 lemma wp_assume [wp]: "wp (assume S) P = (S \<and> P)\<^sub>e"
   by (simp add: wp_itree_def assume_rel, expr_auto)
@@ -104,10 +104,15 @@ lemma wlp_input_in_where [wp]:
   "wb_prism c \<Longrightarrow> wlp_itree (input_in_where c A S) P = [\<lambda> s. \<forall> v\<in>A s. fst (S v) s \<longrightarrow> wlp_itree (snd (S v)) P s]\<^sub>e"
   by (auto simp add: wlp_itree_def itree_rel fun_eq_iff)
 
-theorem hoare_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
+theorem hl_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
   by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
 
-method hoare_wlp uses add = (simp add: prog_defs hoare_via_wlp wp usubst_eval add)
+lemma hl_wlp: "`P \<longrightarrow> wlp S Q` \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
+  by (simp add: hl_via_wlp)
+
+method hoare_wlp uses add = (simp add: prog_defs hl_via_wlp wp usubst_eval add)
 method hoare_wlp_auto uses add = (hoare_wlp add: add; expr_auto)
+
+method wp uses add = (simp add: prog_defs wp usubst_eval add)
 
 end

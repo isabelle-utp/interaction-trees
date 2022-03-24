@@ -108,7 +108,7 @@ lemma hl_assign':
   shows "\<^bold>{P\<^bold>} x := e \<^bold>{Q\<^bold>}"
   using assms by (fact hoare_assigns_impl)
 
-lemma hoare_fwd_assign [hoare_safe]:
+lemma hl_fwd_assign [hoare_safe]:
   assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} x := e ;; S \<^bold>{Q\<^bold>}"
   using assms
@@ -125,6 +125,10 @@ lemma hl_Stop [hoare_safe]:
   by (simp add: hoare_alt_def)
      (meson nonterminates_iff retvals_deadlock)
 
+lemma hl_Div [hoare_safe]:
+  "\<^bold>{P\<^bold>} Div \<^bold>{Q\<^bold>}"
+  by (force simp add: hoare_alt_def)
+
 lemma hl_cond [hoare_safe]:
   assumes "\<^bold>{B \<and> P\<^bold>} S \<^bold>{Q\<^bold>}" "\<^bold>{\<not>B \<and> P\<^bold>} T \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
@@ -135,7 +139,7 @@ lemma hoare_let [hoare_safe]:
   shows "\<^bold>{P\<^bold>} let x \<leftarrow> e in S x \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def let_itree_def lens_defs)
 
-lemma hoare_for:
+lemma hl_for:
   assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
   shows "\<^bold>{@(R 0)\<^bold>} for i in xs do S i od \<^bold>{@(R (length xs))\<^bold>}"
   using assms
@@ -168,7 +172,7 @@ lemma hoare_for_inv [hoare_safe]:
     "`P \<longrightarrow> @(R 0)`" "`@(R (length xs)) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>} for x in xs inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
   unfolding for_inv_def
-  by (meson assms hl_conseq hoare_for)
+  by (meson assms hl_conseq hl_for)
 
 lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
@@ -214,6 +218,8 @@ proof (rule hoareI)
       using while(1) while(2) by force 
   qed
 qed
+
+lemmas hl_while = hoare_while_partial
 
 definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv B I P = iterate B P"
