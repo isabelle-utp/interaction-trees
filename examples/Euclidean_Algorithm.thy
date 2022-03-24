@@ -19,7 +19,7 @@ execute "eucl (2, 8)"
 execute "eucl (12, 30)"
 
 lemma eucl_correct: "\<^bold>{A > 0 \<and> B > 0\<^bold>} eucl (A, B) \<^bold>{a = gcd A B\<^bold>}"
-  apply (hoare_auto)
+  apply (vcg) 
   apply (simp add: gcd_diff1)
   apply (metis gcd.commute gcd_diff1)
   done
