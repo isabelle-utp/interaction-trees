@@ -82,6 +82,15 @@ definition default_pinj :: "'a \<Zpinj> 'b" where "default_pinj = 0"
 instance ..
 end
 
+instantiation prod :: (default, default) default
+begin
+definition default_prod :: "'a \<times> 'b" where
+"default_prod = (default, default)"
+
+instance ..
+
+end
+
 declare UNIV_I [code_unfold]
 declare bool_simps [code_unfold]
 declare UNIV_unit [code_unfold]
