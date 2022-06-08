@@ -78,7 +78,7 @@ end
 
 instantiation pinj :: (type, type) default
 begin
-definition default_pinj :: "'a \<Zpinj> 'b" where "default_pinj = 0"
+definition default_pinj :: "'a \<Zpinj> 'b" where "default_pinj = {}\<^sub>\<rho>"
 instance ..
 end
 
