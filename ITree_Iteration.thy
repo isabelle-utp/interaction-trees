@@ -116,7 +116,7 @@ proof -
   show ?thesis
     apply (unfold_locales, auto simp add: ichain.last_st assms(2))
     using ichain.length_chain apply blast
-    apply (metis (no_types, lifting) Suc_eq_plus1 Suc_pred add_diff_cancel_left' hd_conv_nth ichain.chain_iter ichain.chain_start ichain.length_chain length_greater_0_conv less_Suc_eq_0_disj nth_Cons' plus_1_eq_Suc snd_conv)
+    apply (metis (no_types, lifting) add.commute add_diff_inverse_nat add_less_cancel_left hd_conv_nth ichain.chain_iter ichain.chain_start ichain.length_chain length_greater_0_conv less_one neq0_conv nth_Cons' snd_conv)
     done
 qed
   
