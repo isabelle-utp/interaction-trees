@@ -1,0 +1,13 @@
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build Theory
+    steps:
+      - uses: actions/checkout@v3
+      - uses: lexbailey/isabelle-theory-build-github-action@v4
+        with:
+          isabelle-version: '2021-1'
+          custom-isabelle-url: 'https://github.com/lexbailey/itrees_isabelle_fork/archive/refs/heads/itrees_utp.zip'
+          depends: 'https://github.com/isabelle-utp/Shallow-Expressions.git@main https://github.com/isabelle-utp/explore-subgoal.git@main'
+          session-name: 'Interaction_Trees ITree_Simulation ITree_UTP ITree_VCG ITree_RoboChart'
