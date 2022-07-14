@@ -43,6 +43,9 @@ corec itree_interp
 
 definition "rmap f P = (P \<bind> Fun.comp Ret f)"
 
+text \<open> Here, I is effectively pushing the buttons of P, by providing the events that P needs
+  to continue. \<close>
+
 definition interp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
 "interp c I P = 
   iter (\<lambda> Q::('e, 'r) itree. 
@@ -53,6 +56,22 @@ definition interp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 
                            then Inl (F (build\<^bsub>c\<^esub>a)\<^sub>p) 
                            else Inl deadlock) :: 'a \<Rightarrow> ('e, 'r) itree + 'r) I
     )) P"
+
+
+definition interp_st 
+  :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('st \<Rightarrow> ('e, 'r \<times> 'st) itree) \<Rightarrow> ('st \<Rightarrow> ('e, 'a \<times> 'st) itree) \<Rightarrow> ('st \<Rightarrow> ('e, 'r \<times> 'st) itree)" where
+"interp_st c Ps I s = 
+  iter (\<lambda> (s\<^sub>0 :: 'st , Q :: ('e, 'r \<times> 'st) itree). 
+    (case Q of 
+      Sil Q' \<Rightarrow> Ret (Inl (s\<^sub>0, Q')) |
+      Ret x \<Rightarrow> Ret (Inr x) |
+      Vis F \<Rightarrow> rmap ((\<lambda> (a, s\<^sub>I). if (build\<^bsub>c\<^esub> a \<in> pdom(F)) 
+                           then Inl (s\<^sub>I, F (build\<^bsub>c\<^esub>a)\<^sub>p) 
+                           else Inl (s\<^sub>I, deadlock)) :: 'a \<times> 'st \<Rightarrow> 'st \<times> ('e, 'r \<times> 'st) itree + 'r \<times> 'st) (I s\<^sub>0)
+    )) (s, Ps s)"
+
+
+
 
 
 end
