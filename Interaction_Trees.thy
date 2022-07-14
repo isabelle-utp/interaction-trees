@@ -8,7 +8,6 @@ begin
 subsection \<open> Preliminaries \<close>
 
 unbundle Z_Type_Syntax
-unbundle Z_Relation_Syntax
 
 text \<open> Allow partial functions to be written with braces \<close>
 
