@@ -14,23 +14,25 @@ definition interp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 
     (case Q of 
       Sil Q' \<Rightarrow> Ret (Inl Q') |
       Ret x \<Rightarrow> Ret (Inr x) |
-      Vis F \<Rightarrow> rmap ((\<lambda> a. if (build\<^bsub>c\<^esub> a \<in> pdom(F)) 
+      Vis F \<Rightarrow> map_itree ((\<lambda> a. if (build\<^bsub>c\<^esub> a \<in> pdom(F)) 
                            then Inl (F (build\<^bsub>c\<^esub>a)\<^sub>p) 
                            else Inl deadlock) :: 'a \<Rightarrow> ('e, 'r) itree + 'r) I
     )) P"
 
 definition interp_st 
-  :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e\<^sub>1) \<Rightarrow> ('r \<Rightarrow> ('e\<^sub>1, 's) itree) \<Rightarrow> ('r \<Rightarrow> ('e\<^sub>2, 'a \<times> 'r) itree) \<Rightarrow> 'r \<Rightarrow> ('e\<^sub>2, 's) itree" where
-"interp_st c Ps I s = 
-  iter (\<lambda> (s\<^sub>0 :: 'r, Q :: ('e\<^sub>1, 's) itree). 
+  :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 's) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'a \<times> 'r) itree) \<Rightarrow> 'r \<Rightarrow> ('e, 's \<times> 'r) itree" where
+"interp_st c P I s = 
+  iter (\<lambda> (s\<^sub>0 :: 'r, Q :: (_, 's) itree). 
     (case Q of 
       Sil Q' \<Rightarrow> Ret (Inl (s\<^sub>0, Q')) |
-      Ret x \<Rightarrow> Ret (Inr x) |
-      Vis F \<Rightarrow> map_itree ((\<lambda> (a::'a, s\<^sub>I::'r). 
+      Ret x \<Rightarrow> Ret (Inr (x, s\<^sub>0)) |
+      Vis F \<Rightarrow> if range build\<^bsub>c\<^esub> \<inter> pdom(F) = {}
+               then Vis (\<lambda> e\<in>pdom(F) \<bullet> Ret (Inl (s\<^sub>0, F e)))
+               else map_itree ((\<lambda> (a::'a, s\<^sub>I::'r).
                            Inl (if (build\<^bsub>c\<^esub> a \<in> pdom(F)) 
                                 then (s\<^sub>I, F (build\<^bsub>c\<^esub>a)\<^sub>p) 
                                 else (s\<^sub>I, deadlock)))) (I s\<^sub>0)
-    )) (s, Ps s)"
+    )) (s, P)"
 
 
 (*
