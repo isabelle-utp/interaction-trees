@@ -141,7 +141,7 @@ lemma iterate_body_nonterminates:
   by (simp add: assms iterate.code)
 
 lemma loop_unfold: "loop P = P ;; (\<tau> \<circ> loop P)"
-  by (simp add: kleisli_comp_def fun_eq_iff iterate.code)
+  by (simp add: seq_itree_def kleisli_comp_def fun_eq_iff iterate.code)
 
 lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
   by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge iterate.code)
@@ -324,7 +324,7 @@ qed
 
 lemma iterate_ncond_prop:
   "\<not> (b s) \<Longrightarrow> ((\<lambda>s. if b s then P s \<bind> (\<lambda>s'. \<tau> (\<checkmark> s')) else \<checkmark> s) ^^ n) s = Ret s"
-  by (induct n, auto simp add: kleisli_comp_def)
+  by (induct n, auto simp add: seq_itree_def kleisli_comp_def)
 
 lemma iterate_as_power:
   fixes P :: "('e, 's) htree"
@@ -349,11 +349,11 @@ next
     hence hyp: "iterate b P s\<^sub>0 = ((\<lambda>s. (if b s then (P s \<bind> (\<lambda> s'. \<tau> (Ret s'))) else \<checkmark> s)) ^^ n) s\<^sub>0"
       using P(4) Suc.hyps le_n by blast
     show ?thesis
-      by (simp add: iterate.code Suc kleisli_comp_def, simp add: P(3) hyp)
+      by (simp add: seq_itree_def iterate.code Suc kleisli_comp_def, simp add: P(3) hyp)
   next
     case False
     then show ?thesis 
-      by (simp add: iterate.code Suc kleisli_comp_def P(3) iterate_ncond_prop)
+      by (simp add: seq_itree_def iterate.code Suc kleisli_comp_def P(3) iterate_ncond_prop)
   qed
 qed
 

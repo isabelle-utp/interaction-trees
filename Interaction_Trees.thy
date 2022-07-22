@@ -8,6 +8,7 @@ begin
 subsection \<open> Preliminaries \<close>
 
 unbundle Z_Type_Syntax
+unbundle Z_Relation_Syntax
 
 text \<open> Allow partial functions to be written with braces \<close>
 
@@ -139,11 +140,8 @@ lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind
 
 definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 
-syntax
-  "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixr ";;" 54)
-
-translations
-  "P ;; Q" == "CONST kleisli_comp (CONST bind) P Q"
+definition seq_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" (infixr ";;" 54) where 
+"seq_itree P Q = kleisli_comp bind_itree P Q"
 
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
@@ -236,7 +234,7 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
 lemma kcomp_assoc: 
   fixes P :: "('e, 'r, 's) ktree" 
   shows "(P ;; Q) ;; R = P ;; (Q ;; R)"
-  by (simp add: kleisli_comp_def fun_eq_iff bind_itree_assoc)
+  by (simp add: seq_itree_def kleisli_comp_def fun_eq_iff bind_itree_assoc)
 
 subsection \<open> Run \<close>
 

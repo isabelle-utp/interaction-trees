@@ -112,7 +112,7 @@ lemma hl_fwd_assign [hoare_safe]:
   assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} x := e ;; S \<^bold>{Q\<^bold>}"
   using assms
-  by (auto simp add: hoare_alt_def assigns_def kleisli_comp_def, expr_simp)
+  by (auto simp add: seq_itree_def hoare_alt_def assigns_def kleisli_comp_def, expr_simp)
      (metis (no_types, lifting) mwb_lens_def vwb_lens.put_eq vwb_lens_mwb weak_lens.put_get)
 
 lemma hl_assigns_bwd [hoare_safe]:
