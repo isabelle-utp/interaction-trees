@@ -19,7 +19,31 @@ definition interp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 
                            else Inl deadlock) :: 'a \<Rightarrow> ('e, 'r) itree + 'r) I
     )) P"
 
-definition interp_st 
+record ('e, 'r) interp =
+  interp_evs :: "'e set"
+  interp_fun :: "'r \<Rightarrow> ('e, 'e \<times> 'r) itree"
+
+definition interp_st'
+  :: "('e, 's) itree \<Rightarrow> ('e, 'r) interp \<Rightarrow> 'r \<Rightarrow> ('e, 's \<times> 'r) itree" where
+"interp_st' P I s = 
+  iter (\<lambda> (s\<^sub>0 :: 'r, Q :: (_, 's) itree). 
+    (case Q of 
+      Sil Q' \<Rightarrow> Ret (Inl (s\<^sub>0, Q')) |
+      Ret x \<Rightarrow> Ret (Inr (x, s\<^sub>0)) |
+      Vis F \<Rightarrow> if pdom F \<inter> interp_evs I = {}
+               then Vis (\<lambda> e\<in>pdom(F) \<bullet> Ret (Inl (s\<^sub>0, F e)))
+               else map_itree (\<lambda> (e::'e, s\<^sub>I::'r).
+                           Inl (if (e \<in> pdom(F)) 
+                                then (s\<^sub>I, F e) 
+                                else (s\<^sub>I, deadlock))) (interp_fun I s\<^sub>0)
+    )) (s, P)"
+
+definition prism_interp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('r \<Rightarrow> ('e, 'a \<times> 'r) itree) \<Rightarrow> ('e, 'r) interp" where
+"prism_interp c I = \<lparr> interp_evs = range build\<^bsub>c\<^esub>, 
+                      interp_fun = \<lambda> s. map_itree (\<lambda> (a, s\<^sub>0). (build\<^bsub>c\<^esub> a, s\<^sub>0)) (I s) \<rparr>" 
+
+
+definition interp_st
   :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 's) itree \<Rightarrow> ('r \<Rightarrow> ('e, 'a \<times> 'r) itree) \<Rightarrow> 'r \<Rightarrow> ('e, 's \<times> 'r) itree" where
 "interp_st c P I s = 
   iter (\<lambda> (s\<^sub>0 :: 'r, Q :: (_, 's) itree). 
