@@ -1,8 +1,10 @@
 subsection \<open> Relational Abstraction \<close>
 
 theory ITree_Relation
-  imports ITree_Circus
+  imports ITree_Circus UTP2.utp
 begin
+
+unbundle UTP_Logic_Syntax
 
 text \<open> The relational abstraction captures the possible return values associated with particular
   inputs to a Kleisli tree. It ignores any visible events and treats them as nondeterminism,
@@ -19,7 +21,7 @@ lemmas itree_rel_defs = itree_pred_def itree_rel_def
 named_theorems itree_pred and itree_rel
 
 definition spec :: "'s scene \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> 's rel" where
-"spec a pre post = {(s, s'). s \<approx>\<^sub>S s' on (- a) \<and> pre s \<longrightarrow> post s'}"
+"spec a P Q = {(s, s'). s \<approx>\<^sub>S s' on (- a) \<and> P s \<longrightarrow> Q s'}"
 
 lemma assume_rel [itree_rel]: "itree_rel (assume P) = {(s, s'). s' = s \<and> P s}"
   apply (auto simp add: itree_rel_defs retvals_def assume_def)
@@ -27,14 +29,47 @@ lemma assume_rel [itree_rel]: "itree_rel (assume P) = {(s, s'). s' = s \<and> P 
   using diverge_no_Ret_trans apply fastforce
   done
 
-lemma test_rel [itree_rel]: "itree_rel (test P) = {(s, s'). s' = s \<and> P s}"
-  apply (auto simp add: itree_rel_defs retvals_def test_def)
+term ITree_Circus.test 
+term test
+
+
+no_syntax "_assume" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
+
+no_translations "\<questiondown>P?" == "CONST test (P)\<^sub>e"
+
+consts utest :: "('s \<Rightarrow> bool) \<Rightarrow> 'p"
+
+translations "\<questiondown>P?" == "CONST utest (P)\<^sub>e"
+
+adhoc_overloading utest ITree_Circus.test and utest test
+
+
+lemma test_pred [itree_pred]: "\<lbrakk>\<questiondown>P?\<rbrakk>\<^sub>p = \<questiondown>P?"
+  apply (simp add: itree_pred_def)
+  apply (simp add: ITree_Circus.test_def)
+  apply (simp add: test_def fun_eq_iff)
+  done
+
+lemma assume_pred [itree_pred]: "\<lbrakk>(ITree_Circus.assume P)\<rbrakk>\<^sub>p = test P"
+  apply (simp add: itree_pred_def)
+  apply (simp add: ITree_Circus.assume_def)
+  apply (simp add: test_def fun_eq_iff)
+  done
+
+
+ lemma test_rel [itree_rel]: "itree_rel (ITree_Circus.test P) = {(s, s'). s' = s \<and> P s}"
+  apply (auto simp add: itree_rel_defs retvals_def ITree_Circus.test_def)
+
   apply (metis (full_types) empty_iff insert_iff retvals_Ret retvals_deadlock retvals_traceI)
   using nonterminates_iff apply force
   done
-
+ 
 lemma Skip_rel [itree_rel]: "itree_rel Skip = Id"
   by (auto simp add: itree_rel_defs retvals_def Skip_def)
+
+no_notation assigns ("\<langle>_\<rangle>\<^sub>a")
+
+adhoc_overloading uassigns assigns
 
 lemma assigns_pred [itree_pred]: "\<lbrakk>\<langle>\<sigma>\<rangle>\<^sub>a\<rbrakk>\<^sub>p (s, s') = (s' = \<sigma> s)"
   by (auto simp add: itree_rel_defs retvals_def assigns_def)
@@ -50,6 +85,8 @@ lemma Stop_pred [itree_pred]: "\<lbrakk>Stop\<rbrakk>\<^sub>p (s, s') = False"
 
 lemma Stop_rel [itree_rel]: "itree_rel Stop = {}"
   by (simp add: itree_rel_def set_eq_iff Stop_pred)
+
+
 
 lemma seq_pred [itree_pred]: "\<lbrakk>P ;; Q\<rbrakk>\<^sub>p (s, s') = (\<exists> s\<^sub>0.  \<lbrakk>P\<rbrakk>\<^sub>p (s, s\<^sub>0) \<and> \<lbrakk>Q\<rbrakk>\<^sub>p (s\<^sub>0, s'))"
   by (auto simp add: itree_rel_defs seq_itree_def kleisli_comp_def)
