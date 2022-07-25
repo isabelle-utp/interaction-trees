@@ -170,7 +170,7 @@ lemma cond_simps:
   "S \<lhd> b \<rhd> (T \<lhd> b \<rhd> U) = S \<lhd> b \<rhd> U"
   "(S \<lhd> b \<rhd> T) ;; U = (S ;; U) \<lhd> b \<rhd> (T ;; U)"
   "x := e ;; (S \<lhd> b \<rhd> T) = (x := e ;; S) \<lhd> b\<lbrakk>e/x\<rbrakk> \<rhd> (x := e ;; T)"
-   by (simp_all add: cond_itree_def fun_eq_iff kleisli_comp_def assigns_def subst_app_expr_def)
+   by (simp_all add: cond_itree_def fun_eq_iff kleisli_comp_def assigns_def expr_defs)
 
 lemma for_empty: "for x in [] do P x od = Skip"
   by (simp add: for_itree_def)
