@@ -52,10 +52,10 @@ lemma Stop_rel [itree_rel]: "itree_rel Stop = {}"
   by (simp add: itree_rel_def set_eq_iff Stop_pred)
 
 lemma seq_pred [itree_pred]: "\<lbrakk>P ;; Q\<rbrakk>\<^sub>p (s, s') = (\<exists> s\<^sub>0.  \<lbrakk>P\<rbrakk>\<^sub>p (s, s\<^sub>0) \<and> \<lbrakk>Q\<rbrakk>\<^sub>p (s\<^sub>0, s'))"
-  by (auto simp add: itree_rel_defs kleisli_comp_def)
+  by (auto simp add: itree_rel_defs seq_itree_def kleisli_comp_def)
 
 lemma seq_rel [itree_rel]: "itree_rel (P ;; Q) = itree_rel P O itree_rel Q"
-  by (auto simp add: kleisli_comp_def itree_rel_defs relcomp_unfold)
+  by (auto simp add: seq_itree_def kleisli_comp_def itree_rel_defs relcomp_unfold)
 
 lemma cond_pred [itree_pred]: 
   "\<lbrakk>cond_itree C\<^sub>1 B C\<^sub>2\<rbrakk>\<^sub>p (s, s') = (if B s then \<lbrakk>C\<^sub>1\<rbrakk>\<^sub>p (s, s') else \<lbrakk>C\<^sub>2\<rbrakk>\<^sub>p (s, s'))"

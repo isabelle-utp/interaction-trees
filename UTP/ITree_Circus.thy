@@ -16,7 +16,7 @@ definition Skip :: "('e, 'r) htree" where
 
 lemma Skip_unit [simp]: 
   "Skip ;; S = S" "S ;; Skip = S"
-  by (simp_all add: Skip_def kleisli_comp_def bind_itree_right_unit)
+  by (simp_all add: seq_itree_def Skip_def kleisli_comp_def bind_itree_right_unit)
 
 text \<open> Like @{const Skip}, but do a single silent step. \<close>
 
@@ -32,7 +32,7 @@ abbreviation Div :: "('e, 'r) htree" where
 "Div \<equiv> (\<lambda> s. diverge)"
 
 lemma Div_left_zero [simp]: "Div ;; P = Div"
-  by (simp add: kleisli_comp_def)
+  by (simp add: seq_itree_def kleisli_comp_def)
 
 lemma traces_deadlock: "traces(deadlock) = {[]}"
   by (auto simp add: deadlock_def traces_Vis)
@@ -41,7 +41,7 @@ abbreviation
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
 lemma Stop_left_zero [simp]: "Stop ;; S = Stop"
-  by (simp add: kleisli_comp_def)
+  by (simp add: seq_itree_def kleisli_comp_def)
 
 definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
@@ -117,25 +117,25 @@ lemma assigns_empty: "\<langle>[\<leadsto>]\<rangle>\<^sub>a = Skip"
   by (simp add: subst_id_def assigns_def Skip_def)
 
 lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P ;; Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) ;; Q"
-  by (simp add: kleisli_comp_def assigns_def)
+  by (simp add: seq_itree_def kleisli_comp_def assigns_def)
 
 lemma assigns_seq_comp [assigns_combine]: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
-  by (simp add: kleisli_comp_def assigns_def subst_comp_def)
+  by (simp add: seq_itree_def kleisli_comp_def assigns_def subst_comp_def)
 
 lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! ;; \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
+  by (simp add: seq_itree_def kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
 
 lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? ;; \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
+  by (simp add: seq_itree_def kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
 
 lemma assigns_Stop: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Stop = Stop"
-  by (simp add: assigns_def kleisli_comp_def)
+  by (simp add: seq_itree_def assigns_def kleisli_comp_def)
 
 lemma assign_Stop: "x := e ;; Stop = Stop"
   by (fact assigns_Stop)
 
 lemma assigns_Step: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Step = Step ;; \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: assigns_def Step_def kleisli_comp_def Skip_def)
+  by (simp add: seq_itree_def assigns_def Step_def kleisli_comp_def Skip_def)
 
 lemma assign_self: "vwb_lens x \<Longrightarrow> x := $x = Skip"
   by (simp add: usubst assigns_empty)
@@ -146,7 +146,7 @@ lemma assign_twice: "vwb_lens x \<Longrightarrow> (x := e;; x := f) = x := f\<lb
 lemma assign_combine: 
   assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
   shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
-  using assms by (simp add: kleisli_comp_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
+  using assms by (simp add: seq_itree_def kleisli_comp_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
 
 lemma swap_self: "vwb_lens x \<Longrightarrow> swap(x, x) = Skip"
   by (simp add: usubst assigns_empty)
@@ -170,7 +170,7 @@ lemma cond_simps:
   "S \<lhd> b \<rhd> (T \<lhd> b \<rhd> U) = S \<lhd> b \<rhd> U"
   "(S \<lhd> b \<rhd> T) ;; U = (S ;; U) \<lhd> b \<rhd> (T ;; U)"
   "x := e ;; (S \<lhd> b \<rhd> T) = (x := e ;; S) \<lhd> b\<lbrakk>e/x\<rbrakk> \<rhd> (x := e ;; T)"
-   by (simp_all add: cond_itree_def fun_eq_iff kleisli_comp_def assigns_def expr_defs)
+   by (simp_all add: seq_itree_def cond_itree_def fun_eq_iff kleisli_comp_def assigns_def expr_defs)
 
 lemma for_empty: "for x in [] do P x od = Skip"
   by (simp add: for_itree_def)
@@ -179,7 +179,7 @@ lemma for_Cons: "for_itree (x # xs) P = P x ;; for_itree xs P"
   by (simp add: for_itree_def)
 
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"
-  by (auto simp add: fun_eq_iff iterate.code kleisli_comp_def cond_itree_def Step_def Skip_def comp_def)
+  by (auto simp add: seq_itree_def fun_eq_iff iterate.code kleisli_comp_def cond_itree_def Step_def Skip_def comp_def)
 
 lemma while_True_Skip: "while True do Skip od = Div"
   by (simp add: Skip_def SEXP_def loop_Ret)
@@ -261,7 +261,7 @@ translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambd
 translations "c?(x)|P \<rightarrow> Q" == "CONST input_where c (\<lambda> (x). ((P)\<^sub>e, Q))"
 
 lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a ;; P(x))"
-  by (simp add: input_in_where_def kleisli_comp_def assigns_def)
+  by (simp add: seq_itree_def input_in_where_def kleisli_comp_def assigns_def)
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "output c e P = (\<lambda> s. outp c (e s) \<then> P s)"
@@ -270,7 +270,7 @@ syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> lo
 translations "c!(e) \<rightarrow> P" == "CONST output c (e)\<^sub>e P"
 
 lemma assigns_output: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c!(e) \<rightarrow> P = c!(\<sigma> \<dagger> e) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a ;; P)"
-  by (simp add: assigns_def kleisli_comp_def output_def expr_defs)
+  by (simp add: seq_itree_def assigns_def kleisli_comp_def output_def expr_defs)
 
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
@@ -292,7 +292,7 @@ lemma extchoice_Div: "Div \<box> P = Div"
   by (simp add: choice_diverge extchoice_fun_def)
 
 lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a ;; Q)"
-  by (simp add: kleisli_comp_def extchoice_fun_def expr_defs assigns_def)
+  by (simp add: seq_itree_def kleisli_comp_def extchoice_fun_def expr_defs assigns_def)
 
 no_notation conj  (infixr "&" 35)
 
