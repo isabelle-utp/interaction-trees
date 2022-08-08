@@ -597,6 +597,9 @@ qed
 lemma dom_Vis_ref: "dom F = - (\<Union> {E. Vis F ref (Ev ` E)})"
   by (auto simp add: refuses_def)
 
+lemma dom_from_traces: "pdom F = {a. \<exists> tr. Ev a # tr \<in> traces (Vis F)}"
+  by (simp only: dom_Vis_ref traces_Vis, simp add: traces_def mstep_to_def, auto)
+
 lemma dom_from_failures: "dom F = {a. \<forall> E. ([], E) \<in> failures (Vis F) \<longrightarrow> Ev a \<notin> E}"
   apply (simp only: dom_Vis_ref)
   apply (simp add: failures_def mstep_to_def refuses_def )
@@ -606,7 +609,13 @@ lemma dom_from_failures: "dom F = {a. \<forall> E. ([], E) \<in> failures (Vis F
   apply (metis (no_types, opaque_lifting) Int_insert_left_if0 disjoint_iff image_empty image_insert inf_bot_left singletonI)
     apply (auto)
   done
- 
+
+lemma traces_eq_is_Vis: "\<lbrakk> traces P = traces Q; is_Vis P; stable Q \<rbrakk> \<Longrightarrow> is_Vis Q"
+  by (metis append_Nil empty_subsetI is_Vis_Sils itree.collapse(1) itree.exhaust_disc list.set(1) list.simps(8) term_trace_iff trace_to.intros(1) traces_single_Term)
+
+lemma traces_eq_is_Ret: "\<lbrakk> traces P = traces Q; is_Ret P; stable Q \<rbrakk> \<Longrightarrow> is_Ret Q"
+  by (metis itree.distinct_disc(2) itree.distinct_disc(3) itree.exhaust_disc traces_eq_is_Vis)
+
 theorem wbisim_implies_fd_equiv:
   assumes "failures(P) = failures(Q) \<and> divergences(P) = divergences(Q)"
   shows "P \<approx> Q"
@@ -631,8 +640,6 @@ next
 
   have 2: "divergences (Vis F) = divergences (Vis G)"
     using 5 by auto
-
-  thm set_eq_iff
 
   have dom: "dom F = dom G"
     by (simp add: 5 dom_from_failures)
@@ -693,5 +700,94 @@ next
   then show ?case 
     by (force simp add: failures_Ret divergences_Ret)
 qed (simp)
+
+theorem wbisim_implies_trace_divergences_equiv:
+  assumes "traces(P) = traces(Q) \<and> divergences(P) = divergences(Q)"
+  shows "P \<approx> Q"
+  using assms
+proof (coinduction arbitrary: P Q rule: wbisim_strong_Sil_coind)
+  case (2 P Q)
+  then show ?case
+    using divergences_has_Nil_is_diverge by (auto simp add: failures_diverge divergences_diverge)
+next
+  case (3 P' P Q)
+  then show ?case
+    by (metis divergences_Sil traces_Tau)
+next
+  case (4 P Q)
+  then show ?case
+    by (metis traces_eq_is_Ret traces_eq_is_Vis)
+next
+  case (5 F G P Q)
+
+  hence 1: "traces (Vis F) = traces (Vis G)"
+    by auto
+
+  have 2: "divergences (Vis F) = divergences (Vis G)"
+    using 5 by auto
+
+  have dom: "dom F = dom G"
+    by (simp add: 5 dom_from_traces)
+
+  have fd: "(\<forall>e\<in>dom F. (\<exists>P Q. F(e)\<^sub>p = P \<and> G(e)\<^sub>p = Q \<and> traces P = traces Q \<and> divergences P = divergences Q))"
+  proof
+    fix e
+    assume a: "e \<in> dom F"
+    show "\<exists>P Q. F(e)\<^sub>p = P \<and> G(e)\<^sub>p = Q \<and> traces P = traces Q \<and> divergences P = divergences Q"
+    proof -
+      have "traces (F(e)\<^sub>p) = traces (G(e)\<^sub>p)"
+      proof (auto simp add: set_eq_iff)
+        fix tr
+        assume "tr \<in> traces (F(e)\<^sub>p)"
+        hence i: "[Ev e] @ tr \<in> traces (Vis F)"
+          by (simp add: traces_Vis a)
+        with 1 have "[Ev e] @ tr \<in> traces (Vis G)"
+          by auto
+        thus "tr \<in> traces (G(e)\<^sub>p) "
+          by (simp add: traces_Vis)
+      next
+        fix tr
+        assume "tr \<in> traces (G(e)\<^sub>p)"
+        with dom[THEN sym] have i: "[Ev e] @ tr \<in> traces (Vis G)"
+          by (simp add: traces_Vis a)
+        with 1 have "[Ev e] @ tr \<in> traces (Vis F)"
+          by auto
+        thus "tr \<in> traces (F(e)\<^sub>p) "
+          by (simp add: traces_Vis)
+      qed
+      moreover have "divergences(F(e)\<^sub>p) = divergences(G(e)\<^sub>p)"
+      proof (auto simp add: set_eq_iff)
+        fix tr
+        assume "tr \<in> divergences (F(e)\<^sub>p)"
+        hence i: "[Ev e] @ tr \<in> divergences (Vis F)"
+          by (simp add: divergences_Vis a)
+        with 2 have "[Ev e] @ tr \<in> divergences (Vis G)"
+          by auto
+        thus "tr \<in> divergences (G(e)\<^sub>p) "
+          by (simp add: divergences_Vis)
+      next
+        fix tr
+        assume "tr \<in> divergences (G(e)\<^sub>p)"
+        with dom[THEN sym] have i: "[Ev e] @ tr \<in> divergences (Vis G)"
+          by (simp add: divergences_Vis a)
+        with 2 have "[Ev e] @ tr \<in> divergences (Vis F)"
+          by auto
+        thus "tr \<in> divergences (F(e)\<^sub>p) "
+          by (simp add: divergences_Vis)
+      qed
+      ultimately show ?thesis
+        by auto
+    qed
+  qed
+  with dom show ?case by simp
+next
+  case (6 x y P Q)
+  then show ?case 
+    by (force simp add: traces_Ret divergences_Ret)
+qed (simp)
+
+lemma wbisim_iff_traces_divergences_equiv: 
+  "P \<approx> Q \<longleftrightarrow> (traces P = traces Q \<and> divergences P = divergences Q)"
+  by (meson wbisim_eq_divergences wbisim_eq_traces wbisim_implies_trace_divergences_equiv)
 
 end
