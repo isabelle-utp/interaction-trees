@@ -23,8 +23,6 @@ text \<open> Like @{const Skip}, but do a single silent step. \<close>
 definition Step :: "('e, 'r) htree" where
 "Step = \<tau> \<circ> Skip"
 
-expr_ctr subst_id
-
 lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<checkmark> [\<leadsto>]]})\<^sub>e"
   by (simp add: Skip_def straces_def traces_Ret, expr_simp)
 

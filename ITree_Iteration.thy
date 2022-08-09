@@ -136,8 +136,8 @@ lemma iterate_cond_false [simp]:
   by (simp add: iterate.code)
 
 lemma iterate_body_nonterminates:
-  assumes "nonterminates (P s)" "b s"
-  shows "nonterminates (iterate b P s)"
+  assumes "nonterminating (P s)" "b s"
+  shows "nonterminating (iterate b P s)"
   by (simp add: assms iterate.code)
 
 lemma loop_unfold: "loop P = P ;; (\<tau> \<circ> loop P)"
@@ -427,5 +427,27 @@ lemma iterate_term_chain_iff:
      (b s \<and> \<not> b s' \<and> (\<exists> chn. itree_chain P s s' chn \<and> tr = concat (map fst chn) 
       \<and> (\<forall> i < length chn - 1. b (snd (chn ! i))))))"
   by (metis Ret_trns iterate_chain_terminates iterate_cond_false iterate_term_chain itree.inject(1))
+
+definition terminates :: "('e, 's) itree \<Rightarrow> bool" where
+"terminates P = (\<forall> tr P'. P \<midarrow>tr\<leadsto> P' \<longrightarrow> \<not> nonterminating P')"
+
+term "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+
+lemma
+  fixes V :: "'s \<Rightarrow> nat"
+  assumes 
+    "\<forall> s\<^sub>0. terminates (P s\<^sub>0)"
+    "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+  shows "\<exists> chn s'. itree_chain P s s' chn"
+  oops
+
+lemma
+  fixes V :: "'s \<Rightarrow> nat"
+  assumes 
+    "\<forall> s\<^sub>0. terminates (P s\<^sub>0)"
+    "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+  shows "terminates (iterate b P s)"
+  oops
+
 
 end
