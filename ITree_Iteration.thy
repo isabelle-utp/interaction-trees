@@ -472,6 +472,10 @@ chain_step [intro]: "\<lbrakk> P(s) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub
 inductive_cases
   chain_stepE [elim]: "s \<turnstile> P \<midarrow>(tr, s\<^sub>0) # chn\<leadsto>\<^sup>* s\<^sub>1"
 
+lemma chain_last: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; chn \<noteq> [] \<rbrakk> \<Longrightarrow> snd (last chn) = s'"
+  by (induct rule: itree_chain'.induct, auto)
+     (metis itree_chain'.simps list.discI)
+
 lemma chain_appendI: "\<lbrakk> s \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sup>* s\<^sub>0; s\<^sub>0 \<turnstile> P \<midarrow>tr\<^sub>2\<leadsto>\<^sup>* s' \<rbrakk> \<Longrightarrow> s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<leadsto>\<^sup>* s'"
   by (induct rule: itree_chain'.induct, auto simp add: chain_step)
 
@@ -488,11 +492,14 @@ lemma chain_append_iff: "s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<le
   by (meson chain_appendD chain_appendI)
 
 definition chain_states :: "('e, 's) chain \<Rightarrow> 's set" where
-"chain_states chn = set (map snd chn)"
+"chain_states chn = (if length chn \<le> 1 then {} else set (map snd (butlast chn)))"
 
 lemma chain_states_Nil [simp]: "chain_states [] = {}" by (simp add: chain_states_def)
-lemma chain_states_Cons [simp]: "chain_states ((tr, s) # chn) = insert s (chain_states chn)" 
-    by (simp add: chain_states_def)
+lemma chain_states_single [simp]: "chain_states [(tr, s)] = {}"
+  by (auto simp add: chain_states_def)
+lemma chain_states_Cons [simp]: "length chn > 0 \<Longrightarrow> chain_states ((tr, s) # chn) = insert s (chain_states chn)"
+  by (auto simp add: chain_states_def)
+      (metis One_nat_def diff_is_0_eq empty_iff length_butlast length_greater_0_conv list.set(1) list.size(3))
 
 definition chain_trace :: "('e, 's) chain \<Rightarrow> 'e list" where
 "chain_trace chn = concat (map fst chn)"
@@ -511,7 +518,8 @@ proof (induct s P chn s' rule: itree_chain'.induct)
 next
   case (chain_step P s tr s\<^sub>0 chn s\<^sub>1)
   then show ?case 
-    by (simp, meson iterate_trace_to trace_to_trans)
+    by simp
+       (metis append_Nil2 chain_states_Cons chain_trace_Nil insert_iff iterate_trace_to itree_chain'.simps length_greater_0_conv neq_Nil_conv trace_to_trans)
 qed
 
 lemmas disj_cases[consumes 1, case_names disj1 disj2] = disjE
@@ -526,22 +534,6 @@ lemma bind_extra_tauE:
   using assms
   by (auto elim!: trace_to_bindE)
      (metis Ret_trns bind_Ret comp_apply self_append_conv trace_to_SilE)
-
-primcorec remove_last_tau :: "('e, 's) itree \<Rightarrow> ('e, 's) itree" where
-"remove_last_tau u = 
-  (case u of
-    Ret r \<Rightarrow> Ret r | 
-    Sil t \<Rightarrow> if (is_Ret t) then t else Sil (remove_last_tau t) | 
-    Vis t \<Rightarrow> Vis (map_pfun remove_last_tau t))"
-
-lemma remove_last_tau: "remove_last_tau (P \<bind> \<tau> \<circ> \<checkmark>) = P"
-  sorry
-
-hide_const Map.dom
-
-thm trace_to.induct
-
-thm bind_VisE'
 
 lemma bind_trace_to_induct:
   assumes 
@@ -763,7 +755,6 @@ next
   then show ?thesis
     using assms(3) by force
 qed 
-
 
 lemma pdom_empty_iff_dom_empty: "f = {\<mapsto>} \<longleftrightarrow> dom f = {}"
   by (metis pdom_res_empty pdom_res_pdom pdom_zero)
