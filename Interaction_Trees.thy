@@ -164,7 +164,7 @@ lemma bind_VisE [elim]:
   by (metis assms bind_Ret bind_Vis bind_itree.disc_iff(3) is_VisE itree.collapse(1) itree.disc(9) itree.sel(3))
 
 
-lemma bind_VisE' [elim]:
+lemma bind_VisE' [elim, consumes 1, case_names initial continue]:
   assumes "Vis F = P \<bind> Q"
     "\<And> F'. \<lbrakk> P = Vis F'; F = map_pfun (\<lambda> x. x \<bind> Q) F' \<rbrakk> \<Longrightarrow> R"
     "\<And> x. \<lbrakk> P = Ret x; Q x = Vis F \<rbrakk> \<Longrightarrow> R"
@@ -182,7 +182,7 @@ lemma bind_SilE [elim]:
   shows R
   using assms bind_Sil_dest by blast
 
-lemma bind_SilE' [elim]:
+lemma bind_SilE' [elim, consumes 1, case_names initial continue]:
   assumes "Sil X = (P \<bind> Q)"
     "\<And> P'. \<lbrakk> P = Sil P'; X = P' \<bind> Q \<rbrakk> \<Longrightarrow> R"
     "\<And> x. \<lbrakk> P = Ret x; Sil X = Q x \<rbrakk> \<Longrightarrow> R"

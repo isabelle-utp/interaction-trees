@@ -1,5 +1,5 @@
 theory ITree_Iteration
-  imports ITree_Divergence
+  imports ITree_Divergence ITree_Deadlock
 begin
 
 subsection \<open> Strong Traces \<close>
@@ -173,10 +173,10 @@ lemma iterate_Sil_dest:
   apply (metis bind_Vis iterate.code itree.distinct(1) itree.distinct(5))
   done
 
-lemma iterate_SilE:
+lemma iterate_SilE [elim, consumes 1, case_names initial continue]:
   assumes "\<tau> P = iterate b Q s"
     "\<And> s'. \<lbrakk> b s; Q s = Ret s'; P = iterate b Q s' \<rbrakk> \<Longrightarrow> R"
-    "\<And> P'. \<lbrakk> b s; Q s = \<tau> P' \<and> P = (P' \<bind> \<tau> \<circ> iterate b Q) \<rbrakk> \<Longrightarrow> R"
+    "\<And> P'. \<lbrakk> b s; Q s = \<tau> P'; P = (P' \<bind> \<tau> \<circ> iterate b Q) \<rbrakk> \<Longrightarrow> R"
   shows R
   by (metis assms iterate_Sil_dest)
 
@@ -191,6 +191,12 @@ lemma iterate_Vis_dest:
 
 lemma iterate_VisE:
   assumes "Vis F = iterate b Q s"
+    "\<And> G. \<lbrakk> b s; Q s = Vis G; F = (map_pfun (\<lambda> x. bind_itree x (\<tau> \<circ> iterate b Q)) G) \<rbrakk> \<Longrightarrow> R"
+  shows R
+  by (metis assms(1) assms(2) iterate_Vis_dest)
+
+lemma iterate_VisE'[consumes 1, case_names body]:
+  assumes "iterate b Q s = Vis F"
     "\<And> G. \<lbrakk> b s; Q s = Vis G; F = (map_pfun (\<lambda> x. bind_itree x (\<tau> \<circ> iterate b Q)) G) \<rbrakk> \<Longrightarrow> R"
   shows R
   by (metis assms(1) assms(2) iterate_Vis_dest)
@@ -449,5 +455,349 @@ lemma
   shows "terminates (iterate b P s)"
   oops
 
+  term "itree_chain"
+
+  thm trace_to.induct
+
+  find_theorems bind_itree
+
+  term itree_chain
+
+type_synonym ('e, 's) chain = "('e list \<times> 's) list"
+
+inductive itree_chain' :: "'s \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e list \<times> 's) list \<Rightarrow> 's \<Rightarrow> bool" ("_ \<turnstile> _ \<midarrow>_\<leadsto>\<^sup>* _" [55, 0, 0, 55] 55) where
+chain_Nil [intro]: "s \<turnstile> P \<midarrow>[]\<leadsto>\<^sup>* s" |
+chain_step [intro]: "\<lbrakk> P(s) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>0; s\<^sub>0 \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1 \<rbrakk> \<Longrightarrow> s \<turnstile> P \<midarrow>(tr, s\<^sub>0) # chn\<leadsto>\<^sup>* s\<^sub>1"
+
+inductive_cases
+  chain_stepE [elim]: "s \<turnstile> P \<midarrow>(tr, s\<^sub>0) # chn\<leadsto>\<^sup>* s\<^sub>1"
+
+lemma chain_appendI: "\<lbrakk> s \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sup>* s\<^sub>0; s\<^sub>0 \<turnstile> P \<midarrow>tr\<^sub>2\<leadsto>\<^sup>* s' \<rbrakk> \<Longrightarrow> s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<leadsto>\<^sup>* s'"
+  by (induct rule: itree_chain'.induct, auto simp add: chain_step)
+
+lemma chain_appendD: "s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<leadsto>\<^sup>* s' \<Longrightarrow> \<exists> s\<^sub>0. s \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sup>* s\<^sub>0 \<and> s\<^sub>0 \<turnstile> P \<midarrow>tr\<^sub>2\<leadsto>\<^sup>* s'"
+  apply (induct tr\<^sub>1 arbitrary: s s')
+  apply (simp)
+  using chain_Nil apply fastforce
+  apply (simp)
+  apply (case_tac a)
+  apply (meson chain_step chain_stepE)
+  done  
+
+lemma chain_append_iff: "s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<leadsto>\<^sup>* s' \<longleftrightarrow> (\<exists> s\<^sub>0. s \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sup>* s\<^sub>0 \<and> s\<^sub>0 \<turnstile> P \<midarrow>tr\<^sub>2\<leadsto>\<^sup>* s')"
+  by (meson chain_appendD chain_appendI)
+
+definition chain_states :: "('e, 's) chain \<Rightarrow> 's set" where
+"chain_states chn = set (map snd chn)"
+
+lemma chain_states_Nil [simp]: "chain_states [] = {}" by (simp add: chain_states_def)
+lemma chain_states_Cons [simp]: "chain_states ((tr, s) # chn) = insert s (chain_states chn)" 
+    by (simp add: chain_states_def)
+
+definition chain_trace :: "('e, 's) chain \<Rightarrow> 'e list" where
+"chain_trace chn = concat (map fst chn)"
+
+lemma chain_trace_Nil [simp]: "chain_trace [] = []" by (simp add: chain_trace_def)
+lemma chain_trace_Cons [simp]: "chain_trace ((tr, s) # chn) = tr @ chain_trace chn"
+  by (simp add: chain_trace_def)
+
+lemma iterate_transition_chain:
+  assumes "s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'" "b s" "\<forall> s\<^sub>0\<in>chain_states chn. b s\<^sub>0"
+  shows "iterate b P s \<midarrow>chain_trace chn\<leadsto> iterate b P s'"
+using assms
+proof (induct s P chn s' rule: itree_chain'.induct)
+  case (chain_Nil s P)
+  then show ?case by auto
+next
+  case (chain_step P s tr s\<^sub>0 chn s\<^sub>1)
+  then show ?case 
+    by (simp, meson iterate_trace_to trace_to_trans)
+qed
+
+lemmas disj_cases[consumes 1, case_names disj1 disj2] = disjE
+
+
+lemma bind_extra_tauE:
+  assumes 
+    "(P \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<leadsto> P'"
+    "\<And>P\<^sub>0. \<lbrakk> P \<midarrow>tr\<leadsto> P\<^sub>0; P' = P\<^sub>0 \<bind> \<tau> \<circ> \<checkmark> \<rbrakk> \<Longrightarrow> thesis"
+    "\<And>x. \<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P' = Ret x \<rbrakk> \<Longrightarrow> thesis"
+  shows thesis
+  using assms
+  by (auto elim!: trace_to_bindE)
+     (metis Ret_trns bind_Ret comp_apply self_append_conv trace_to_SilE)
+
+primcorec remove_last_tau :: "('e, 's) itree \<Rightarrow> ('e, 's) itree" where
+"remove_last_tau u = 
+  (case u of
+    Ret r \<Rightarrow> Ret r | 
+    Sil t \<Rightarrow> if (is_Ret t) then t else Sil (remove_last_tau t) | 
+    Vis t \<Rightarrow> Vis (map_pfun remove_last_tau t))"
+
+lemma remove_last_tau: "remove_last_tau (P \<bind> \<tau> \<circ> \<checkmark>) = P"
+  sorry
+
+hide_const Map.dom
+
+thm trace_to.induct
+
+thm bind_VisE'
+
+lemma bind_trace_to_induct:
+  assumes 
+    "(P \<bind> Q) \<midarrow>tr\<leadsto> R"
+    "\<And>P Q. prop P Q [] (P \<bind> Q)"
+    "\<And>P' Q tr R. (P' \<bind> Q) \<midarrow>tr\<leadsto> R \<Longrightarrow> prop (\<tau> P') Q tr R"
+    "\<And>x Q tr Q' R. \<lbrakk> Q x = \<tau> Q'; Q' \<midarrow>tr\<leadsto> R \<rbrakk> \<Longrightarrow> prop (Ret x) Q tr R"
+    "\<And> e F Q tr R. \<lbrakk> e \<in> dom(F); (F(e)\<^sub>p \<bind> Q) \<midarrow>tr\<leadsto> R \<rbrakk> \<Longrightarrow> prop (Vis F) Q (e # tr) R"
+    "\<And> x e F Q tr R. \<lbrakk> Q x = Vis F; e \<in> dom(F); F(e)\<^sub>p \<midarrow>tr\<leadsto> R \<rbrakk> \<Longrightarrow> prop (Ret x) Q (e # tr) R"
+  shows "prop P Q tr R"
+using assms(1) proof (induct "P \<bind> Q" tr R arbitrary: Q rule: trace_to.induct)
+  case trace_to_Nil
+  then show ?case
+    by (simp add: assms(2))
+next
+  case (trace_to_Sil P tr P')
+  then show ?case
+    apply (erule_tac bind_SilE')
+    using assms(3) apply auto[1]
+    apply (metis assms(4))
+    done
+next
+  case (trace_to_Vis e F tr P')
+  then show ?case
+    apply (erule_tac bind_VisE')
+    using assms(5) apply force
+    apply (simp add: assms(6))
+  done
+qed
+
+lemma prefixed_iterate_chain:
+  fixes B :: "('e, 's) htree"
+  assumes "(Q \<bind> iterate b B) \<midarrow>tr\<leadsto> R"
+  shows "(\<exists> Q'. Q \<midarrow>tr\<leadsto> Q' \<and> R = Q' \<bind> iterate b B)
+         \<or> (\<exists> s chn s\<^sub>0 tr\<^sub>0 tr\<^sub>1 P' n. Q \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s \<and> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0 \<and> B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P' \<and> tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1 \<and> R = P' \<bind> Sils n \<circ> iterate b B \<and> n \<le> 1)"
+using assms
+proof (induct "Q \<bind> iterate b B" tr R arbitrary: Q rule: trace_to.induct)
+  case trace_to_Nil
+  then show ?case
+    by blast
+next
+  case (trace_to_Sil P tr P')
+  have "\<tau> P = Q \<bind> iterate b B"
+    by (simp add: trace_to_Sil.hyps(3))
+  thus ?case
+  proof (cases rule: bind_SilE')
+    case (initial Q\<^sub>0)
+    note Q_def = this(1) and P_def = this(2)
+    from trace_to_Sil.hyps(2)[of Q\<^sub>0, OF initial(2)] show ?thesis
+    proof (cases rule: disj_cases)
+      case disj1
+      then show ?thesis
+        using trace_to_Sil P_def Q_def by blast
+    next
+      case disj2
+      then obtain s s\<^sub>0 ::"'s" and chn::"('e,'s) chain" and tr\<^sub>0 tr\<^sub>1 :: "'e list" and B' :: "('e, 's) itree" and n :: nat
+        where steps: "Q\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s" "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> B'" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" "P' = B' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
+        by blast
+        
+      show ?thesis
+        apply (simp add: Q_def P_def)
+        apply (rule_tac disjI2)
+        apply (rule_tac x="s" in exI)
+        apply (rule_tac x="chn" in exI)
+        apply (rule_tac x="s\<^sub>0" in exI)
+        apply (rule_tac x="tr\<^sub>0" in exI)
+        apply (simp add: steps)
+        using steps(3) steps(6) apply auto
+        done
+    qed
+  next
+    case (continue s)
+    note defs = this
+    with defs(2) show ?thesis
+    proof (cases rule: iterate_SilE)
+      case (initial s') 
+      with trace_to_Sil(2)[of "Ret s' :: ('e, 's) itree", simplified, OF initial(3)] show ?thesis
+      proof (cases rule: disj_cases)
+        case disj1
+        with initial show ?thesis
+          apply (simp add: defs)
+          apply (rule_tac disjI2)
+          apply (rule_tac x="[]" in exI)
+          apply (rule_tac x="s" in exI)
+          apply (auto)
+          apply (metis Sils.simps(1) bot_nat_0.extremum)
+          done
+      next
+        case disj2
+        then obtain chn s\<^sub>0 tr\<^sub>1 P'' n where P'': "s' \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = chain_trace chn @ tr\<^sub>1" "P' = P'' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
+          by auto
+        with initial show ?thesis
+          apply (simp add: defs)
+          apply (rule_tac disjI2)
+          apply (rule_tac x="([], s') # chn" in exI)
+          apply (rule_tac x="s\<^sub>0" in exI)
+          apply auto
+          done
+      qed
+    next
+      case (continue P\<^sub>0)
+      hence P: "P = P\<^sub>0 \<bind> \<tau> \<circ> \<checkmark> \<bind> iterate b B"
+        by (simp add: bind_itree_assoc[THEN sym] comp_def)
+      from trace_to_Sil(2)[of "P\<^sub>0 \<bind> Sil \<circ> Ret", OF P] continue(1)
+      show ?thesis
+      proof (cases rule: disj_cases)
+        case disj1
+        with continue(1,2) show ?thesis 
+          apply (simp add: defs)
+          apply (rule disjI2)
+          apply (rule_tac x="[]" in exI)
+          apply (rule_tac x="s" in exI)
+          apply (auto)
+          apply (erule bind_extra_tauE)
+           apply (simp)
+           apply (rule_tac x="P\<^sub>0'" in exI)
+           apply (auto simp add: bind_itree_assoc[THEN sym] comp_def)
+           apply (rule_tac x="1" in exI)
+          apply simp
+          apply (metis Sils.simps(1) bind_Ret bot_nat_0.extremum trace_to.trace_to_Sil)
+          done
+      next
+        case disj2
+        then obtain s chn s\<^sub>0 tr\<^sub>0 tr\<^sub>1 P'' n
+          where P\<^sub>0: "(P\<^sub>0 \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s" "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0"
+                    "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" "P' = P'' \<bind> Sils n \<circ> iterate b B"
+          by auto
+        then show ?thesis
+          apply (simp add: defs)
+          apply (rule_tac disjI2)
+          apply (smt (z3) One_nat_def Sil_to_Ret append_eq_appendI chain_step chain_trace_Cons continue(2) disj2 trace_to_post_Sil_iff)
+          done
+      qed
+    qed
+  qed
+next
+  case (trace_to_Vis e F tr P')
+  hence "Vis F = Q \<bind> iterate b B" by simp
+  thus ?case
+  proof (cases rule: bind_VisE')
+    case (initial F')
+    have F: "F(e)\<^sub>p = F'(e)\<^sub>p \<bind> iterate b B"
+      using initial(2) trace_to_Vis.hyps(1) by auto
+
+    from trace_to_Vis(3)[of "F'(e)\<^sub>p", OF F] show ?thesis
+    proof (cases rule: disj_cases)
+      case disj1
+      then show ?thesis
+        using initial(1) initial(2) trace_to_Vis.hyps(1) by auto
+    next
+      case disj2
+      then show ?thesis
+        by (metis append_Cons initial(1) initial(2) pdom_map_pfun trace_to.trace_to_Vis trace_to_Vis.hyps(1)) 
+    qed
+  next
+    case (continue s)
+    from continue(2) show ?thesis
+    proof (cases rule: iterate_VisE')
+      case (body G)
+      hence "F(e)\<^sub>p = G(e)\<^sub>p \<bind> \<tau> \<circ> iterate b B"
+        using trace_to_Vis.hyps(1) by auto
+      hence F: "F(e)\<^sub>p = G(e)\<^sub>p \<bind> \<tau> \<circ> \<checkmark> \<bind> iterate b B"
+        by (simp add: bind_itree_assoc[THEN sym] comp_def)
+      from trace_to_Vis(3)[of "G(e)\<^sub>p \<bind> Sil \<circ> Ret", OF F] show ?thesis
+      proof (cases rule: disj_cases)
+        case disj1
+        then obtain Q' where "(G(e)\<^sub>p \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<leadsto> Q'" "P' = Q' \<bind> iterate b B"
+          by auto
+        with trace_to_Vis(1) continue(1) body show ?thesis
+          apply (simp)
+          apply (rule_tac x="[]" in exI)
+          apply (rule_tac x="s" in exI)
+          apply auto
+          apply (erule bind_extra_tauE)
+           apply (rule_tac x="P\<^sub>0" in exI)
+           apply auto
+           apply (rule_tac x="1" in exI)
+          apply (simp add: bind_itree_assoc[THEN sym] comp_def)
+          apply (metis Sils.simps(1) bind_Ret bot_nat_0.extremum comp_eq_dest_lhs)
+        done
+      next
+        case disj2
+        then obtain s\<^sub>0 chn s\<^sub>1 tr\<^sub>0 tr\<^sub>1 P'' n 
+          where G: "(G(e)\<^sub>p \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0" and chn: "s\<^sub>0 \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1" "B s\<^sub>1 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" and P': "P' = P'' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
+          by auto
+        from G trace_to_Vis(1,2) continue(1) body P' chn show ?thesis
+          apply (simp)
+          apply (erule bind_extra_tauE)
+          apply (rule_tac x="(e # tr, s\<^sub>0) # chn" in exI)
+          apply (rule_tac x="s\<^sub>1" in exI)
+          apply auto
+          apply (rule_tac x="(e # tr\<^sub>0, s\<^sub>0) # chn" in exI)
+          apply (rule_tac x="s\<^sub>1" in exI)
+          apply auto
+          done
+      qed 
+    qed
+  qed
+qed
+
+lemma iterate_chain:
+  assumes 
+    "iterate b B s \<midarrow>tr\<leadsto> R" "b s"
+    "\<And> chn s\<^sub>0 tr\<^sub>0 P' n. 
+        \<lbrakk> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0; 
+          B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P'; 
+          tr = chain_trace chn @ tr\<^sub>0; 
+          R = P' \<bind> Sils n \<circ> iterate b B; 
+          n \<le> 1
+        \<rbrakk> \<Longrightarrow> P"
+  shows P
+  using prefixed_iterate_chain[of "\<checkmark> s", simplified, OF assms(1)]
+proof (cases rule: disj_cases)
+  case disj1
+  then show ?thesis
+    by (rule_tac assms(3)[of "[]" s "[]" "B s" 1, simplified], auto simp add: iterate.code comp_def assms)
+next
+  case disj2
+  then show ?thesis
+    using assms(3) by force
+qed 
+
+
+lemma pdom_empty_iff_dom_empty: "f = {\<mapsto>} \<longleftrightarrow> dom f = {}"
+  by (metis pdom_res_empty pdom_res_pdom pdom_zero)
+
+lemma Sils_VisE:
+  assumes "Sils n P = Vis F"
+  "\<lbrakk> n = 0; P = Vis F \<rbrakk> \<Longrightarrow> Q"
+  shows Q
+  by (metis Sils.elims assms(1) assms(2) itree.distinct(5))
+
+thm iterate_VisE'
+
+lemma loop_deadlock_free_lemma:
+  assumes 
+  "\<And> tr s. \<not> (P s \<midarrow>tr\<leadsto>  deadlock)"
+  "loop P s \<midarrow>tr\<leadsto> deadlock"
+  shows False
+  using assms apply (erule_tac iterate_chain; simp)
+  apply (simp add: deadlock_def)
+  apply (erule bind_VisE')
+   apply auto
+   apply (subgoal_tac "F' = {\<mapsto>}")
+    apply (simp)
+  apply (simp add: pdom_empty_iff_dom_empty)
+   apply (metis pdom_map_pfun pdom_zero)
+  apply (erule Sils_VisE)
+  apply (erule iterate_VisE')
+  apply (simp add: pdom_empty_iff_dom_empty)
+  apply (metis pdom_empty_iff_dom_empty pdom_map_pfun trace_to_Nil)
+  done
+
+lemma deadlock_free_loop:
+  assumes "\<And> s. deadlock_free (P s)"
+  shows "deadlock_free (loop P s)"
+  by (metis assms deadlock_free_def loop_deadlock_free_lemma)
 
 end
