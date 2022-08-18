@@ -175,8 +175,8 @@ lemma iterate_Sil_dest:
 
 lemma iterate_SilE [elim, consumes 1, case_names initial continue]:
   assumes "\<tau> P = iterate b Q s"
-    "\<And> s'. \<lbrakk> b s; Q s = Ret s'; P = iterate b Q s' \<rbrakk> \<Longrightarrow> R"
     "\<And> P'. \<lbrakk> b s; Q s = \<tau> P'; P = (P' \<bind> \<tau> \<circ> iterate b Q) \<rbrakk> \<Longrightarrow> R"
+    "\<And> s'. \<lbrakk> b s; Q s = Ret s'; P = iterate b Q s' \<rbrakk> \<Longrightarrow> R"
   shows R
   by (metis assms iterate_Sil_dest)
 
@@ -492,14 +492,11 @@ lemma chain_append_iff: "s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<le
   by (meson chain_appendD chain_appendI)
 
 definition chain_states :: "('e, 's) chain \<Rightarrow> 's set" where
-"chain_states chn = (if length chn \<le> 1 then {} else set (map snd (butlast chn)))"
+"chain_states chn = set (map snd chn)"
 
 lemma chain_states_Nil [simp]: "chain_states [] = {}" by (simp add: chain_states_def)
-lemma chain_states_single [simp]: "chain_states [(tr, s)] = {}"
+lemma chain_states_Cons [simp]: "chain_states ((tr, s) # chn) = insert s (chain_states chn)"
   by (auto simp add: chain_states_def)
-lemma chain_states_Cons [simp]: "length chn > 0 \<Longrightarrow> chain_states ((tr, s) # chn) = insert s (chain_states chn)"
-  by (auto simp add: chain_states_def)
-      (metis One_nat_def diff_is_0_eq empty_iff length_butlast length_greater_0_conv list.set(1) list.size(3))
 
 definition chain_trace :: "('e, 's) chain \<Rightarrow> 'e list" where
 "chain_trace chn = concat (map fst chn)"
@@ -564,25 +561,48 @@ next
   done
 qed
 
-lemma prefixed_iterate_chain:
+text \<open> The next theorem states is a general law for extracting chains from prefixed iterations. 
+  We adopt the prefixed pattern (@{term "Q \<bind> iterate b B"} so that the inductive proof goes through.
+  Whenever @{term "(Q \<bind> iterate b B) \<midarrow>tr\<leadsto> R"} there are two possibilities. (1) The prefix @{term Q}
+  performs the transition, and @{term "iterate b B"} is the continuation. (2) The prefix @{term Q}
+  terminates in a state @{term "s"}, having done a prefix of the trace, and then there is a chain of 
+  iterations of the loop body. Finally, it is possible that the body makes partial progress, leading
+  to another continuation. The overall trace is consists of (a) the trace contributed by @{term Q};
+  (b) the trace contributed in the chain; and (c) the trace contributed by partial execution of
+  they body @{term B}.
+ \<close>
+
+theorem prefixed_iterate_chain:
   fixes B :: "('e, 's) htree"
   assumes "(Q \<bind> iterate b B) \<midarrow>tr\<leadsto> R"
   shows "(\<exists> Q'. Q \<midarrow>tr\<leadsto> Q' \<and> R = Q' \<bind> iterate b B)
-         \<or> (\<exists> s chn s\<^sub>0 tr\<^sub>0 tr\<^sub>1 P' n. Q \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s \<and> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0 \<and> B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P' \<and> tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1 \<and> R = P' \<bind> Sils n \<circ> iterate b B \<and> n \<le> 1)"
-using assms
+         \<or> (\<exists> s chn s\<^sub>0 tr\<^sub>0 tr\<^sub>1 P' n. 
+              Q \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s \<and> b s \<and> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0 \<and> (\<forall> s\<in>chain_states chn. b s) \<and> B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P' 
+            \<and> tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1 
+            \<and> R = P' \<bind> Sils n \<circ> iterate b B \<and> n \<le> 1)"
+  using assms
+\<comment> \<open> We begin the proof by induction on the transition relation. This leads to three top-level
+  cases corresponding to the three possible ways a transition is constructed in the inductive predicate. \<close>
 proof (induct "Q \<bind> iterate b B" tr R arbitrary: Q rule: trace_to.induct)
+  \<comment> \<open> If the transition is empty, and so @{term "R = Q \<bind> iterate b B"}, then the proof is trivial. \<close>
   case trace_to_Nil
   then show ?case
     by blast
 next
+  text \<open> If the transition is a @{term "\<tau>"} then we need to further determine whether it originates
+    in @{term Q} or in the loop @{term "iterate b B"}. \<close>
   case (trace_to_Sil P tr P')
   have "\<tau> P = Q \<bind> iterate b B"
     by (simp add: trace_to_Sil.hyps(3))
   thus ?case
+  \<comment> \<open> We split on these two possibilities below. \<close>
   proof (cases rule: bind_SilE')
     case (initial Q\<^sub>0)
     note Q_def = this(1) and P_def = this(2)
     from trace_to_Sil.hyps(2)[of Q\<^sub>0, OF initial(2)] show ?thesis
+    \<comment> \<open> If it originates in @{term Q}, we need to further split the inductive hypotheses. Either
+         the remainder of @{term Q} (@{term Q\<^sub>0}) can reach @{term R}, or else the loop body has
+         executed, and so there is a chain. \<close>
     proof (cases rule: disj_cases)
       case disj1
       then show ?thesis
@@ -590,7 +610,8 @@ next
     next
       case disj2
       then obtain s s\<^sub>0 ::"'s" and chn::"('e,'s) chain" and tr\<^sub>0 tr\<^sub>1 :: "'e list" and B' :: "('e, 's) itree" and n :: nat
-        where steps: "Q\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s" "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> B'" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" "P' = B' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
+        where steps: "Q\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s" "b s" "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall> s\<in>chain_states chn. b s" "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> B'" 
+                     "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" "P' = B' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
         by blast
         
       show ?thesis
@@ -601,19 +622,21 @@ next
         apply (rule_tac x="s\<^sub>0" in exI)
         apply (rule_tac x="tr\<^sub>0" in exI)
         apply (simp add: steps)
-        using steps(3) steps(6) apply auto
+        using steps(5) steps(8) apply auto
         done
     qed
   next
     case (continue s)
     note defs = this
     with defs(2) show ?thesis
+    \<comment> \<open> If the @{term \<tau>} originates in the loop, then again we need two cases: (1) it originates
+         in the first execution of body, or (2) some further iterations. \<close>
     proof (cases rule: iterate_SilE)
-      case (initial s') 
-      with trace_to_Sil(2)[of "Ret s' :: ('e, 's) itree", simplified, OF initial(3)] show ?thesis
+      case (continue s') 
+      with trace_to_Sil(2)[of "Ret s' :: ('e, 's) itree", simplified, OF continue(3)] show ?thesis
       proof (cases rule: disj_cases)
         case disj1
-        with initial show ?thesis
+        with continue show ?thesis
           apply (simp add: defs)
           apply (rule_tac disjI2)
           apply (rule_tac x="[]" in exI)
@@ -623,9 +646,9 @@ next
           done
       next
         case disj2
-        then obtain chn s\<^sub>0 tr\<^sub>1 P'' n where P'': "s' \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = chain_trace chn @ tr\<^sub>1" "P' = P'' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
+        then obtain chn s\<^sub>0 tr\<^sub>1 P'' n where P'': "b s'" "s' \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall> s\<in>chain_states chn. b s" "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = chain_trace chn @ tr\<^sub>1" "P' = P'' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
           by auto
-        with initial show ?thesis
+        with continue show ?thesis
           apply (simp add: defs)
           apply (rule_tac disjI2)
           apply (rule_tac x="([], s') # chn" in exI)
@@ -634,14 +657,15 @@ next
           done
       qed
     next
-      case (continue P\<^sub>0)
+      \<comment> \<open> The prefix terminated in state @{term s}, and body @{term B} made partial progress. \<close>
+      case (initial P\<^sub>0)
       hence P: "P = P\<^sub>0 \<bind> \<tau> \<circ> \<checkmark> \<bind> iterate b B"
         by (simp add: bind_itree_assoc[THEN sym] comp_def)
-      from trace_to_Sil(2)[of "P\<^sub>0 \<bind> Sil \<circ> Ret", OF P] continue(1)
+      from trace_to_Sil(2)[of "P\<^sub>0 \<bind> Sil \<circ> Ret", OF P] initial(1)
       show ?thesis
       proof (cases rule: disj_cases)
         case disj1
-        with continue(1,2) show ?thesis 
+        with initial(1,2) show ?thesis 
           apply (simp add: defs)
           apply (rule disjI2)
           apply (rule_tac x="[]" in exI)
@@ -657,14 +681,19 @@ next
           done
       next
         case disj2
-        then obtain s chn s\<^sub>0 tr\<^sub>0 tr\<^sub>1 P'' n
-          where P\<^sub>0: "(P\<^sub>0 \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s" "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0"
-                    "B s\<^sub>0 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" "P' = P'' \<bind> Sils n \<circ> iterate b B"
+        then obtain s\<^sub>0 chn s\<^sub>1 tr\<^sub>0 tr\<^sub>1 P'' n
+          where P\<^sub>0: "(P\<^sub>0 \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0" "b s\<^sub>0" "s\<^sub>0 \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1" "\<forall> s\<in>chain_states chn. b s"
+                    "B s\<^sub>1 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" "P' = P'' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
           by auto
         then show ?thesis
           apply (simp add: defs)
           apply (rule_tac disjI2)
-          apply (smt (z3) One_nat_def Sil_to_Ret append_eq_appendI chain_step chain_trace_Cons continue(2) disj2 trace_to_post_Sil_iff)
+          apply auto
+          using initial(1) apply fastforce
+          apply (rule_tac x="(tr\<^sub>0, s\<^sub>0) # chn" in exI)
+          apply (rule_tac x="s\<^sub>1" in exI)
+          apply auto
+           apply (simp add: chain_step initial(2) trace_to_post_Sil_iff)
           done
       qed
     qed
@@ -717,7 +746,8 @@ next
       next
         case disj2
         then obtain s\<^sub>0 chn s\<^sub>1 tr\<^sub>0 tr\<^sub>1 P'' n 
-          where G: "(G(e)\<^sub>p \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0" and chn: "s\<^sub>0 \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1" "B s\<^sub>1 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" and P': "P' = P'' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
+          where G: "(G(e)\<^sub>p \<bind> \<tau> \<circ> \<checkmark>) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0" "b s\<^sub>0" 
+          and chn: "s\<^sub>0 \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1" "\<forall> s\<in>chain_states chn. b s" "B s\<^sub>1 \<midarrow>tr\<^sub>1\<leadsto> P''" "tr = tr\<^sub>0 @ chain_trace chn @ tr\<^sub>1" and P': "P' = P'' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
           by auto
         from G trace_to_Vis(1,2) continue(1) body P' chn show ?thesis
           apply (simp)
@@ -739,7 +769,8 @@ lemma iterate_chain:
     "iterate b B s \<midarrow>tr\<leadsto> R" "b s"
     "\<And> chn s\<^sub>0 tr\<^sub>0 P' n. 
         \<lbrakk> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0; 
-          B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P'; 
+          \<forall> s\<in>chain_states chn. b s;
+          B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P';
           tr = chain_trace chn @ tr\<^sub>0; 
           R = P' \<bind> Sils n \<circ> iterate b B; 
           n \<le> 1
@@ -755,6 +786,35 @@ next
   then show ?thesis
     using assms(3) by force
 qed 
+
+lemma iterate_chain_terminate:
+  assumes 
+    "iterate b B s \<midarrow>tr\<leadsto> \<checkmark> s'" "b s"
+    "\<And> chn s\<^sub>0 tr\<^sub>0. 
+        \<lbrakk> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0; 
+          \<forall> s\<in>chain_states chn. b s;
+          B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s';
+          \<not> b s';
+          tr = chain_trace chn @ tr\<^sub>0
+        \<rbrakk> \<Longrightarrow> P"
+  shows P
+proof -
+  obtain chn s\<^sub>0 tr\<^sub>0 P' n where chn: "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0"  "\<forall>s\<in>chain_states chn. b s" "B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P'"
+    "tr = chain_trace chn @ tr\<^sub>0" "\<checkmark> s' = P' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
+    using iterate_chain[OF assms(1), OF assms(2)] by blast
+  from chn have P': "P' = \<checkmark> s'"
+    apply (erule_tac bind_RetE')
+    apply (auto)
+    apply (metis Ret_Sils_iff iterate_RetE')
+    done
+  from chn have b: "\<not> b s'"
+    apply (erule_tac bind_RetE')
+    apply (auto)
+    apply (metis Ret_Sils_iff iterate_RetE')
+    done
+  show ?thesis
+    using P' assms(3) b chn(1) chn(2) chn(3) chn(4) by blast
+qed
 
 lemma pdom_empty_iff_dom_empty: "f = {\<mapsto>} \<longleftrightarrow> dom f = {}"
   by (metis pdom_res_empty pdom_res_pdom pdom_zero)
