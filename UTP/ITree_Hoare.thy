@@ -180,11 +180,46 @@ lemma hoare_while_partial [hoare_safe]:
 proof (rule hoareI)
   fix s s' tr
   assume while: "P s" "while B do S od s \<midarrow>tr\<leadsto> \<checkmark> s'"
+  have B: "\<not> B s'"
+    by (metis SEXP_def iterate_term_chain_iff while(2))
+  have P: "P s'"
+  proof (cases "B s")
+    case True
+    hence "(B, s) \<turnstile> S \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s'"
+      by (metis SEXP_def iterate_terminates_chain while(2))   
+    then obtain chn s\<^sub>0 tr\<^sub>0 
+      where "B s" "s \<turnstile> S \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>s\<in>chain_states chn. B s" "S s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'" "tr = chain_trace chn @ tr\<^sub>0"
+      by (metis itree_term_chain.simps)
+    from assms have "\<forall>i<length chn. P (snd (chn ! i))"
+    proof (clarify)
+      fix i
+      assume i: "i < length chn"
+      thus "P (snd (chn ! i))"
+      proof (induct i)
+        case 0
+        hence "S s \<midarrow>fst (chn ! 0)\<leadsto> \<checkmark> (snd (chn ! 0))"
+          using \<open>s \<turnstile> S \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0\<close> itree_chain.cases by fastforce   
+        with assms while(1) B show ?case
+          by (metis (mono_tags, lifting) True hoare_alt_def)
+      next
+        case (Suc i)
+        hence "S (snd (chn ! i)) \<midarrow>fst (chn ! Suc i)\<leadsto> \<checkmark> (snd (chn ! Suc i))"
+          by (metis Suc_eq_plus1 ichain.chain_iter less_diff_conv)
+        moreover have "B (snd (chn ! i))"
+          by (metis Suc.prems Suc_lessE chn(3) diff_Suc_1)
+        moreover have "P (snd (chn ! i))"
+          by (simp add: Suc.hyps Suc.prems Suc_lessD)
+        ultimately show ?case
+          using assms by (auto simp add: hoare_alt_def)
+      qed
+    qed
+
+      apply (auto simp add: hoare_alt_def)
   show "\<not> B s' \<and> P s'"
   proof (cases "B s")
     case True
     note B = this
-    obtain chn where chn: "itree_chain S s s' chn" "concat (map fst chn) = tr" "\<forall> i < length chn - 1. B (snd (chn ! i))" "\<not> B s'"
+    obtain chn where chn: "S s s' chn" "concat (map fst chn) = tr" "\<forall> i < length chn - 1. B (snd (chn ! i))" "\<not> B s'"
       by (metis SEXP_def True iterate_term_chain while(2))
     then interpret ichain: itree_chain S s s' chn by simp
     have "\<forall> i < length chn. P (snd (chn ! i))"

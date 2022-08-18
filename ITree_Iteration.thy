@@ -98,6 +98,7 @@ lemma iterate_term_once:
   shows "iterate b P s \<midarrow>es\<leadsto> Ret s'"
   by (metis assms(1) assms(2) assms(3) iterate.code iterate_trace_to)
 
+(*
 subsection \<open> Strong Traces \<close>
 
 inductive strace_to :: "('a, 'b) itree \<Rightarrow> 'a option list \<Rightarrow> ('a, 'b) itree \<Rightarrow> bool" ("_ \<midarrow>_\<rightarrow> _" [55, 0, 55] 55) where
@@ -179,6 +180,7 @@ next
     apply (metis Cons.prems(1) append_Nil bind_Ret strace_to_Nil)
     done
 qed
+*)
 
 subsection \<open> Power \<close>
 
@@ -196,7 +198,7 @@ subsection \<open> Chains \<close>
 
 type_synonym ('e, 's) chain = "('e list \<times> 's) list"
 
-inductive itree_chain' :: "'s \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e list \<times> 's) list \<Rightarrow> 's \<Rightarrow> bool" ("_ \<turnstile> _ \<midarrow>_\<leadsto>\<^sup>* _" [55, 0, 0, 55] 55) where
+inductive itree_chain :: "'s \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e list \<times> 's) list \<Rightarrow> 's \<Rightarrow> bool" ("_ \<turnstile> _ \<midarrow>_\<leadsto>\<^sup>* _" [55, 0, 0, 55] 55) where
 chain_Nil [intro]: "s \<turnstile> P \<midarrow>[]\<leadsto>\<^sup>* s" |
 chain_step [intro]: "\<lbrakk> P(s) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>0; s\<^sub>0 \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1 \<rbrakk> \<Longrightarrow> s \<turnstile> P \<midarrow>(tr, s\<^sub>0) # chn\<leadsto>\<^sup>* s\<^sub>1"
 
@@ -204,11 +206,11 @@ inductive_cases
   chain_stepE [elim]: "s \<turnstile> P \<midarrow>(tr, s\<^sub>0) # chn\<leadsto>\<^sup>* s\<^sub>1"
 
 lemma chain_last: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; chn \<noteq> [] \<rbrakk> \<Longrightarrow> snd (last chn) = s'"
-  by (induct rule: itree_chain'.induct, auto)
-     (metis itree_chain'.simps list.discI)
+  by (induct rule: itree_chain.induct, auto)
+     (metis itree_chain.simps list.discI)
 
 lemma chain_appendI: "\<lbrakk> s \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sup>* s\<^sub>0; s\<^sub>0 \<turnstile> P \<midarrow>tr\<^sub>2\<leadsto>\<^sup>* s' \<rbrakk> \<Longrightarrow> s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<leadsto>\<^sup>* s'"
-  by (induct rule: itree_chain'.induct, auto simp add: chain_step)
+  by (induct rule: itree_chain.induct, auto simp add: chain_step)
 
 lemma chain_appendD: "s \<turnstile> P \<midarrow>tr\<^sub>1 @ tr\<^sub>2\<leadsto>\<^sup>* s' \<Longrightarrow> \<exists> s\<^sub>0. s \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sup>* s\<^sub>0 \<and> s\<^sub>0 \<turnstile> P \<midarrow>tr\<^sub>2\<leadsto>\<^sup>* s'"
   apply (induct tr\<^sub>1 arbitrary: s s')
@@ -236,11 +238,17 @@ lemma chain_trace_Nil [simp]: "chain_trace [] = []" by (simp add: chain_trace_de
 lemma chain_trace_Cons [simp]: "chain_trace ((tr, s) # chn) = tr @ chain_trace chn"
   by (simp add: chain_trace_def)
 
+fun itree_term_chain :: 
+  "_ \<times> 's \<Rightarrow> ('e, 's) htree \<Rightarrow> 'e list \<Rightarrow> 's \<Rightarrow> bool" ("_ \<turnstile> _ \<midarrow>_\<leadsto>\<^sub>\<checkmark> _" [55, 0, 0, 55] 55)
+  where "(b, s) \<turnstile> P \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<longleftrightarrow> (\<exists> chn s\<^sub>0 tr\<^sub>0. b s \<and> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0 \<and> (\<forall>s\<in>chain_states chn. b s) \<and> P s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s' \<and> tr = chain_trace chn @ tr\<^sub>0)"
+
+declare itree_term_chain.simps [simp del]
+
 lemma iterate_transition_chain:
   assumes "s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'" "b s" "\<forall> s\<^sub>0\<in>chain_states chn. b s\<^sub>0"
   shows "iterate b P s \<midarrow>chain_trace chn\<leadsto> iterate b P s'"
 using assms
-proof (induct s P chn s' rule: itree_chain'.induct)
+proof (induct s P chn s' rule: itree_chain.induct)
   case (chain_Nil s P)
   then show ?case by auto
 next
@@ -249,6 +257,31 @@ next
     by simp
        (meson iterate_trace_to trace_to_trans)
 qed
+
+lemma final_state_in_chain: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; chn \<noteq> [] \<rbrakk> \<Longrightarrow> s' \<in> chain_states chn"
+  by (drule chain_last, simp, auto simp add: chain_states_def)
+
+lemma iterate_chain_terminates:
+  assumes "b s" "(b, s) \<turnstile> P \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s'" "\<not> b s'"
+  shows "iterate b P s \<midarrow>tr\<leadsto> \<checkmark> s'"
+proof -
+  obtain chn s\<^sub>0 tr\<^sub>0 where P: "s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>s\<in>chain_states chn. b s" "P s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'" "tr = chain_trace chn @ tr\<^sub>0"
+    using assms
+    by (simp add: itree_term_chain.simps, auto)
+
+  have 1: "iterate b P s \<midarrow>chain_trace chn\<leadsto> iterate b P s\<^sub>0"
+    by (simp add: P(1) P(2) assms(1) iterate_transition_chain)
+  have 2: "iterate b P s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'"
+  proof -
+    have "b s\<^sub>0"
+      by (metis P(1) P(2) assms(1) final_state_in_chain itree_chain.cases list.discI)
+    thus ?thesis
+      by (simp add: P(3) assms(3) iterate_term_once)
+  qed
+  show ?thesis
+    using "1" "2" P(4) trace_to_trans by blast
+qed
+
 
 lemmas disj_cases[consumes 1, case_names disj1 disj2] = disjE
 
@@ -488,274 +521,33 @@ next
     using assms(3) by force
 qed 
 
-lemma iterate_chain_terminate:
+lemma iterate_terminates_chain:
   assumes 
     "iterate b B s \<midarrow>tr\<leadsto> \<checkmark> s'" "b s"
-    "\<And> chn s\<^sub>0 tr\<^sub>0. 
-        \<lbrakk> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0; 
-          \<forall> s\<in>chain_states chn. b s;
-          B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s';
-          \<not> b s';
-          tr = chain_trace chn @ tr\<^sub>0
-        \<rbrakk> \<Longrightarrow> P"
+    "\<lbrakk> (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s'; \<not> b s' \<rbrakk> \<Longrightarrow> P"
   shows P
 proof -
-  obtain chn s\<^sub>0 tr\<^sub>0 P' n where chn: "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0"  "\<forall>s\<in>chain_states chn. b s" "B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P'"
+  from assms(1,2) obtain chn s\<^sub>0 tr\<^sub>0 P' n where chn: "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>s\<in>chain_states chn. b s" "B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P'"
     "tr = chain_trace chn @ tr\<^sub>0" "\<checkmark> s' = P' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
     using iterate_chain[OF assms(1), OF assms(2)] by blast
-  from chn have P': "P' = \<checkmark> s'"
-    apply (erule_tac bind_RetE')
-    apply (auto)
-    apply (metis Ret_Sils_iff iterate_RetE')
-    done
-  from chn have b: "\<not> b s'"
-    apply (erule_tac bind_RetE')
-    apply (auto)
-    apply (metis Ret_Sils_iff iterate_RetE')
-    done
-  show ?thesis
-    using P' assms(3) b chn(1) chn(2) chn(3) chn(4) by blast
-qed
-
-locale itree_chain =
-  fixes P :: "('e, 's) htree" \<comment> \<open> The loop body \<close>
-  and s s' :: "'s" \<comment> \<open> Initial and final state \<close>
-  and chn :: "('e list \<times> 's) list" \<comment> \<open> The chain \<close>
-  assumes length_chain: "length chn > 0" 
-  and last_st: "snd (last chn) = s'"
-  and chain_start: "P s \<midarrow>fst (hd chn)\<leadsto> Ret (snd (hd chn))"
-  and chain_iter: "\<forall> i < length chn - 1. P (snd (chn ! i)) \<midarrow>fst (chn ! (i + 1))\<leadsto> Ret (snd (chn ! (i + 1)))"
-
-lemma itree_chain_ConsI:
-  assumes "itree_chain P s\<^sub>0 s' chn" "P s \<midarrow>es\<leadsto> \<checkmark> s\<^sub>0"
-  shows "itree_chain P s s' ((es, s\<^sub>0) # chn)"
-proof -
-  interpret ichain: itree_chain P s\<^sub>0 s' chn
-    by (simp add: assms)
-  show ?thesis
-    apply (unfold_locales, auto simp add: ichain.last_st assms(2))
-    using ichain.length_chain apply blast
-    apply (metis (no_types, lifting) add.commute add_diff_inverse_nat add_less_cancel_left hd_conv_nth ichain.chain_iter ichain.chain_start ichain.length_chain length_greater_0_conv less_one neq0_conv nth_Cons' snd_conv)
-    done
-qed
-  
-lemma itree_chan_singleton_dest [dest!]: 
-  assumes "itree_chain P s s' [x]" 
-  shows "P s \<midarrow>fst x\<leadsto> \<checkmark> s' \<and> snd x = s'"
-proof -
-  interpret chn: itree_chain P s s' "[x]"
-    by (simp add: assms)
-  from chn.chain_start show ?thesis
-    using chn.last_st by auto
-qed
-
-lemma itree_chain_Cons_dest:
-  assumes "itree_chain P s s' ((es\<^sub>1, s\<^sub>0) # chn)" "length chn > 0"
-  shows "itree_chain P s\<^sub>0 s' chn"
-proof -
-  interpret chn: itree_chain P s s' "(es\<^sub>1, s\<^sub>0) # chn"
-    by (simp add: assms)
-  from assms(2) show ?thesis
-    apply (unfold_locales, auto)
-    using chn.last_st apply auto[1]
-    using chn.chain_iter hd_conv_nth apply fastforce
-    apply (metis (no_types, opaque_lifting) One_nat_def Suc_eq_plus1 Suc_less_eq Suc_pred assms(2) chn.chain_iter diff_Suc_Suc diff_zero list.size(4) nth_Cons_Suc)
-    done
-qed
-
-lemma iterate_chain_terminates:
-  assumes "itree_chain P s s' chn" "b s" "\<forall> i < length chn - 1. b (snd (chn ! i))" "\<not> b s'"
-  shows "iterate b P s \<midarrow>concat (map fst chn)\<leadsto> Ret s'"
-using assms proof (induct chn arbitrary: s)
-  case Nil
-  then interpret chn: itree_chain P s s' "[]"
-    by simp
-  show ?case
-    using chn.length_chain by blast    
-next
-  case (Cons ec chn)
-  show ?case
-  proof (cases "chn = []")
-    case True
-    thus ?thesis
-      using Cons by (auto, meson iterate_term_once)
-  next
-    case False
-    then interpret chn: itree_chain P s s' "ec # chn"
-      by (simp add: Cons.prems(1))
-    have chn': "itree_chain P (snd ec) s' chn"
-      by (metis Cons.prems(1) False itree_chain_Cons_dest length_greater_0_conv prod.exhaust_sel)
-    have "P s \<midarrow>fst ec\<leadsto> Ret (snd ec)"
-      using chn.chain_start by auto
-    hence "iterate b P s \<midarrow>fst ec\<leadsto> iterate b P (snd ec)"
-      by (simp add: Cons.prems(2) iterate_trace_to)
-    moreover have "b (snd ec)"
-      by (metis Cons.prems(3) chn' itree_chain.length_chain length_tl list.sel(3) nth_Cons_0)
-    ultimately show ?thesis
-      apply (simp, rule_tac trace_to_trans)
-       apply (auto)
-      apply (metis Cons.hyps Cons.prems(3) One_nat_def Suc_eq_plus1 Suc_pred assms(4) chn' diff_Suc_1 itree_chain_def list.size(4) not_less_eq nth_Cons_Suc)
-      done
-  qed
-qed
-
-lemma iterate_body_Ret:
-  assumes "iterate b P s \<midarrow>[]\<leadsto> Ret s'" "b s"
-  obtains s\<^sub>0 where "P s \<midarrow>[]\<leadsto> Ret s\<^sub>0"
-  using assms
-  by (auto elim!: bind_RetE trace_to_bindE simp add: iterate.code)
-
-lemma iterate_body_countdown:
-  assumes "iterate b P s = Sils n (\<checkmark> s')" "b s"
-  obtains m s\<^sub>0 where "0 < n" "m \<le> n" "P s = Sils m (Ret s\<^sub>0)" "iterate b P s\<^sub>0 = Sils (n - m - 1) (\<checkmark> s')"
-proof -
-  from assms obtain m s\<^sub>0 where "m \<le> n" "P s = Sils m (\<checkmark> s\<^sub>0)" "Sil (iterate b P s\<^sub>0) = Sils (n - m) (\<checkmark> s')"
-    by (auto elim!: bind_SilsE simp add: iterate.code)
-  moreover have "0 < n"
-    by (metis Sils.simps(1) assms gr0I iterate_RetE)
-  moreover have "iterate b P s\<^sub>0 = Sils (n - m - 1) (\<checkmark> s')"
-    by (metis Ret_Sils_iff calculation(3) itree.sel(2) itree.simps(5) un_Sil_Sils)
-  ultimately show ?thesis using that by auto
-qed
-
-lemma iterate_body_consume:
-  assumes "iterate b P s \<midarrow>tr\<leadsto> \<checkmark> s'" "b s"
-  obtains tr\<^sub>0 s\<^sub>0 where "tr\<^sub>0 \<le> tr" "P s \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0" "iterate b P s\<^sub>0 \<midarrow>tr - tr\<^sub>0\<leadsto> \<checkmark> s'"
-  using assms 
-  by (auto elim!: trace_to_bindE simp add: iterate.code)
-     (metis Prefix_Order.prefixI append_minus)
-
-lemma iterate_body_strong_consume:
-  assumes "iterate b P s \<midarrow>tr\<rightarrow> \<checkmark> s'" "b s"
-  obtains tr\<^sub>0 s\<^sub>0 where "(tr\<^sub>0 @ [None]) \<le> tr" "P s \<midarrow>tr\<^sub>0\<rightarrow> \<checkmark> s\<^sub>0" "iterate b P s\<^sub>0 \<midarrow>tr - (tr\<^sub>0 @ [None])\<rightarrow> \<checkmark> s'"
-proof -
-  from assms have "(P s \<bind> \<tau> \<circ> iterate b P) \<midarrow>tr\<rightarrow> \<checkmark> s'"
-    by (simp add: iterate.code assms)
-  thus ?thesis
-  proof (cases rule: strace_to_bindE)
-    case (left P')
-    then obtain s\<^sub>0 where "P' = \<checkmark> s\<^sub>0" "(\<tau> \<circ> iterate b P) s\<^sub>0 = \<checkmark> s'"
-      by auto
-    text \<open> It cannot be the case that the left process produced all the trace, because the right
-           trace at least contributes one silent event. \<close>
-    hence False
-      by simp
-    thus ?thesis by simp
-  next
-    case (right s\<^sub>0 tr\<^sub>0 tr\<^sub>1)
-    then obtain tr\<^sub>1' where tr\<^sub>1: "tr\<^sub>1 = None # tr\<^sub>1'" "iterate b P s\<^sub>0 \<midarrow>tr\<^sub>1'\<rightarrow> \<checkmark> s'"
-      by (auto)
-    hence "tr\<^sub>0 @ [None] \<le> tr" "iterate b P s\<^sub>0 \<midarrow>tr - (tr\<^sub>0 @ [None])\<rightarrow> \<checkmark> s'"
-      by (simp_all add: right(3) list_concat_minus_list_concat)
-    with right(1) tr\<^sub>1 that show ?thesis by auto
-  qed
-qed
-
-lemma iterate_ncond_prop:
-  "\<not> (b s) \<Longrightarrow> ((\<lambda>s. if b s then P s \<bind> (\<lambda>s'. \<tau> (\<checkmark> s')) else \<checkmark> s) ^^ n) s = Ret s"
-  by (induct n, auto simp add: seq_itree_def kleisli_comp_def)
-
-lemma iterate_as_power:
-  fixes P :: "('e, 's) htree"
-  assumes "\<exists> m\<le>n. iterate b P s = Sils m (\<checkmark> s')" "b s"
-  shows "iterate b P s = ((\<lambda> s. (if (b s) then (P s \<bind> (\<lambda> s'. \<tau> (Ret s'))) else Ret s)) ^^ n) s"
-using assms proof (induct n arbitrary: s)
-  case 0
-  then show ?case by (meson iterate_body_countdown not_less)
-next
-  case (Suc n)
-  obtain n' where n': "n'\<le>Suc n" "iterate b P s = Sils n' (\<checkmark> s')"
-    using Suc.prems(1) by blast
-  obtain m s\<^sub>0 where P: "0 < n'" "m \<le> n'" "P s = Sils m (\<checkmark> s\<^sub>0)" "iterate b P s\<^sub>0 = Sils (n' - m - 1) (\<checkmark> s')"
-    by (meson Suc.prems(2) iterate_body_countdown n'(2))
-  have "iterate b P s = \<tau> (Sils m (iterate b P s\<^sub>0))"
-    by (subst iterate.code, simp add: Suc(3) P)
-  have le_n: "n' - m - 1 \<le> n"
-    using n'(1) by auto
-  show ?case
-  proof (cases "b s\<^sub>0")
-    case True
-    hence hyp: "iterate b P s\<^sub>0 = ((\<lambda>s. (if b s then (P s \<bind> (\<lambda> s'. \<tau> (Ret s'))) else \<checkmark> s)) ^^ n) s\<^sub>0"
-      using P(4) Suc.hyps le_n by blast
-    show ?thesis
-      by (simp add: seq_itree_def iterate.code Suc kleisli_comp_def, simp add: P(3) hyp)
-  next
-    case False
-    then show ?thesis 
-      by (simp add: seq_itree_def iterate.code Suc kleisli_comp_def P(3) iterate_ncond_prop)
-  qed
-qed
-
-lemma list_compr_option: "[x. Some x \<leftarrow> tr] = map the (filter (Not \<circ> Option.is_none) tr)"
-  by (induct tr, auto simp add: Option.is_none_def)
-
-text \<open> If an iterated ITree terminates then there is a chain of states, punctuated by traces,
-  that leads to a state where the condition is not satisfied. \<close>
-
-lemma iterate_term_chain_strong:
-  assumes "iterate b P s \<midarrow>tr\<rightarrow> \<checkmark> s'" "b s"
-  shows "\<exists> chn. itree_chain P s s' chn 
-              \<and> concat (map fst chn) = [e. Some e \<leftarrow> tr] 
-              \<and> (\<forall> i < length chn - 1. b (snd (chn ! i)))
-              \<and> \<not> b s'"
-proof -
-  from assms show ?thesis
-  proof (induct "length tr" arbitrary: tr s rule: nat_less_induct)
-    case 1
-    then obtain tr\<^sub>0 s\<^sub>0 where tr\<^sub>0: "(tr\<^sub>0 @ [None]) \<le> tr" "P s \<midarrow>tr\<^sub>0\<rightarrow> \<checkmark> s\<^sub>0" "iterate b P s\<^sub>0 \<midarrow>tr - (tr\<^sub>0 @ [None])\<rightarrow> \<checkmark> s'"
-      by (meson iterate_body_strong_consume)
-    let ?tr' = "tr - (tr\<^sub>0 @ [None])"
-    from 1 tr\<^sub>0 
-    have chn_ex:"(\<forall>s\<^sub>0. iterate b P s\<^sub>0 \<midarrow>?tr'\<rightarrow> \<checkmark> s' \<longrightarrow> b s\<^sub>0 \<longrightarrow> 
-                  (\<exists>chn. itree_chain P s\<^sub>0 s' chn 
-                       \<and> concat (map fst chn) = [e. Some e \<leftarrow> ?tr'] 
-                       \<and> (\<forall> i < length chn - 1. b (snd (chn ! i)))
-                       \<and> \<not> b s'))"
-      by (drule_tac x="length ?tr'" in spec, auto simp add: length_minus_less)
-    show ?case
-    proof (cases "b s\<^sub>0")
-      case True
-      then obtain chn 
-        where chn: "itree_chain P s\<^sub>0 s' chn" "concat (map fst chn) = [e. Some e \<leftarrow> ?tr']"
-                   "\<forall> i < length chn - 1. b (snd (chn ! i))" "\<not> b s'"
-        using chn_ex tr\<^sub>0(3) by blast
-      then show ?thesis
-        apply (rule_tac x="([e. Some e \<leftarrow> tr\<^sub>0], s\<^sub>0) # chn" in exI)
-        apply (auto simp add: itree_chain_ConsI strace_then_trace tr\<^sub>0(2))
-        apply (smt (verit, del_insts) Prefix_Order.prefixE append.right_neutral append_minus concat.simps(2) concat_append list.simps(9) map_append option.simps(4) tr\<^sub>0(1))
-        apply (simp_all add: list_compr_option True nth_Cons' tr\<^sub>0)
-        done
-    next
-      case False
-      with tr\<^sub>0(3) have "P s \<midarrow>[e. Some e \<leftarrow> tr]\<leadsto> \<checkmark> s'"
-        by (auto simp add: iterate.code)
-           (smt (z3) Prefix_Order.prefixE append_Nil2 append_minus concat.simps(2) concat_append list.simps(9) map_append option.simps(4) strace_then_trace tr\<^sub>0(1) tr\<^sub>0(2))
-      with False tr\<^sub>0(3) show ?thesis
-        by (rule_tac x="[([e. Some e \<leftarrow> tr], s')]" in exI, auto, unfold_locales, auto)
-    qed
-  qed
-qed
-
-lemma iterate_term_chain:
-  assumes "iterate b P s \<midarrow>tr\<leadsto> \<checkmark> s'" "b s"
-  shows "\<exists> chn. itree_chain P s s' chn 
-              \<and> tr = concat (map fst chn) 
-              \<and> (\<forall> i < length chn - 1. b (snd (chn ! i)))
-              \<and> \<not> b s'"
-proof -
-  obtain tr\<^sub>0 where tr\<^sub>0: "iterate b P s \<midarrow>tr\<^sub>0\<rightarrow> \<checkmark> s'" "tr = [e. Some e \<leftarrow> tr\<^sub>0]"
-    using assms(1) trace_then_strace by blast
-  from iterate_term_chain_strong[OF tr\<^sub>0(1), OF assms(2)]
-  show ?thesis
-    by (auto, metis tr\<^sub>0(2))
+  from chn have P': "P' = \<checkmark> s'" "\<not> b s'"
+    by (auto elim!: bind_RetE', metis Ret_Sils_iff iterate_RetE')+   
+   show ?thesis
+     by (metis P' assms(2,3) chn(1-4) itree_term_chain.simps)
 qed
 
 lemma iterate_term_chain_iff:
-  "iterate b P s \<midarrow>tr\<leadsto> \<checkmark> s' \<longleftrightarrow>
-   ((\<not> b s \<and> s = s' \<and> tr = []) \<or>
-     (b s \<and> \<not> b s' \<and> (\<exists> chn. itree_chain P s s' chn \<and> tr = concat (map fst chn) 
-      \<and> (\<forall> i < length chn - 1. b (snd (chn ! i))))))"
-  by (metis Ret_trns iterate_chain_terminates iterate_cond_false iterate_term_chain itree.inject(1))
+  "iterate b B s \<midarrow>tr\<leadsto> \<checkmark> s' \<longleftrightarrow> 
+   ((\<not> b s \<and> s = s' \<and> tr = []) \<or> (b s \<and> (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'))"
+proof (cases "b s")
+  case True
+  then show ?thesis
+    by (metis iterate_chain_terminates iterate_terminates_chain)
+next
+  case False
+  then show ?thesis
+    by force 
+qed
 
 definition terminates :: "('e, 's) itree \<Rightarrow> bool" where
 "terminates P = (\<forall> tr P'. P \<midarrow>tr\<leadsto> P' \<longrightarrow> \<not> nonterminating P')"
