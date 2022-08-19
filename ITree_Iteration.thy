@@ -524,8 +524,6 @@ lemma
   shows "terminates (iterate b P s)"
   oops
 
-lemma pdom_empty_iff_dom_empty: "f = {\<mapsto>} \<longleftrightarrow> dom f = {}"
-  by (metis pdom_res_empty pdom_res_pdom pdom_zero)
 
 text \<open> If @{term P} is an invariant of a chain for process @{term C}, then the invariant holds
   for every element of the looped process @{term C}. \<close>

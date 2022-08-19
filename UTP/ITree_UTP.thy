@@ -10,5 +10,6 @@ theory ITree_UTP
     ITree_Procedure
     ITree_Hoare
     ITree_WP
+    ITree_DFP
     ITree_Designs
 begin end
