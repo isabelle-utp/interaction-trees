@@ -351,6 +351,11 @@ lemma bind_SilsE':
 lemma Ret_Sils_iff [simp]: "Ret x = Sils n P \<longleftrightarrow> (n = 0 \<and> P = Ret x)"
   by (metis Sils.simps(1) is_Ret_Sils itree.disc(1))
 
+lemma Sils_VisE:
+  assumes "Sils n P = Vis F"
+  "\<lbrakk> n = 0; P = Vis F \<rbrakk> \<Longrightarrow> Q"
+  shows Q
+  by (metis Sils.elims assms(1) assms(2) itree.distinct(5))
 
 lemma stabilises_eq_iff [simp]: 
   "\<lbrakk> stable P; stable Q \<rbrakk> \<Longrightarrow> Sils m P = Sils n Q \<longleftrightarrow> (m = n \<and> P = Q)"

@@ -98,90 +98,6 @@ lemma iterate_term_once:
   shows "iterate b P s \<midarrow>es\<leadsto> Ret s'"
   by (metis assms(1) assms(2) assms(3) iterate.code iterate_trace_to)
 
-(*
-subsection \<open> Strong Traces \<close>
-
-inductive strace_to :: "('a, 'b) itree \<Rightarrow> 'a option list \<Rightarrow> ('a, 'b) itree \<Rightarrow> bool" ("_ \<midarrow>_\<rightarrow> _" [55, 0, 55] 55) where
-strace_to_Nil [intro!]: "P \<midarrow>[]\<rightarrow> P" | 
-strace_to_Sil [intro!]: "P \<midarrow>tr\<rightarrow> P' \<Longrightarrow> Sil P \<midarrow>None # tr\<rightarrow> P'" |
-strace_to_Vis [intro!]: "\<lbrakk> e \<in> pdom F; F e \<midarrow>tr\<rightarrow> P' \<rbrakk> \<Longrightarrow> Vis F \<midarrow>Some e # tr\<rightarrow> P'"
-
-inductive_cases
-  strace_NilE [elim!]: "P \<midarrow>[]\<rightarrow> P'" and
-  strace_singleE [elim!]: "P \<midarrow>[e]\<rightarrow> P'" and
-  strace_Cons_NoneE [elim!]: "P \<midarrow>None # tr\<rightarrow> P'" and
-  strace_Cons_SomeE [elim!]: "P \<midarrow>Some e # tr\<rightarrow> P'" and
-  strace_SilE [elim!]: "\<tau> P \<midarrow>tr\<rightarrow> P'" and
-  strace_RetE [elim!]: "\<checkmark> x \<midarrow>tr\<rightarrow> P"
-
-lemma strace_to_Sils [intro!]: "P \<midarrow>tr\<rightarrow> P' \<Longrightarrow> Sils n P \<midarrow>(replicate n None) @ tr\<rightarrow> P'"
-  by (induct n, auto)
-
-lemma trace_then_strace:
-  assumes "P \<midarrow>tr\<leadsto> P'"
-  shows "(\<exists> tr'. P \<midarrow>tr'\<rightarrow> P' \<and> tr = [x. Some x \<leftarrow> tr'])"
-using assms proof (induct tr arbitrary: P)
-  case Nil
-  then obtain n where "P = Sils n P'"
-    by (meson trace_to_NilE)
-  then show ?case
-    using strace_to_Nil strace_to_Sils by fastforce
-next
-  case (Cons a tr)
-  then obtain n F where P: "P = Sils n (Vis F)" "a \<in> pdom(F)"
-    by (meson trace_to_ConsE trace_to_singleE)
-  moreover then obtain tr' where tr': "F a \<midarrow>tr'\<rightarrow> P'" "tr = [x. Some x \<leftarrow> tr']"
-    using Cons.hyps Cons.prems by auto
-  ultimately show ?case
-    by (rule_tac x="replicate n None @ Some a # tr'" in exI, auto)
-qed
-
-lemma strace_then_trace:
-  assumes "P \<midarrow>tr\<rightarrow> P'" 
-  shows "P \<midarrow>[x. Some x \<leftarrow> tr]\<leadsto> P'"
-using assms by (induct rule: strace_to.induct, auto)
-
-lemma strace_to_ConsE:
-  assumes "P \<midarrow>x # xs\<rightarrow> Q" 
-  obtains P' where "P \<midarrow>[x]\<rightarrow> P'" "P' \<midarrow>xs\<rightarrow> Q"
-  using assms 
-proof -
-  have "\<And> tr. P \<midarrow>tr\<rightarrow> Q \<Longrightarrow> tr \<noteq> [] \<longrightarrow> (\<exists>P'. P \<midarrow>[hd tr]\<rightarrow> P' \<and> P' \<midarrow>tl tr\<rightarrow> Q)"
-  proof -
-    fix tr
-    assume "P \<midarrow>tr\<rightarrow> Q"
-    thus "tr \<noteq> [] \<longrightarrow> (\<exists>P'. P \<midarrow>[hd tr]\<rightarrow> P' \<and> P' \<midarrow>tl tr\<rightarrow> Q)"
-      by (induct rule: strace_to.induct, auto)
-  qed
-  thus ?thesis
-    by (metis assms list.distinct(1) list.sel(1) list.sel(3) that)
-qed
-
-lemma strace_to_bindE [elim, consumes 1, case_names left right, induct pred: "HOL.eq"]:
-  assumes 
-    "(P \<bind> Q) \<midarrow>tr\<rightarrow> Q'"
-    "\<And> P'. \<lbrakk> P \<midarrow>tr\<rightarrow> P'; Q' = (P' \<bind> Q) \<rbrakk> \<Longrightarrow> thesis"
-    "\<And> x tr\<^sub>1 tr\<^sub>2. \<lbrakk> P \<midarrow>tr\<^sub>1\<rightarrow> Ret x; Q x \<midarrow>tr\<^sub>2\<rightarrow> Q'; tr = tr\<^sub>1 @ tr\<^sub>2 \<rbrakk> \<Longrightarrow> thesis"
-  shows thesis
-  using assms proof (induct tr arbitrary: P Q Q')
-  case Nil
-  then show ?case by (auto elim: strace_NilE)
-next
-  case (Cons e tr)
-  from Cons(2) obtain PQ' where "(P \<bind> Q) \<midarrow>[e]\<rightarrow> PQ'" "PQ' \<midarrow>tr\<rightarrow> Q'"
-    by (meson strace_to_ConsE)
-  then show ?case
-    thm Cons
-    using Cons.prems(2,3) apply (auto elim!: bind_SilE bind_VisE Cons(1))
-    apply (metis append_Cons strace_to_Sil)
-    apply (metis append_Nil strace_to_Nil strace_to_Sil)
-    using Cons.prems(2) apply blast
-    apply (metis append_Cons strace_to_Vis)
-    apply (metis Cons.prems(1) append_Nil bind_Ret strace_to_Nil)
-    done
-qed
-*)
-
 subsection \<open> Power \<close>
 
 overloading
@@ -237,6 +153,30 @@ definition chain_trace :: "('e, 's) chain \<Rightarrow> 'e list" where
 lemma chain_trace_Nil [simp]: "chain_trace [] = []" by (simp add: chain_trace_def)
 lemma chain_trace_Cons [simp]: "chain_trace ((tr, s) # chn) = tr @ chain_trace chn"
   by (simp add: chain_trace_def)
+
+lemma chain_first_step: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; chn \<noteq> [] \<rbrakk> \<Longrightarrow> P s \<midarrow>fst (hd chn)\<leadsto> \<checkmark> (snd (hd chn))"
+  by (metis chain_stepE list.collapse prod.collapse)
+
+lemma chain_steps: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; length chn > 1; i < length chn - 1 \<rbrakk> \<Longrightarrow> P (snd (chn ! i)) \<midarrow>fst (chn ! Suc i)\<leadsto> \<checkmark> (snd (chn ! Suc i))"
+proof (induct arbitrary: i rule: itree_chain.induct)
+  case (chain_Nil s P)
+  then show ?case by simp
+next
+  case (chain_step P s tr s\<^sub>0 chn s\<^sub>1)
+  then show ?case
+  proof (cases "i = 0")
+    case True
+    with chain_step show ?thesis
+      by (simp, metis chain_first_step hd_conv_nth)
+  next
+    case False
+    with chain_step gr0_conv_Suc show ?thesis
+      by fastforce
+  qed
+qed
+
+lemma chain_stated_indexed: "(\<forall>s\<in>chain_states chn. B s) \<longleftrightarrow> (\<forall> i<length chn. B (snd (chn ! i)))"
+  by (auto simp add: chain_states_def, metis in_set_conv_nth snd_eqD)
 
 fun itree_term_chain :: 
   "_ \<times> 's \<Rightarrow> ('e, 's) htree \<Rightarrow> 'e list \<Rightarrow> 's \<Rightarrow> bool" ("_ \<turnstile> _ \<midarrow>_\<leadsto>\<^sub>\<checkmark> _" [55, 0, 0, 55] 55)
@@ -498,42 +438,56 @@ next
   qed
 qed
 
-lemma iterate_chain:
+lemma iterate_chain [consumes 1, case_names iterates terms]:
   assumes 
-    "iterate b B s \<midarrow>tr\<leadsto> R" "b s"
+    "iterate b B s \<midarrow>tr\<leadsto> R"
     "\<And> chn s\<^sub>0 tr\<^sub>0 P' n. 
-        \<lbrakk> s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0; 
+        \<lbrakk> b s;
+          s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0; 
           \<forall> s\<in>chain_states chn. b s;
           B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P';
           tr = chain_trace chn @ tr\<^sub>0; 
           R = P' \<bind> Sils n \<circ> iterate b B; 
           n \<le> 1
         \<rbrakk> \<Longrightarrow> P"
+    "\<lbrakk> \<not> b s; tr = []; R = \<checkmark> s \<rbrakk> \<Longrightarrow> P"
   shows P
-  using prefixed_iterate_chain[of "\<checkmark> s", simplified, OF assms(1)]
-proof (cases rule: disj_cases)
-  case disj1
-  then show ?thesis
-    by (rule_tac assms(3)[of "[]" s "[]" "B s" 1, simplified], auto simp add: iterate.code comp_def assms)
+proof (cases "b s")
+  case True
+  show ?thesis
+    using prefixed_iterate_chain[of "\<checkmark> s", simplified, OF assms(1)]
+  proof (cases rule: disj_cases)
+    case disj1
+    then show ?thesis
+      by (rule_tac assms(2)[of "[]" s "[]" "B s" 1, simplified], auto simp add: iterate.code comp_def assms True)
+  next
+    case disj2
+    then show ?thesis
+      using assms(2) by force
+  qed 
 next
-  case disj2
-  then show ?thesis
-    using assms(3) by force
-qed 
+  case False
+  thus ?thesis
+    using assms(1) assms(3) by force
+qed
 
 lemma iterate_terminates_chain:
   assumes 
-    "iterate b B s \<midarrow>tr\<leadsto> \<checkmark> s'" "b s"
-    "\<lbrakk> (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s'; \<not> b s' \<rbrakk> \<Longrightarrow> P"
+    "iterate b B s \<midarrow>tr\<leadsto> \<checkmark> s'"
+    "\<lbrakk> b s; (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s'; \<not> b s' \<rbrakk> \<Longrightarrow> P"
+    "\<lbrakk> \<not> b s; tr = []; s' = s \<rbrakk> \<Longrightarrow> P"
   shows P
-proof -
-  from assms(1,2) obtain chn s\<^sub>0 tr\<^sub>0 P' n where chn: "s \<turnstile> B \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>s\<in>chain_states chn. b s" "B s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> P'"
-    "tr = chain_trace chn @ tr\<^sub>0" "\<checkmark> s' = P' \<bind> Sils n \<circ> iterate b B" "n \<le> 1"
-    using iterate_chain[OF assms(1), OF assms(2)] by blast
-  from chn have P': "P' = \<checkmark> s'" "\<not> b s'"
-    by (auto elim!: bind_RetE', metis Ret_Sils_iff iterate_RetE')+   
-   show ?thesis
-     by (metis P' assms(2,3) chn(1-4) itree_term_chain.simps)
+  using assms
+proof (cases rule: iterate_chain)
+  case (iterates chn s\<^sub>0 tr\<^sub>0 P' n)
+  hence P': "P' = \<checkmark> s'" "\<not> b s'"
+    by (auto elim!: bind_RetE', metis Ret_Sils_iff iterate_RetE')+
+  then show ?thesis
+    by (metis assms(2) iterates(1-5) itree_term_chain.simps)
+next
+  case terms
+  then show ?thesis
+    using assms(3) by fastforce
 qed
 
 lemma iterate_term_chain_iff:
@@ -573,36 +527,90 @@ lemma
 lemma pdom_empty_iff_dom_empty: "f = {\<mapsto>} \<longleftrightarrow> dom f = {}"
   by (metis pdom_res_empty pdom_res_pdom pdom_zero)
 
-lemma Sils_VisE:
-  assumes "Sils n P = Vis F"
-  "\<lbrakk> n = 0; P = Vis F \<rbrakk> \<Longrightarrow> Q"
-  shows Q
-  by (metis Sils.elims assms(1) assms(2) itree.distinct(5))
+text \<open> If @{term P} is an invariant of a chain for process @{term C}, then the invariant holds
+  for every element of the looped process @{term C}. \<close>
 
-thm iterate_VisE'
-
-lemma loop_deadlock_free_lemma:
+lemma chain_invariant:
   assumes 
-  "\<And> tr s. \<not> (P s \<midarrow>tr\<leadsto>  deadlock)"
-  "loop P s \<midarrow>tr\<leadsto> deadlock"
-  shows False
-  using assms apply (erule_tac iterate_chain; simp)
-  apply (simp add: deadlock_def)
-  apply (erule bind_VisE')
-   apply auto
-   apply (subgoal_tac "F' = {\<mapsto>}")
-    apply (simp)
-  apply (simp add: pdom_empty_iff_dom_empty)
-   apply (metis pdom_map_pfun pdom_zero)
-  apply (erule Sils_VisE)
-  apply (erule iterate_VisE')
-  apply (simp add: pdom_empty_iff_dom_empty)
-  apply (metis pdom_empty_iff_dom_empty pdom_map_pfun trace_to_Nil)
-  done
+    "B s" "P s"
+    "\<And> s s'. \<lbrakk> B s; P s; s' \<in> \<^bold>R(C s) \<rbrakk> \<Longrightarrow> P s'"
+    "s \<turnstile> C \<midarrow>chn\<leadsto>\<^sup>* s'"
+    "\<forall> s\<^sub>0\<in>chain_states chn. B s\<^sub>0"
+  shows "\<forall> s\<^sub>0\<in>chain_states chn. P s\<^sub>0"
+proof -
+  have "\<forall>i<length chn. P (snd (chn ! i))"
+  proof (clarify)
+    fix i
+    assume i: "i < length chn"
+    thus "P (snd (chn ! i))"
+    proof (induct i)
+      case 0
+      hence "C s \<midarrow>fst (chn ! 0)\<leadsto> \<checkmark> (snd (chn ! 0))"
+        by (metis assms(4) chain_first_step hd_conv_nth length_greater_0_conv)
+      thus ?case
+        by (meson assms(1) assms(2) assms(3) retvals_traceI)
+    next
+      case (Suc i)
+      hence "C (snd (chn ! i)) \<midarrow>fst (chn ! Suc i)\<leadsto> \<checkmark> (snd (chn ! Suc i))"
+        using assms(4) chain_steps by fastforce        
+      moreover have "P (snd (chn ! i))"
+        by (simp add: Suc.hyps Suc.prems Suc_lessD)
+      moreover have "B (snd (chn ! i))"
+        by (simp add: Suc.prems Suc_lessD assms(5) chain_states_def)
+      ultimately show ?case
+        by (meson assms(3) retvals_traceI)
+    qed
+  qed
+  thus ?thesis
+    by (simp add: chain_stated_indexed)
+qed
+
+lemma chain_invariant_simple:
+  assumes 
+    "P s"
+    "\<And> s s'. \<lbrakk> P s; s' \<in> \<^bold>R(C s) \<rbrakk> \<Longrightarrow> P s'"
+    "s \<turnstile> C \<midarrow>chn\<leadsto>\<^sup>* s'"
+  shows "\<forall> s\<^sub>0\<in>chain_states chn. P s\<^sub>0"
+  using assms
+  by (rule_tac chain_invariant[of "\<lambda> s. True" s P C chn s'], auto)
+
+text \<open> Generalised deadlock freedom check for loops. If @{term P} is sufficient establish deadlock
+  freedom of @{term C}, and @{term P} is an invariant of @{term C}, which holds also in the initial
+  state @{term s}, then @{term "loop C s"} is also deadlock free. \<close>
 
 lemma deadlock_free_loop:
-  assumes "\<And> s. deadlock_free (P s)"
-  shows "deadlock_free (loop P s)"
-  by (metis assms deadlock_free_def loop_deadlock_free_lemma)
+  assumes cond_dlockf: "\<And> s. P s \<Longrightarrow> deadlock_free (C s)" 
+  and invariant: "\<And> s s'. \<lbrakk> P s; s' \<in> \<^bold>R(C s) \<rbrakk> \<Longrightarrow> P s'"
+  and initial: "P s"
+  shows "deadlock_free (loop C s)"
+proof (simp add: deadlock_free_def deadlock_def, clarify)
+  fix tr 
+  assume "loop C s \<midarrow>tr\<leadsto> Vis {\<mapsto>}"
+  thus False
+  proof (cases rule: iterate_chain)
+    case (iterates chn s\<^sub>0 tr\<^sub>0 P' n)
+    with initial invariant have "\<forall> s\<in>chain_states chn. P s"
+      by (rule_tac chain_invariant_simple[where s="s" and C="C" and s'="s\<^sub>0"], auto)
+    hence dlckf_C_s\<^sub>0: "deadlock_free (C s\<^sub>0)"
+      by (metis cond_dlockf final_state_in_chain initial iterates(2) itree_chain.cases list.distinct(1))
+    with iterates(6) show False
+    proof (cases rule: bind_VisE')
+      case (initial F')
+      then show ?thesis
+        by (metis deadlock_def deadlock_free_def dlckf_C_s\<^sub>0 iterates(4) pdom_empty_iff_dom_empty pdom_map_pfun)
+    next
+      case (continue s')
+      have "loop C s' = Vis {\<mapsto>}"
+        by (metis comp_apply continue(2) deadlock_def deadlock_trace_to trace_of_Sils)
+      then show ?thesis
+        by (metis (no_types, lifting) \<open>\<forall>s\<in>chain_states chn. P s\<close> cond_dlockf continue(1) deadlock_def deadlock_free_def deadlock_trace_to final_state_in_chain initial invariant iterate_VisE iterates(2) iterates(4) itree_chain.simps list.distinct(1) pdom_empty_iff_dom_empty pdom_map_pfun pdom_zero retvals_traceI)
+    qed
+  next
+    case terms
+    then show ?thesis
+      by blast
+  qed
+qed
+    
 
 end

@@ -188,70 +188,30 @@ proof (rule hoareI)
     hence "(B, s) \<turnstile> S \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s'"
       by (metis SEXP_def iterate_terminates_chain while(2))   
     then obtain chn s\<^sub>0 tr\<^sub>0 
-      where "B s" "s \<turnstile> S \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>s\<in>chain_states chn. B s" "S s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'" "tr = chain_trace chn @ tr\<^sub>0"
+      where chn: "s \<turnstile> S \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>s\<in>chain_states chn. B s" "S s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'" "tr = chain_trace chn @ tr\<^sub>0"
       by (metis itree_term_chain.simps)
-    from assms have "\<forall>i<length chn. P (snd (chn ! i))"
-    proof (clarify)
-      fix i
-      assume i: "i < length chn"
-      thus "P (snd (chn ! i))"
-      proof (induct i)
-        case 0
-        hence "S s \<midarrow>fst (chn ! 0)\<leadsto> \<checkmark> (snd (chn ! 0))"
-          using \<open>s \<turnstile> S \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0\<close> itree_chain.cases by fastforce   
-        with assms while(1) B show ?case
-          by (metis (mono_tags, lifting) True hoare_alt_def)
-      next
-        case (Suc i)
-        hence "S (snd (chn ! i)) \<midarrow>fst (chn ! Suc i)\<leadsto> \<checkmark> (snd (chn ! Suc i))"
-          by (metis Suc_eq_plus1 ichain.chain_iter less_diff_conv)
-        moreover have "B (snd (chn ! i))"
-          by (metis Suc.prems Suc_lessE chn(3) diff_Suc_1)
-        moreover have "P (snd (chn ! i))"
-          by (simp add: Suc.hyps Suc.prems Suc_lessD)
-        ultimately show ?case
-          using assms by (auto simp add: hoare_alt_def)
-      qed
-    qed
+    from assms have hl: "\<And>s s'. B s \<Longrightarrow> P s \<Longrightarrow> s' \<in> \<^bold>R (S s) \<Longrightarrow> P s'"
+      by (simp add: hoare_alt_def retvals_def)
+    then have chst: "\<forall>s\<in>chain_states chn. P s"
+      by (rule_tac chain_invariant[where C="S" and B="B" and s="s" and s'="s\<^sub>0"])
+         (simp_all add: while(1) True chn)
 
-      apply (auto simp add: hoare_alt_def)
-  show "\<not> B s' \<and> P s'"
-  proof (cases "B s")
-    case True
-    note B = this
-    obtain chn where chn: "S s s' chn" "concat (map fst chn) = tr" "\<forall> i < length chn - 1. B (snd (chn ! i))" "\<not> B s'"
-      by (metis SEXP_def True iterate_term_chain while(2))
-    then interpret ichain: itree_chain S s s' chn by simp
-    have "\<forall> i < length chn. P (snd (chn ! i))"
-    proof (clarify)
-      fix i
-      assume i: "i < length chn"
-      thus "P (snd (chn ! i))"
-      proof (induct i)
-        case 0
-        hence "S s \<midarrow>fst (chn ! 0)\<leadsto> \<checkmark> (snd (chn ! 0))"
-          by (metis gr_implies_not0 hd_conv_nth i ichain.chain_start length_0_conv)   
-        with assms while(1) B show ?case
-          by (auto simp add: hoare_alt_def)
-      next
-        case (Suc i)
-        hence "S (snd (chn ! i)) \<midarrow>fst (chn ! Suc i)\<leadsto> \<checkmark> (snd (chn ! Suc i))"
-          by (metis Suc_eq_plus1 ichain.chain_iter less_diff_conv)
-        moreover have "B (snd (chn ! i))"
-          by (metis Suc.prems Suc_lessE chn(3) diff_Suc_1)
-        moreover have "P (snd (chn ! i))"
-          by (simp add: Suc.hyps Suc.prems Suc_lessD)
-        ultimately show ?case
-          using assms by (auto simp add: hoare_alt_def)
-      qed
-    qed
-    thus ?thesis
-      by (metis Suc_diff_1 chn(4) ichain.last_st ichain.length_chain last_conv_nth length_greater_0_conv lessI)
+    have "chn \<noteq> [] \<Longrightarrow> s\<^sub>0 = snd (last chn)"
+      by (metis \<open>s \<turnstile> S \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0\<close> chain_last)
+
+    hence "P s\<^sub>0"
+      by (metis chn(1) chst final_state_in_chain itree_chain.cases list.simps(3) while(1))
+
+    thus "P s'"
+      by (metis True chn(1) chn(2) chn(3) final_state_in_chain hl itree_chain.cases neq_Nil_conv retvals_traceI)
+      
   next
     case False
     then show ?thesis
-      using while(1) while(2) by force 
+      using while(1) while(2) by auto
   qed
+  show "\<not> B s' \<and> P s'"
+    by (simp add: B P)
 qed
 
 lemmas hl_while = hoare_while_partial
