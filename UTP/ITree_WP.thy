@@ -12,7 +12,7 @@ definition wp_itree :: "('e, 'a, 'b) ktree \<Rightarrow> ('b \<Rightarrow> bool)
 definition wlp_itree :: "('e, 'a, 'b) ktree \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" where
 "wlp_itree S P = (\<lambda>s. \<forall>s'. (s, s') \<in> itree_rel S \<longrightarrow> P s')"
 
-expr_ctr wlp_itree wp_itree
+expr_constructor wlp_itree wp_itree
 
 syntax 
   "_wp"  :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("wp")
@@ -26,7 +26,7 @@ translations
 
 abbreviation "pre P \<equiv> wp P True"
 
-expr_ctr pre
+expr_constructor pre
 
 lemma wp_Skip [wp]: "wp Skip P = P"
   by (expr_simp add: wp_itree_def Skip_rel)

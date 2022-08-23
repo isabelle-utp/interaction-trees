@@ -4,8 +4,6 @@ theory ITree_FDSem
   imports ITree_CSP
 begin
 
-unbundle Z_Relation_Syntax
-
 subsection \<open> Preliminaries \<close>
 
 datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's

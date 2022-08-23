@@ -4,8 +4,6 @@ theory ITree_Circus
   imports "ITree_FDSem" "Shallow-Expressions-Z.Shallow_Expressions_Z"
 begin
 
-unbundle Z_Relation_Syntax
-
 subsection \<open> Main Operators \<close>
 
 type_synonym ('e, 's) action = "('e, 's) htree"
@@ -315,9 +313,31 @@ definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longri
 syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
 translations "_promote P a" == "CONST promote P a"
 
-definition action_system :: "('s \<Rightarrow> 'e \<Zpfun> 's) \<Rightarrow> ('e, 's) htree"
-  where "action_system P = loop (\<lambda> s. Vis (map_pfun (\<lambda> s'. Ret s') (P s)))"
-
 named_theorems prog_defs
+
+subsection \<open> Event Choice Blocks \<close>
+
+definition event_fun_empty :: "('s \<Rightarrow> 'e \<Zpfun> ('e, 's) itree)" ("{}\<^sub>E") where
+"event_fun_empty = (\<lambda> s. {\<mapsto>})"
+
+definition event_fun_upd :: "('s \<Rightarrow> 'e \<Zpfun> ('e, 's) itree) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> \<bool>) \<times> ('s \<Rightarrow> ('e, 's) itree)) \<Rightarrow> 's \<Rightarrow> 'e \<Zpfun> ('e, 's) itree" where
+"event_fun_upd F c A PB = (\<lambda> s. F s \<oplus> prism_fun c (A s) (\<lambda> v. (fst (PB v) s, snd (PB v) s)))"
+
+syntax
+  "_event_fun_upd" :: "logic \<Rightarrow> prism_maplets \<Rightarrow> logic" ("_'(_')\<^sub>E" [900, 0] 900)
+  "_event_fun" :: "prism_maplets \<Rightarrow> logic" ("{_}\<^sub>E")
+
+term disj
+
+no_notation
+  disj  (infixr "|" 30)
+
+translations
+  "f(c[v \<in> A | P] \<Rightarrow> B)\<^sub>E" == "CONST event_fun_upd f c A (\<lambda> v. ((P)\<^sub>e, B))"
+  "_event_fun_upd m (_prism_Maplets xy ms)"  \<rightleftharpoons> "_event_fun_upd (_event_fun_upd m xy) ms"
+  "_event_fun ms"                            \<rightleftharpoons> "_event_fun_upd {}\<^sub>E ms"
+  "_event_fun (_prism_Maplets ms1 ms2)"     \<leftharpoondown> "_event_fun_upd (_event_fun ms1) ms2"
+
+definition "event_choice F = (\<lambda> s. Vis (F s))"
 
 end

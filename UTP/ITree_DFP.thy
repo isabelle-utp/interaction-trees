@@ -22,6 +22,9 @@ lemma dfp_seq [wp]: "dfp (P ;; Q) = (dfp P \<and> wlp P (dfp Q))\<^sub>e"
   by (simp add: dfp_def seq_itree_def kleisli_comp_def deadlock_free_bind_iff wlp_itree_def 
                 SEXP_def retvals_def itree_rel_def itree_pred_def)
 
+lemma dfp_event_choice [wp]: "dfp (event_choice F) = (pdom(F) \<noteq> {} \<and> (\<forall> e\<in>pdom(F). dfp(F(\<guillemotleft>e\<guillemotright>)\<^sub>p)\<^sub>e))\<^sub>e"
+  by (simp add: dfp_def event_choice_def deadlock_free_Vis SEXP_def)
+
 lemma deadlock_free_init_loop:
   assumes "\<sigma> establishes P" "C preserves P" "`P \<longrightarrow> dfp C`"
   shows "deadlock_free ((\<langle>\<sigma>\<rangle>\<^sub>a ;; loop C) s)"
