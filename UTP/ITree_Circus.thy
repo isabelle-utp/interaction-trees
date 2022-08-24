@@ -321,19 +321,14 @@ definition event_fun_empty :: "('s \<Rightarrow> 'e \<Zpfun> ('e, 's) itree)" ("
 "event_fun_empty = (\<lambda> s. {\<mapsto>})"
 
 definition event_fun_upd :: "('s \<Rightarrow> 'e \<Zpfun> ('e, 's) itree) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> \<bool>) \<times> ('s \<Rightarrow> ('e, 's) itree)) \<Rightarrow> 's \<Rightarrow> 'e \<Zpfun> ('e, 's) itree" where
-"event_fun_upd F c A PB = (\<lambda> s. F s \<oplus> prism_fun c (A s) (\<lambda> v. (fst (PB v) s, snd (PB v) s)))"
+"event_fun_upd F c A PB = (\<lambda> s. (F s)(c{v \<in> A s. fst (PB v) s} \<Rightarrow> snd (PB v) s))"
 
 syntax
   "_event_fun_upd" :: "logic \<Rightarrow> prism_maplets \<Rightarrow> logic" ("_'(_')\<^sub>E" [900, 0] 900)
   "_event_fun" :: "prism_maplets \<Rightarrow> logic" ("{_}\<^sub>E")
 
-term disj
-
-no_notation
-  disj  (infixr "|" 30)
-
 translations
-  "f(c[v \<in> A | P] \<Rightarrow> B)\<^sub>E" == "CONST event_fun_upd f c A (\<lambda> v. ((P)\<^sub>e, B))"
+  "f(c{v \<in> A. P} \<Rightarrow> B)\<^sub>E" == "CONST event_fun_upd f c (A)\<^sub>e (\<lambda> v. ((P)\<^sub>e, B))"
   "_event_fun_upd m (_prism_Maplets xy ms)"  \<rightleftharpoons> "_event_fun_upd (_event_fun_upd m xy) ms"
   "_event_fun ms"                            \<rightleftharpoons> "_event_fun_upd {}\<^sub>E ms"
   "_event_fun (_prism_Maplets ms1 ms2)"     \<leftharpoondown> "_event_fun_upd (_event_fun ms1) ms2"
