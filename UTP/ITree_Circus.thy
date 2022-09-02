@@ -335,4 +335,7 @@ translations
 
 definition "event_choice F = (\<lambda> s. Vis (F s))"
 
+definition event_block :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> \<bool>) \<times> ('s \<Rightarrow> 's)) \<Rightarrow> ('e, 's) htree" where
+"event_block c A PB = (\<lambda> s. Vis (prism_fun c (A s) (\<lambda> c. (fst (PB c) s, Ret (snd (PB c) s)))))"
+
 end

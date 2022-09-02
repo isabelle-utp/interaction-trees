@@ -63,4 +63,8 @@ lemma deadlock_free_bind_iff:
   apply (meson trace_to_bind)
   done
 
+lemma deadlock_free_Vis_prism_fun: 
+  "wb_prism c \<Longrightarrow> deadlock_free (Vis (prism_fun c A (\<lambda> x. (P x, Ret (f x))))) = (\<exists>v\<in>A. P v)"
+  by (auto simp add: deadlock_free_Vis dom_prism_fun prism_fun_apply deadlock_free_Ret)
+
 end

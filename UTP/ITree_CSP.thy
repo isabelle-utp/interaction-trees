@@ -361,7 +361,8 @@ lemma genchoice_RetE [elim]:
   apply (smt (z3) assms(1) genchoice.disc_iff(1) is_Sil_genchoice itree.case_eq_if itree.disc(4) itree.discI(1) itree.distinct(3) itree.expand itree.sel(1) snd_conv)
   apply (metis (no_types, lifting) assms(1) is_Sil_genchoice itree.case_eq_if itree.collapse(1) itree.disc(4) itree.disc(7) itree.disc(9))
   done
- 
+
+
 subsection \<open> External Choice \<close>
 
 definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
@@ -536,6 +537,9 @@ proof -
   thus ?thesis
     by (simp add: P Q map_prod_as_ovrd Un_commute pdom_nres_disjoint)
 qed
+
+lemma trace_to_Nil_extchoice: "P \<midarrow>[]\<leadsto> P' \<Longrightarrow> P \<box> Q \<midarrow>[]\<leadsto> P' \<box> Q"
+  using choice_Sils trace_to_Nil_iff by blast
 
 subsection \<open> Generalised Parallel Composition \<close>
 
