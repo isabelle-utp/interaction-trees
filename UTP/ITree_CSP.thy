@@ -541,6 +541,69 @@ qed
 lemma trace_to_Nil_extchoice: "P \<midarrow>[]\<leadsto> P' \<Longrightarrow> P \<box> Q \<midarrow>[]\<leadsto> P' \<box> Q"
   using choice_Sils trace_to_Nil_iff by blast
 
+lemma choice_Ret_Ret: "\<checkmark> x \<box> \<checkmark> y = (if x = y then \<checkmark> x else deadlock)"
+  by (auto simp add: extchoice_itree_def genchoice.ctr(1) deadlock_def genchoice_Vis_iff)
+
+lemma choice_Ret_Vis: "\<checkmark> x \<box> Vis G = \<checkmark> x"
+  by (simp add: extchoice_itree_def genchoice.ctr(1))
+
+lemma pran_map_prod: "pran (F \<odot> G) \<subseteq> pran F \<union> pran G"
+  by (auto simp add: map_prod_def)
+     (metis Un_iff pfun_split_domain pran_override)+
+
+lemma stabilises_retvals_extchoice:
+  assumes "stabilises P" "stabilises Q"
+  shows "\<^bold>R(P \<box> Q) \<subseteq> \<^bold>R(P) \<union> \<^bold>R(Q)"
+proof -
+  obtain m n P' Q' where PQ: "P = Sils m P'" "stable P'" "Q = Sils n Q'" "stable Q'"
+    by (metis assms(1) assms(2) stabilises_def)
+  show ?thesis
+  proof (cases "P'")
+    case (Ret x)
+    note Ret_P' = this
+    then show ?thesis
+    proof (cases Q')
+      case (Ret y)
+      with Ret_P' PQ show ?thesis
+        by (simp add: choice_Sils choice_Sils' choice_Ret_Ret)
+    next
+      case (Sil _)
+      then show ?thesis
+        using PQ(4) by auto
+    next
+      case (Vis G)
+      with Ret_P' PQ show ?thesis
+        by (simp add: choice_Sils choice_Sils')
+           (metis choice_Ret_Vis insertCI retvals_Ret singletonD subsetI)
+    qed
+  next
+    case (Sil _)
+    then show ?thesis
+      using PQ(2) by auto
+  next
+    case (Vis F)
+    note Vis_P' = this
+    then show ?thesis
+    proof (cases Q')
+      case (Ret y)
+      then show ?thesis
+        by (metis PQ(1) PQ(3) Vis_P' choice_Ret_Vis choice_commutative extchoice_itree_def genchoice_Sils' le_supI2 retvals_Sils set_eq_subset)
+    next
+      case (Sil _)
+      then show ?thesis
+        using PQ(4) by auto
+    next
+      case (Vis G)
+      with Vis_P' PQ show ?thesis
+        by (auto simp add: choice_Sils choice_Sils')
+           (meson Un_iff in_mono pran_map_prod)
+    qed
+  qed
+qed
+
+lemma retvals_extchoice: "\<^bold>R(P \<box> Q) \<subseteq> \<^bold>R(P) \<union> \<^bold>R(Q)"
+  by (metis Un_upper1 choice_commutative choice_diverge diverges_then_diverge le_supE retvals_diverge stabilises_retvals_extchoice sup_bot.right_neutral)
+
 subsection \<open> Generalised Parallel Composition \<close>
 
 text \<open> This parallel composition operator follows a similar approach to the UTP "parallel-by-merge" scheme. \<close>

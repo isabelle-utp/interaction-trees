@@ -134,6 +134,15 @@ lemma hl_cond [hoare_safe]:
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def cond_itree_def)
 
+lemma hl_choice [hoare_safe]:
+  assumes "\<^bold>{P\<^bold>} C\<^sub>1 \<^bold>{Q\<^bold>}" "\<^bold>{P\<^bold>} C\<^sub>2 \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} C\<^sub>1 \<box> C\<^sub>2 \<^bold>{Q\<^bold>}"
+  using assms
+  apply (auto simp add: hoare_ref_by itree_pred_def)
+  apply expr_auto
+  apply (metis (mono_tags, lifting) Un_iff extchoice_fun_def in_mono retvals_extchoice)
+  done
+
 lemma hoare_let [hoare_safe]:
   assumes "\<And> s. \<^bold>{P \<and> \<guillemotleft>s\<guillemotright> = \<^bold>v\<^bold>} (S (e s)) \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} let x \<leftarrow> e in S x \<^bold>{Q\<^bold>}"

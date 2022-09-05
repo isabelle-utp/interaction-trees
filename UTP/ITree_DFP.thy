@@ -25,7 +25,7 @@ lemma dfp_seq [wp]: "dfp (P ;; Q) = (dfp P \<and> wlp P (dfp Q))\<^sub>e"
 lemma dfp_event_choice [wp]: "dfp (event_choice F) = (pdom(F) \<noteq> {} \<and> (\<forall> e\<in>pdom(F). dfp(F(\<guillemotleft>e\<guillemotright>)\<^sub>p)\<^sub>e))\<^sub>e"
   by (simp add: dfp_def event_choice_def deadlock_free_Vis SEXP_def)
 
-lemma dfp_event_block [wp]: "wb_prism c \<Longrightarrow> dfp (event_block c A (\<lambda> a. (P a, \<sigma> a))) = [\<lambda> s. \<exists> v\<in>A s. P v s]\<^sub>e"
+lemma dfp_event_block [wp]: "wb_prism c \<Longrightarrow> dfp (event_block c A P\<sigma>) = [\<lambda> s. \<exists> v\<in>A s. fst (P\<sigma> v) s]\<^sub>e"
   by (simp add: dfp_def event_block_def deadlock_free_Vis_prism_fun SEXP_def) 
 
 (*

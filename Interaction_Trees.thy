@@ -673,6 +673,9 @@ lemma retvals_Ret [simp]: "\<^bold>R(Ret x) = {x}"
 lemma retvals_Sil [simp]: "\<^bold>R(Sil P) = \<^bold>R(P)"
   by (auto simp add: retvals_def)
 
+lemma retvals_Sils [simp]: "\<^bold>R(Sils n P) = \<^bold>R(P)"
+  by (auto simp add: retvals_def)
+
 lemma retvals_Vis [simp]: "\<^bold>R(Vis F) = \<Union> (\<^bold>R ` pran(F))"
   apply (auto simp add: retvals_def)
   apply (metis image_eqI itree.distinct(3) pran_pdom trace_to_VisE)
