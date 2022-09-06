@@ -509,6 +509,12 @@ lemma choice_commutative:
   shows "P \<box> Q = Q \<box> P"
   by (simp add: extchoice_itree_def genchoice_commutative map_prod_commute)
 
+text \<open> External choice is commutative, but currently not associative. This is because when we
+  have two competing return values, external choice deadlocks. However, since a return takes 
+  priority over a visible event, that means the order in which deadlocks are produced and 
+  returns occur is significant. Perhaps competing returns should lead to a divergence, which
+  would then take priority over a return. \<close>
+
 lemma skip_stable_choice: 
   assumes "stable P"
   shows "skip \<box> P = skip"

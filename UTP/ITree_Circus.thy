@@ -284,8 +284,14 @@ instance ..
 
 end
 
-lemma extchoice_Stop: "Stop \<box> P = P"
+lemma extchoice_Stop [simp]: "Stop \<box> P = P"
   by (auto simp add: extchoice_fun_def fun_eq_iff)
+
+lemma extchoice_Stop' [simp]: "P \<box> Stop = P"
+  by (auto simp add: extchoice_fun_def fun_eq_iff)
+
+lemma extchoice_commutative: "(P :: ('s, 'e) htree) \<box> Q = Q \<box> P"
+  by (simp add: extchoice_fun_def fun_eq_iff choice_commutative)
 
 lemma extchoice_Div: "Div \<box> P = Div"
   by (simp add: choice_diverge extchoice_fun_def)
@@ -337,10 +343,6 @@ definition "event_choice F = (\<lambda> s. Vis (F s))"
 
 definition event_block :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> \<bool>) \<times> ('s \<Rightarrow> 's)) \<Rightarrow> ('e, 's) htree" where
 "event_block c A PB = (\<lambda> s. Vis (prism_fun c (A s) (\<lambda> c. (fst (PB c) s, Ret (snd (PB c) s)))))"
-
-lemma prism_diff_implies_indep_funs: 
-  "\<lbrakk> wb_prism c; wb_prism d; c \<nabla> d \<rbrakk> \<Longrightarrow> pdom(prism_fun c A P\<sigma>) \<inter> pdom(prism_fun d B Q\<rho>) = {}"
-  by (auto simp add: dom_prism_fun prism_diff_build)
 
 lemma case_sum_prod_dist: "case_sum (\<lambda> x. (f\<^sub>1 x, f\<^sub>2 x)) (\<lambda> x. (g\<^sub>1 x, g\<^sub>2 x)) = (\<lambda> x. (case_sum f\<^sub>1 g\<^sub>1 x, case_sum f\<^sub>2 g\<^sub>2 x))"
   by (simp add: fun_eq_iff sum.case_eq_if)
