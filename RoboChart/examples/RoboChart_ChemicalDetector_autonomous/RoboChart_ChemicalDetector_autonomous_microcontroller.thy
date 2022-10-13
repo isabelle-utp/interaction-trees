@@ -2050,7 +2050,7 @@ definition rename_Movement_events_others where
 
 definition rename_MemorySTM_opt_Movement where
 "rename_MemorySTM_opt_Movement idd = ( 
-  (MemorySTM_opt_Movement idd) \<lbrakk>(set (rename_Movement_events @ rename_Movement_events_others))\<rbrakk>
+  (MemorySTM_opt_Movement idd) \<lbrace>(set (rename_Movement_events @ rename_Movement_events_others))\<rbrace>
 )
 " 
 
@@ -2122,7 +2122,7 @@ definition rename_MicroController_Movement_events where
 "
 
 definition rename_D__Movement where
-  "rename_D__Movement idd = ((D__Movement idd) \<lbrakk>(set rename_MicroController_Movement_events)\<rbrakk>)"
+  "rename_D__Movement idd = ((D__Movement idd) \<lbrace>(set rename_MicroController_Movement_events)\<rbrace>)"
 
 definition D__MicroController where
 "D__MicroController (idd::integer) = 

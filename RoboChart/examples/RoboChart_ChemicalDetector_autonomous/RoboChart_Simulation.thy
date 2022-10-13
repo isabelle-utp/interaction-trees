@@ -117,7 +117,7 @@ structure ISim_Path = Theory_Data
 fun simulator_setup thy = 
   let open Isabelle_System; val tmp = Path.expand (create_tmp_path "itree-simulate" "")
   in case (ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
-    mkdir tmp; (tmp, ISim_Path.put (SOME tmp) thy)
+    make_directory tmp; (tmp, ISim_Path.put (SOME tmp) thy)
   end
 
 fun sim_files_cp tmp = 
@@ -139,6 +139,8 @@ fun prep_simulation model thy ctx =
   let open Generated_Files; 
       val (tmp, thy') = simulator_setup (Local_Theory.exit_global ctx);
       val ctx' = Named_Target.theory_init thy'
+      val ghc = getenv "ISABELLE_GHC"
+      val _ = if (ghc = "") then error "GHC is not set up. Please set the environment variable ISABELLE_GHC." else ()
   in
   generate_file (Path.binding0 (Path.make ["code", "simulate", "Simulation.hs"]), (Input.string (simulation_file model thy))) ctx' |>
   (fn ctx' => 
@@ -157,7 +159,7 @@ fun prep_simulation model thy ctx =
 fun run_simulation thy =
   case ISim_Path.get thy of
     NONE => error "No animation" |
-    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./Simulation") "Start animation")
+    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./simulate/Simulation") "Start animation")
 
 fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
