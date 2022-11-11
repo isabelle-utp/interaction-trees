@@ -5,7 +5,7 @@ theory ITree_VCG
   keywords "procedure" :: "thy_decl_block"
 begin
 
-syntax "_kleisli_comp" :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infixr ";" 54)
+notation seq_itree (infixr ";" 54)
 
 lit_vars
 

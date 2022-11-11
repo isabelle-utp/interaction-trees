@@ -4,7 +4,9 @@ theory ITree_Hoare
   imports ITree_Relation
 begin
 
-named_theorems hoare_safe
+text \<open> We introduce theorem attributed for safe Hoare rules and already proven triples \<close>
+
+named_theorems hoare_safe and hoare_lemmas
 
 definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
