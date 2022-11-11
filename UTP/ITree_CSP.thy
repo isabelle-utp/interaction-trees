@@ -216,6 +216,8 @@ lemma genchoice_VisE [elim]:
 lemma genchoice_Sils: "genchoice \<M> (Sils m P) Q = Sils m (genchoice \<M> P Q)"
   by (induct m, simp_all add: genchoice.code)
 
+hide_const BNF_Cardinal_Order_Relation.stable
+
 lemma genchoice_Sil_stable: "stable P \<Longrightarrow> genchoice \<M> P (Sil Q) = Sil (genchoice \<M> P  Q)"
   by (cases P, simp_all add: genchoice.code)
 

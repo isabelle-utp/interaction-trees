@@ -36,6 +36,8 @@ translations
 
 text \<open> A stable process has no possible internal activity \<close>
 
+hide_const stable
+
 abbreviation "unstable P \<equiv> is_Sil P"
 abbreviation "stable P \<equiv> \<not> unstable P"
 
