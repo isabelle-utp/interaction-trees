@@ -7,7 +7,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: lexbailey/isabelle-theory-build-github-action@v7
         with:
-          isabelle-version: '2021-1'
-          custom-isabelle-url: 'https://github.com/lexbailey/itrees_isabelle_fork/archive/refs/heads/itrees_utp.zip'
+          isabelle-version: '2022'
+          custom-isabelle-url: 'https://github.com/lexbailey/itrees_isabelle_fork/archive/refs/heads/itrees_utp_2022.zip'
           depends: 'https://github.com/isabelle-utp/Shallow-Expressions.git@main https://github.com/isabelle-utp/explore-subgoal.git@main'
           session-name: 'Interaction_Trees ITree_Simulation ITree_UTP ITree_VCG ITree_RoboChart'
+          report_url: 'https://isabelle-utp-ci-dashboard.link/submit_job_log'
+          report_secret: ${{ secrets.DashboardReportKey }}
+
