@@ -20,6 +20,12 @@ declare list_augment_as_update [simp]
 
 declare nth_list_update [simp]
 
+(* Added alternative syntax for list update to avoid ambiguity with assignment *)
+
+syntax
+  "_lupdbind":: "['a, 'a] => lupdbind"    ("(2_ \<leftarrow>/ _)")
+
+
 (* Set up the procedure command *)
 
 ML \<open>
