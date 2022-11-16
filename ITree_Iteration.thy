@@ -589,18 +589,18 @@ text \<open> The following theorem using both a variant @{term V} and invariant 
 lemma wellorder_variant_term_chain:
   fixes V :: "'s \<Rightarrow> 'a::wellorder" and I :: "'s \<Rightarrow> bool"
   assumes 
-    "\<And> s\<^sub>0. I s\<^sub>0 \<Longrightarrow> terminates (B s\<^sub>0)"
-    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
-    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+    "\<And> s\<^sub>0. \<lbrakk> b s\<^sub>0; I s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (B s\<^sub>0)"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
   shows "\<lbrakk> I s; b s \<rbrakk> \<Longrightarrow> \<exists> tr s'. (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
 proof (induct "V(s)" arbitrary: s rule: less_induct)
   case (less s\<^sub>0)
   obtain s\<^sub>1 tr\<^sub>0 where B_next: "B(s\<^sub>0) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>1"
-    by (meson assms(1) less.prems(1) terminates_def)
+    by (meson assms(1) less.prems(1) less.prems(2) terminates_def)
   have inv: "I s\<^sub>1"
-    using B_next assms(2) less.prems(1) by presburger
+    using B_next assms(2) less.prems(1) less.prems(2) by presburger
   have dec: "V(s\<^sub>1) < V(s\<^sub>0)"
-    using B_next assms(3) less.prems(1) by auto
+    using B_next assms(3) less.prems(1) less.prems(2) by force
   show ?case
   proof (cases "b s\<^sub>1")
     case True
@@ -618,15 +618,15 @@ qed
 lemma terminates_iterate_wellorder_variant:
   fixes V :: "'s \<Rightarrow> 'a::wellorder" and I :: "'s \<Rightarrow> bool"
   assumes 
-    "\<And> s\<^sub>0. I s\<^sub>0 \<Longrightarrow> terminates (B s\<^sub>0)"
-    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
-    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+    "\<And> s\<^sub>0. \<lbrakk> b s\<^sub>0; I s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (B s\<^sub>0)"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
     "I s"
   shows "terminates (iterate b B s)"
 proof (cases "b s")
   case True
   have "\<exists> tr s'. (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
-    by (rule wellorder_variant_term_chain[of I B V], simp_all add: assms True)
+    by (rule wellorder_variant_term_chain[of b I B V], simp_all add: assms True)
   then show ?thesis
     by (metis iterate_term_chain_iff terminates_def)
   next
