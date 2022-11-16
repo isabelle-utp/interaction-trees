@@ -1,7 +1,7 @@
 section \<open> Hoare Logic \<close>
 
 theory ITree_Hoare
-  imports ITree_Relation
+  imports ITree_WP
 begin
 
 text \<open> We introduce theorem attributed for safe Hoare rules and already proven triples \<close>
@@ -252,5 +252,14 @@ method hoare = ((simp add: prog_defs assigns_combine usubst usubst_eval)?, (auto
 method vcg = (hoare; expr_taut?; safe?; simp?)
 
 method hoare_auto = (hoare; expr_auto)
+
+theorem hl_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
+  by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
+
+lemma hl_wlp: "`P \<longrightarrow> wlp S Q` \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
+  by (simp add: hl_via_wlp)
+
+method hoare_wlp uses add = (simp add: prog_defs hl_via_wlp wp usubst_eval add)
+method hoare_wlp_auto uses add = (hoare_wlp add: add; expr_auto)
 
 end
