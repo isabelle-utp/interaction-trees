@@ -184,6 +184,22 @@ fun itree_term_chain ::
 
 declare itree_term_chain.simps [simp del]
 
+lemma term_chain_step:
+  assumes "b s" "P(s) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0" "(b, s\<^sub>0) \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sub>\<checkmark> s'"
+  shows "(b, s) \<turnstile> P \<midarrow>tr\<^sub>0 @ tr\<^sub>1\<leadsto>\<^sub>\<checkmark> s'"
+proof -
+  obtain chn s\<^sub>1 tr\<^sub>2 where chn: "b s\<^sub>0" "s\<^sub>0 \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1" "\<forall>s\<in>chain_states chn. b s" "P s\<^sub>1 \<midarrow>tr\<^sub>2\<leadsto> \<checkmark> s'" "tr\<^sub>1 = chain_trace chn @ tr\<^sub>2"
+    by (metis assms(3) itree_term_chain.simps)
+  have chn': "s \<turnstile> P \<midarrow>(tr\<^sub>0, s\<^sub>0) # chn\<leadsto>\<^sup>* s\<^sub>1"
+    by (simp add: assms(2) chain_step chn(2))
+  show ?thesis
+    apply (simp add: itree_term_chain.simps assms)
+    apply (rule_tac x="(tr\<^sub>0, s\<^sub>0) # chn" in exI)
+    apply (rule_tac x="s\<^sub>1" in exI)
+    apply (simp_all add: chn chn')
+    done
+qed
+
 lemma iterate_transition_chain:
   assumes "s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'" "b s" "\<forall> s\<^sub>0\<in>chain_states chn. b s\<^sub>0"
   shows "iterate b P s \<midarrow>chain_trace chn\<leadsto> iterate b P s'"
@@ -503,28 +519,6 @@ next
     by force 
 qed
 
-definition terminates :: "('e, 's) itree \<Rightarrow> bool" where
-"terminates P = (\<forall> tr P'. P \<midarrow>tr\<leadsto> P' \<longrightarrow> \<not> nonterminating P')"
-
-term "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
-
-lemma
-  fixes V :: "'s \<Rightarrow> nat"
-  assumes 
-    "\<forall> s\<^sub>0. terminates (P s\<^sub>0)"
-    "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
-  shows "\<exists> chn s'. itree_chain P s s' chn"
-  oops
-
-lemma
-  fixes V :: "'s \<Rightarrow> nat"
-  assumes 
-    "\<forall> s\<^sub>0. terminates (P s\<^sub>0)"
-    "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
-  shows "terminates (iterate b P s)"
-  oops
-
-
 text \<open> If @{term P} is an invariant of a chain for process @{term C}, then the invariant holds
   for every element of the looped process @{term C}. \<close>
 
@@ -571,6 +565,75 @@ lemma chain_invariant_simple:
   shows "\<forall> s\<^sub>0\<in>chain_states chn. P s\<^sub>0"
   using assms
   by (rule_tac chain_invariant[of "\<lambda> s. True" s P C chn s'], auto)
+
+text \<open> We can establish termination, as usual, with an variant function. Here, ``terminates'' means 
+  that an ITree may terminate. \<close>
+
+definition terminates :: "('e, 's) itree \<Rightarrow> bool" where
+"terminates P = (\<exists> tr s'. P \<midarrow>tr\<leadsto> \<checkmark> s')"
+
+lemma terminates_Ret: "terminates (\<checkmark> s')"
+  by (simp add: terminates_def)
+
+lemma terminates_Sil: "terminates (Sil P) = terminates P"
+  by (simp add: terminates_def)
+
+lemma terminates_bind:
+  assumes "terminates P" "\<And> v. v \<in> \<^bold>R(P) \<Longrightarrow> terminates(Q v)"
+  shows "terminates (P \<bind> Q)"
+  by (meson assms(1) assms(2) retvals_traceI terminates_def trace_to_bind)
+
+text \<open> The following theorem using both a variant @{term V} and invariant @{term I} to establish
+  termination. \<close>
+
+lemma wellorder_variant_term_chain:
+  fixes V :: "'s \<Rightarrow> 'a::wellorder" and I :: "'s \<Rightarrow> bool"
+  assumes 
+    "\<And> s\<^sub>0. I s\<^sub>0 \<Longrightarrow> terminates (B s\<^sub>0)"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+  shows "\<lbrakk> I s; b s \<rbrakk> \<Longrightarrow> \<exists> tr s'. (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
+proof (induct "V(s)" arbitrary: s rule: less_induct)
+  case (less s\<^sub>0)
+  obtain s\<^sub>1 tr\<^sub>0 where B_next: "B(s\<^sub>0) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>1"
+    by (meson assms(1) less.prems(1) terminates_def)
+  have inv: "I s\<^sub>1"
+    using B_next assms(2) less.prems(1) by presburger
+  have dec: "V(s\<^sub>1) < V(s\<^sub>0)"
+    using B_next assms(3) less.prems(1) by auto
+  show ?case
+  proof (cases "b s\<^sub>1")
+    case True
+    obtain tr\<^sub>1 s' where chain: "(b, s\<^sub>1) \<turnstile> B \<midarrow>tr\<^sub>1\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
+      using True dec inv less.hyps by presburger
+    then show ?thesis
+      by (meson B_next less.prems term_chain_step) 
+  next
+    case False
+    then show ?thesis
+      by (metis B_next iterate_term_chain_iff iterate_term_once less.prems(2)) 
+  qed  
+qed
+
+lemma terminates_iterate_wellorder_variant:
+  fixes V :: "'s \<Rightarrow> 'a::wellorder" and I :: "'s \<Rightarrow> bool"
+  assumes 
+    "\<And> s\<^sub>0. I s\<^sub>0 \<Longrightarrow> terminates (B s\<^sub>0)"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+    "I s"
+  shows "terminates (iterate b B s)"
+proof (cases "b s")
+  case True
+  have "\<exists> tr s'. (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
+    by (rule wellorder_variant_term_chain[of I B V], simp_all add: assms True)
+  then show ?thesis
+    by (metis iterate_term_chain_iff terminates_def)
+  next
+  case False
+  then show ?thesis
+    by (simp add: terminates_def)
+qed
 
 text \<open> Generalised deadlock freedom check for loops. If @{term P} is sufficient establish deadlock
   freedom of @{term C}, and @{term P} is an invariant of @{term C}, which holds also in the initial
