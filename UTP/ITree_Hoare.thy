@@ -11,15 +11,8 @@ named_theorems hoare_safe and hoare_lemmas
 definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
 
-definition prog_term_under :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool"
-  where "prog_term_under C P = (\<forall> s. P s \<longrightarrow> terminates (C s))"
-
-definition thoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
-"thoare_triple P S Q = (hoare_triple P S Q \<and> prog_term_under S P)"
-
 syntax 
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("H{_}/ _/ {_}")
-  "_thoare"          :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("H[_]/ _/ [_]")
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<^bold>{_\<^bold>}/ _/ \<^bold>{_\<^bold>}")
   "_preserves"       :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "preserves" 40)
   "_preserves_under" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ preserves _ under _" [40, 0, 40] 40)
@@ -27,7 +20,6 @@ syntax
 
 translations
   "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
-  "_thoare P S Q" == "CONST thoare_triple (P)\<^sub>e S (Q)\<^sub>e"
   "_preserves S P" => "H{P} S {P}"
   "_preserves_under S P Q" => "H{P \<and> Q} S {P}"
   "_establishes \<sigma> P" => "H{CONST True} \<langle>\<sigma>\<rangle>\<^sub>a {P}"
@@ -37,12 +29,6 @@ lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrighta
 
 lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<checkmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (auto simp add: hoare_alt_def)
-
-lemma thoare_then_hoare: "H[P] C [Q] \<Longrightarrow> H{P} C {Q}"
-  by (simp add: thoare_triple_def)
-
-lemma thoareI: "\<lbrakk> H{P} C {Q}; prog_term_under C (P)\<^sub>e \<rbrakk> \<Longrightarrow> H[P] C [Q]"
-  by (simp add: thoare_triple_def)
 
 lemma hoare_ref_by: "hoare_triple P C Q \<longleftrightarrow> (P\<^sup>< \<longrightarrow> Q\<^sup>>)\<^sub>e \<sqsubseteq> \<lbrakk>C\<rbrakk>\<^sub>p"
   by (auto simp add: hoare_triple_def itree_rel_def spec_def ref_by_fun_def ref_by_bool_def)
@@ -239,27 +225,7 @@ proof (rule hoareI)
     by (simp add: B P)
 qed
 
-lemma hoare_while_total [hoare_safe]:
-  fixes V :: "'s \<Rightarrow> 'a::wellorder"
-  assumes "\<And> z. H[P \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [P \<and> V < \<guillemotleft>z\<guillemotright>]"
-  shows "H[P] while B do S od [\<not> B \<and> P]"
-proof -
-  from assms have "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
-    by (auto simp add: hoare_alt_def thoare_triple_def)
-  hence partial: "\<^bold>{P\<^bold>} while B do S od \<^bold>{\<not> B \<and> P\<^bold>}"
-    by (rule hoare_while_partial)
-  from assms have S_term: "\<And> s. \<lbrakk> B s; P s \<rbrakk> \<Longrightarrow> terminates (S s)"
-    by (simp add: thoare_triple_def SEXP_def prog_term_under_def)  
-
-  from assms have wS_term: "prog_term_under (while B do S od) P"
-    unfolding thoare_triple_def hoare_alt_def prog_term_under_def
-    by (auto intro!: terminates_iterate_wellorder_variant[of B P S V] simp add: SEXP_def)
-
-  show ?thesis
-    by (metis SEXP_def partial thoareI wS_term)
-qed
-
-lemmas hl_while = hoare_while_partial hoare_while_total
+lemmas hl_while = hoare_while_partial
 
 definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv B I P = iterate B P"

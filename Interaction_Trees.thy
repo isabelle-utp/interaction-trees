@@ -630,9 +630,15 @@ lemma trace_to_post_Sil_iff:
 
 text \<open> Termination is deterministic. \<close>
 
-lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P \<midarrow>tr\<leadsto> Ret y \<rbrakk> \<Longrightarrow> x = y"
+lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> \<checkmark> x; P \<midarrow>tr\<leadsto> \<checkmark> y \<rbrakk> \<Longrightarrow> x = y"
   by (induct tr arbitrary: P, auto)
      (metis Sils_to_Ret Vis_Cons_trns trace_to_ConsE trace_to_singleE)
+
+text \<open> A pure ITree, whenever it terminates, always terminates in the same state, regardless 
+  of the state interaction. \<close>
+
+definition pure_itree :: "('e, 's) itree \<Rightarrow> bool" where
+"pure_itree P = (\<forall> tr\<^sub>0 tr\<^sub>1 s\<^sub>0 s\<^sub>1. P \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0 \<and> P \<midarrow>tr\<^sub>1\<leadsto> \<checkmark> s\<^sub>1 \<longrightarrow> s\<^sub>0 = s\<^sub>1)"
 
 subsection \<open> Initial Events \<close>
 
