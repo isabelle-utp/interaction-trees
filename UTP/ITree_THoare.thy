@@ -4,6 +4,10 @@ theory ITree_THoare
   imports ITree_Hoare
 begin
 
+text \<open> Total correctness = partial correctness + termination. Termination is expressed using 
+  the weakest precondition calculus, i.e. @{term "pre S"} is the weakest precondition under
+  which @{term S} terminates. \<close>
+
 definition thoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
 "thoare_triple P S Q = (hoare_triple P S Q \<and> `P \<longrightarrow> pre S`)"
 
@@ -39,11 +43,37 @@ lemma thl_seq: "\<lbrakk> H[P] S\<^sub>1 [Q]; H[Q] S\<^sub>2 [R] \<rbrakk> \<Lon
   by (auto simp add: thoare_triple_def hl_seq wp)
      (simp add: hoare_alt_def wp_alt_def seq_itree_def kleisli_comp_def, expr_auto, meson)
 
+lemma thl_seq_inv [hoare_safe]: "\<lbrakk> H[P] S\<^sub>1 [P]; H[P] S\<^sub>2 [P] \<rbrakk> \<Longrightarrow> H[P] S\<^sub>1 ;; S\<^sub>2 [P]"
+  by (simp add: thl_seq)
+
 lemma thl_assigns: "H[\<sigma> \<dagger> P] \<langle>\<sigma>\<rangle>\<^sub>a [P]"
   by (simp add: thoare_triple_def hoare_assigns wp, subst_eval)
 
 lemma thl_assign: "H[P\<lbrakk>e/x\<rbrakk>] x := e [P]"
   by (rule thl_assigns)
+
+lemma thl_assigns_impl [hoare_safe]:
+  assumes "`P \<longrightarrow> \<sigma> \<dagger> Q`"
+  shows "H[P] \<langle>\<sigma>\<rangle>\<^sub>a [Q]"
+  using assms by (auto intro: thl_conseq thl_assigns)
+
+lemma thl_assign':
+  assumes "`P \<longrightarrow> Q\<lbrakk>e/x\<rbrakk>`"
+  shows "H[P] x := e [Q]"
+  using assms by (fact thl_assigns_impl)
+
+lemma thl_fwd_assign [hoare_safe]:
+  assumes "vwb_lens x" "\<And> x\<^sub>0. H[$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>] S [Q]"
+  shows "H[P] x := e ;; S [Q]"
+  using assms
+  by (auto simp add: thoare_triple_def hl_fwd_assign wp)
+     (simp add: hoare_alt_def wp_alt_def, expr_auto
+     ,metis assms(1) vwb_lens.put_eq vwb_lens_wb wb_lens_weak weak_lens_def)
+
+lemma thl_assigns_bwd [hoare_safe]:
+  assumes "H[P] S [\<sigma> \<dagger> Q]"
+  shows "H[P] S ;; \<langle>\<sigma>\<rangle>\<^sub>a [Q]"
+  by (blast intro: thl_seq[OF assms(1)] thl_assigns)
 
 lemma thl_cond [hoare_safe]:
   assumes "H[B \<and> P] S [Q]" "H[\<not>B \<and> P] T [Q]"
@@ -67,6 +97,18 @@ proof -
   show ?thesis
     using partial thoareI wS_term by fastforce
 qed
+
+definition while_inv_var :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a::wellorder) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+[code_unfold]: "while_inv_var B I V P = iterate B P"
+
+syntax "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ var _ do _ od")
+translations "_while_inv_var_itree B I V P" == "CONST while_inv_var (B)\<^sub>e (I)\<^sub>e (V)\<^sub>e P"
+
+lemma thl_while_inv_var [hoare_safe]:
+  assumes "\<And> z. H[I \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [I \<and> V < \<guillemotleft>z\<guillemotright>]" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
+  shows "H[P] while B inv I var V do S od [Q]"
+  unfolding while_inv_var_def
+  by (auto intro!: thl_conseq[OF _ assms(2) assms(3)] thl_while assms(1))
 
 lemma thl_via_wlp_wp: "H[P] S [Q] = `P \<longrightarrow> (wlp S Q \<and> pre S)`"
   by (simp add: thoare_triple_def hl_via_wlp, expr_auto)

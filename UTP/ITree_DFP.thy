@@ -1,7 +1,7 @@
 section \<open> Deadlock Freedom Preconditions \<close>
 
 theory ITree_DFP
-  imports ITree_WP
+  imports ITree_Hoare
 begin
 
 definition dfp :: "('e, 's, 'r) ktree \<Rightarrow> ('s \<Rightarrow> bool)" 
