@@ -80,6 +80,23 @@ lemma thl_cond [hoare_safe]:
   shows "H[P] if B then S else T fi [Q]"
   using assms by (simp add: thoare_triple_def hl_cond wp taut_def)
 
+text \<open> For loops do not require a variant, as termination is guaranteed by construction \<close>
+
+lemma thl_for:
+  assumes "\<And> i. i < length xs \<Longrightarrow> H[@(R i)] S (xs ! i) [@(R (i+1))]"
+  shows "H[@(R 0)] for i in xs do S i od [@(R (length xs))]"
+  using assms 
+  by (simp add: thoare_triple_def hl_for pre_terminates)
+     (auto simp add: hoare_alt_def taut_def
+     , metis (no_types, lifting) Suc_eq_plus1 terminates_for_itree)
+
+lemma thl_for_inv [hoare_safe]:
+  assumes "\<And> i. i < length xs \<Longrightarrow> H[@(R i)] S (xs ! i) [@(R (i+1))]"
+    "`P \<longrightarrow> @(R 0)`" "`@(R (length xs)) \<longrightarrow> Q`"
+  shows "H[P] for x in xs inv i. @(R i) do S x od [Q]"
+  unfolding for_inv_def
+  by (rule thl_conseq[OF thl_for[of xs R S, OF assms(1)]], simp_all add: assms)
+
 lemma thl_while [hoare_safe]:
   fixes V :: "'s \<Rightarrow> 'a::wellorder"
   assumes "\<And> z. H[P \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [P \<and> V < \<guillemotleft>z\<guillemotright>]"

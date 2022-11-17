@@ -174,6 +174,39 @@ lemma for_empty: "for x in [] do P x od = Skip"
 lemma for_Cons: "for_itree (x # xs) P = P x ;; for_itree xs P"
   by (simp add: for_itree_def)
 
+text \<open> A for loop terminates provided that the body does so in each iteration. We use an invariant
+  expression @{term R} to restrict the possible states encountered. \<close>
+
+lemma terminates_for_itree:
+  assumes  
+    "\<And> i s\<^sub>0 tr\<^sub>0 s\<^sub>1. \<lbrakk> i < length xs; R i s\<^sub>0; S (xs ! i) s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> Ret s\<^sub>1 \<rbrakk> \<Longrightarrow> R (i + 1) s\<^sub>1"
+    "\<And> i s\<^sub>0. \<lbrakk> i < length xs; R i s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (S (xs ! i) s\<^sub>0)"
+  shows "R 0 s \<Longrightarrow> terminates (for_itree xs S s)"
+using assms proof (induct xs arbitrary: R s)
+  case Nil
+  then show ?case by (simp add: for_empty Skip_def terminates_Ret)
+next
+  case (Cons a xs) 
+  have 1: "terminates (S a s)"
+    by (metis Cons.prems(1) Cons.prems(3) length_greater_0_conv list.distinct(1) nth_Cons_0)
+  have 2: "\<And> s\<^sub>0. s\<^sub>0 \<in> \<^bold>R (S a s) \<Longrightarrow> terminates (for_itree xs S s\<^sub>0)"
+  proof -
+    fix s\<^sub>0
+    assume "s\<^sub>0 \<in> \<^bold>R (S a s)"
+    then obtain tr\<^sub>0 where S_term: "S a s \<midarrow>tr\<^sub>0\<leadsto> Ret s\<^sub>0"
+      by (auto simp add: retvals_def)
+    hence R_1: "R 1 s\<^sub>0"
+      by (metis Cons.prems(1) Cons.prems(2) One_nat_def Suc_eq_plus1 length_Cons nth_Cons_0 zero_less_Suc)
+    with S_term show "terminates (for_itree xs S s\<^sub>0)"
+      by (auto intro!: Cons(1)[of "\<lambda> i s. R (i + 1) s"])
+         (metis Cons.prems(2) Suc_eq_plus1 Suc_less_eq length_Cons nth_Cons_Suc
+         ,metis Cons.prems(3) Suc_less_eq length_Cons nth_Cons_Suc)
+  qed
+
+  from 1 2 show ?case
+    by (auto intro!: terminates_bind simp add: for_Cons seq_itree_def kleisli_comp_def)
+qed
+
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"
   by (auto simp add: seq_itree_def fun_eq_iff iterate.code kleisli_comp_def cond_itree_def Step_def Skip_def comp_def)
 
