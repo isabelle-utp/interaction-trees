@@ -15,6 +15,15 @@ lemma stable_deadlock [simp]: "stable deadlock"
 lemma deadlock_trace_to: "deadlock \<midarrow>tr\<leadsto> P \<longleftrightarrow> tr = [] \<and> P = deadlock"
   by (auto simp add: deadlock_def)
 
+lemma pure_deadlock: "pure_itree deadlock"
+  by (simp add: deadlock_trace_to pure_itree_def)
+
+lemma pure_itree_disj_cases:
+  assumes "pure_itree P" "stabilises P"
+  shows "(\<exists> n v. P = Sils n (Ret v)) \<or> (\<exists> n. P = Sils n deadlock)"
+  unfolding deadlock_def
+  by (metis assms diverges_then_diverge itree_disj_cases pure_itree_Vis pure_itree_trace_to trace_of_Sils)
+
 lemma deadlock_bind [simp]: "deadlock \<bind> P = deadlock"
   by (metis (no_types, lifting) deadlock_def run_bind run_empty)
 

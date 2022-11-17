@@ -181,6 +181,9 @@ lemma diverge_no_Ret_trans [dest]: "diverge \<midarrow>tr\<leadsto> Ret v \<Long
 lemma diverge_no_Vis_trans [dest]: "diverge \<midarrow>tr\<leadsto> Vis F \<Longrightarrow> False"
   by (metis diverge_not_Vis diverges_diverge snd_conv trace_of_divergent)
 
+lemma pure_diverge: "pure_itree diverge"
+  by (auto simp add: pure_itree_def) (meson diverges_diverge stabilises_traceI)
+
 text \<open> Any interaction either stabilises to a visible event, stabilises to termination, or diverges. \<close>
 
 lemma itree_disj_cases:

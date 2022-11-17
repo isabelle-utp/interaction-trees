@@ -634,11 +634,26 @@ lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> \<checkmar
   by (induct tr arbitrary: P, auto)
      (metis Sils_to_Ret Vis_Cons_trns trace_to_ConsE trace_to_singleE)
 
-text \<open> A pure ITree, whenever it terminates, always terminates in the same state, regardless 
-  of the state interaction. \<close>
+text \<open> A pure ITree does not exhibit any visible choices, and therefore cannot be influenced by
+  the environment. \<close>
 
 definition pure_itree :: "('e, 's) itree \<Rightarrow> bool" where
-"pure_itree P = (\<forall> tr\<^sub>0 tr\<^sub>1 s\<^sub>0 s\<^sub>1. P \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0 \<and> P \<midarrow>tr\<^sub>1\<leadsto> \<checkmark> s\<^sub>1 \<longrightarrow> s\<^sub>0 = s\<^sub>1)"
+"pure_itree P = (\<forall> tr\<^sub>0 P'. P \<midarrow>tr\<^sub>0\<leadsto> P' \<longrightarrow> tr\<^sub>0 = [])"
+
+lemma pure_itree_Sil: "pure_itree (Sil P) = pure_itree P"
+  by (auto simp add: pure_itree_def)
+
+lemma pure_itree_Ret: "pure_itree (Ret x)"
+  by (auto simp add: pure_itree_def)
+
+lemma pure_itree_trace_to:
+  assumes "pure_itree P" "P \<midarrow>tr\<leadsto> P'"
+  shows "pure_itree P'"
+  using assms by (auto simp add: pure_itree_def, blast)
+
+lemma pure_itree_Vis: "pure_itree (Vis F) = (F = {\<mapsto>})"
+  by (auto simp add: pure_itree_def)
+     (metis Vis_Cons_trns ex_in_conv pdom_empty_iff_dom_empty trace_to_Nil)
 
 subsection \<open> Initial Events \<close>
 
