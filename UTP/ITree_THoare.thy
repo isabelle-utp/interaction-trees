@@ -127,6 +127,18 @@ lemma thl_while_inv_var [hoare_safe]:
   unfolding while_inv_var_def
   by (auto intro!: thl_conseq[OF _ assms(2) assms(3)] thl_while assms(1))
 
+text \<open> The next law is a degenerate partial correctness law, which ignores the variant. \<close>
+
+lemma hl_while_inv_var [hoare_safe]:
+  assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>}while B inv I var V do S od\<^bold>{Q\<^bold>}"
+proof -
+  have "while B inv I var V do S od = while B inv I do S od"
+    by (simp add: while_inv_var_def while_inv_def)
+  with assms show ?thesis
+    by (simp add: hl_while_inv)
+qed
+
 lemma thl_via_wlp_wp: "H[P] S [Q] = `P \<longrightarrow> (wlp S Q \<and> pre S)`"
   by (simp add: thoare_triple_def hl_via_wlp, expr_auto)
 
