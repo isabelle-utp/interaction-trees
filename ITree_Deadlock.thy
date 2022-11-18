@@ -18,11 +18,20 @@ lemma deadlock_trace_to: "deadlock \<midarrow>tr\<leadsto> P \<longleftrightarro
 lemma pure_deadlock: "pure_itree deadlock"
   by (simp add: deadlock_trace_to pure_itree_def)
 
+lemma div_free_deadlock: "div_free deadlock"
+  by (metis deadlock_def div_free_run run_empty)
+
 lemma pure_itree_disj_cases:
-  assumes "pure_itree P" "stabilises P"
-  shows "(\<exists> n v. P = Sils n (Ret v)) \<or> (\<exists> n. P = Sils n deadlock)"
+  assumes "pure_itree P"
+  shows "(\<exists> n v. P = Sils n (Ret v)) \<or> (\<exists> n. P = Sils n deadlock) \<or> P = diverge"
   unfolding deadlock_def
-  by (metis assms diverges_then_diverge itree_disj_cases pure_itree_Vis pure_itree_trace_to trace_of_Sils)
+  by (metis assms itree_disj_cases pure_itree_Vis pure_itree_trace_to trace_of_Sils)
+
+lemma pure_itree_cases [case_names rets deadlock diverge, consumes 1]:
+  assumes "pure_itree P" 
+    "\<And> n v. P = Sils n (Ret v) \<Longrightarrow> Q" "\<And> n. P = Sils n deadlock \<Longrightarrow> Q" "P = diverge \<Longrightarrow> Q"
+  shows Q
+  by (meson assms pure_itree_disj_cases)
 
 lemma deadlock_bind [simp]: "deadlock \<bind> P = deadlock"
   by (metis (no_types, lifting) deadlock_def run_bind run_empty)

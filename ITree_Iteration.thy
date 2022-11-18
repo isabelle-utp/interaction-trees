@@ -578,10 +578,24 @@ lemma terminates_Ret: "terminates (\<checkmark> s')"
 lemma terminates_Sil: "terminates (Sil P) = terminates P"
   by (simp add: terminates_def)
 
+lemma terminates_Sils: "terminates (Sils n P) = terminates P"
+  by (simp add: terminates_def)
+
 lemma terminates_bind:
   assumes "terminates P" "\<And> v. v \<in> \<^bold>R(P) \<Longrightarrow> terminates(Q v)"
   shows "terminates (P \<bind> Q)"
   by (meson assms(1) assms(2) retvals_traceI terminates_def trace_to_bind)
+
+lemma not_terminates_diverge:
+  "terminates diverge = False"
+  by (meson diverge_no_Ret_trans terminates_def)
+
+text \<open> A terminating pure ITree is divergence free \<close>
+
+lemma terminates_pure_implies_div_free:
+  assumes "pure_itree P" "terminates P"
+  shows "div_free P"
+  by (metis Sils_diverge assms div_free_is_no_divergence no_divergence_def not_terminates_diverge pure_itree_def trace_to_Nil_Sils)
 
 text \<open> The following theorem using both a variant @{term V} and invariant @{term I} to establish
   termination. \<close>
