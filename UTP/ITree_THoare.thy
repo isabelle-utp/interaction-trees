@@ -118,7 +118,9 @@ qed
 definition while_inv_var :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a::wellorder) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv_var B I V P = iterate B P"
 
-syntax "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ var _ do _ od")
+syntax 
+  "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ var _ do _ od")
+  "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ invariant _ variant _ do _ od")
 translations "_while_inv_var_itree B I V P" == "CONST while_inv_var (B)\<^sub>e (I)\<^sub>e (V)\<^sub>e P"
 
 lemma thl_while_inv_var [hoare_safe]:

@@ -230,7 +230,9 @@ lemmas hl_while = hoare_while_partial
 definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv B I P = iterate B P"
 
-syntax "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ do _ od")
+syntax 
+  "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ do _ od")
+  "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ invariant _ do _ od")
 translations "_while_inv_itree B I P" == "CONST while_inv (B)\<^sub>e (I)\<^sub>e P"
 
 lemma hl_while_inv [hoare_safe]:
