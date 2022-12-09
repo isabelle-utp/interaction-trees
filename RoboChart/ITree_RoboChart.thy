@@ -21,6 +21,42 @@ text \<open> A process's state must be discarded before being in parallel compos
 definition discard_state where
 "discard_state P = do {P ; skip}"
 
+term "map_pfun"
+term "rename a"
+
+text \<open> Domain restriction of an associative list \<close>
+definition rel_domres_l :: "'a set \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> ('a \<times> 'b) list" (infixr "\<lhd>\<^sub>r\<^sub>l" 85) where
+"rel_domres_l A al = [m. m \<leftarrow> al, fst m \<in> A]"
+
+text \<open> Drop pairs @{text "(x,y)"} where @{text "y"} is in @{text "A"}. 
+
+With this definition, we can give priority to the pair with a small index and remove remaining pairs 
+with the same value in the image. 
+
+For example, @{text "filter_out [(a1, b1), (a2, b2), (a3, b1)] = [(a1, b1), (a2, b2)]"}
+where @{text "(a3, b1)"} is filtered out because @{text "b1"} is mapped to @{text "a1"} in the 
+beginning of the list.
+\<close>
+primrec drop_dup :: "('a \<times> 'b) list \<Rightarrow> 'b set \<Rightarrow> ('a \<times> 'b) list" where 
+"drop_dup [] A = []" |
+"drop_dup (x#xs) A = 
+  (if (snd x) \<in> A then (drop_dup xs A) 
+ else (x # (drop_dup xs (A \<union> {snd x}))))"
+
+value "drop_dup [(1, 2), (2, 3), (3, 2)] {}::(int \<times> int) list"
+
+abbreviation "drop_dup' l \<equiv> drop_dup l {}"
+
+text \<open> Another form of renaming whose renaming maps are an associative list. Priority, therefore, 
+can be given to the pairs in the beginning of the list when renaming causes nondeterminism. 
+\<close>
+primcorec renamel :: "('e\<^sub>1 \<times> 'e\<^sub>2) list \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+"renamel \<rho> P = 
+  (case P of
+    Ret x \<Rightarrow> Ret x |
+    Sil P \<Rightarrow> Sil (renamel \<rho> P) |
+    Vis F \<Rightarrow> Vis (map_pfun (renamel \<rho>) (F \<circ>\<^sub>p graph_pfun ((set (drop_dup' (pdom F \<lhd>\<^sub>r\<^sub>l \<rho>)))\<inverse>))))"
+
 subsection \<open> RoboChart types \<close>
 type_synonym core_bool = bool
 type_synonym core_nat = natural
@@ -121,6 +157,34 @@ datatype InOut = din | dout
 
 definition "InOut_list = [din, dout]"
 definition "InOut_set = set InOut_list"
+
+instantiation InOut :: enum
+begin
+definition enum_InOut :: "InOut list" where
+"enum_InOut = InOut_list"
+
+definition enum_all_InOut :: "(InOut \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_all_InOut P = (\<forall>b :: InOut \<in> set enum_class.enum. P b)"
+
+definition enum_ex_InOut :: "(InOut \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_ex_InOut P = (\<exists>b ::  InOut \<in> set enum_class.enum. P b)"
+
+instance
+proof (intro_classes)
+  show "distinct (enum_class.enum :: InOut list)"
+    by (simp add: enum_InOut_def InOut_list_def)
+
+  show univ_eq: "UNIV = set (enum_class.enum:: InOut list)"
+    apply (simp add: enum_InOut_def InOut_list_def)
+    apply (auto simp add: enum_UNIV)
+    by (meson InOut.exhaust)
+
+  fix P :: "InOut \<Rightarrow> bool"
+  show "enum_class.enum_all P = Ball UNIV P"
+    and "enum_class.enum_ex P = Bex UNIV P" 
+    by (simp_all add: univ_eq enum_all_InOut_def enum_ex_InOut_def)
+qed
+end
 
 subsection \<open> Channels and Events\<close>
 text \<open> The @{text "mapfc"} and @{text "mapf"} together are used to enumerate events 

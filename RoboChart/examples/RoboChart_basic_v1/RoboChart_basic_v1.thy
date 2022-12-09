@@ -34,7 +34,9 @@ This theory, on the contrary, is built from the bottom up because the definition
 relies on the definitions of other processes in the top process. 
 \<close>
 theory RoboChart_basic_v1
-  imports "ITree_RoboChart.ITree_RoboChart" "ITree_Simulation.ITree_Simulation"
+  imports "ITree_RoboChart.ITree_RoboChart" 
+    "ITree_Simulation.ITree_Simulation"
+    "ITree_RoboChart.RoboChart_Simulation"
 begin
 
 text \<open>We, therefore, structure the theory as follows. In Sect.~\ref{ssec:basic_general}, we give 
@@ -50,7 +52,7 @@ text \<open> The interpretation of the locale @{text robochart_confs} below inst
 and @{term "max_real"}, to -1, 1, 1, -1, and 1 separately. In the CSP semantics, these values are 
 set in the @{verbatim "instantiation.csp"} file.
 \<close>
-interpretation rc: robochart_confs "-1" "1" "1" "-1" "1".
+interpretation rc: robochart_confs "-2" "2" "1" "-1" "1".
 
 (* We can animate this theory with [-50, 50]. 
 For the input E2, the animation is very smooth, and we can see the next events available to execute 
@@ -532,6 +534,34 @@ datatype TIDS_stm1 = NULLTRANSITION_stm1
 	              | TID_stm1_t2
 	              | TID_stm1_t3
 
+instantiation TIDS_stm1 :: enum
+begin
+definition enum_TIDS_stm1 :: "TIDS_stm1 list" where
+"enum_TIDS_stm1 = [NULLTRANSITION_stm1, TID_stm1_t0, TID_stm1_t1, TID_stm1_t2, TID_stm1_t3]"
+
+definition enum_all_TIDS_stm1 :: "(TIDS_stm1 \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_all_TIDS_stm1 P = (\<forall>b :: TIDS_stm1 \<in> set enum_class.enum. P b)"
+
+definition enum_ex_TIDS_stm1 :: "(TIDS_stm1 \<Rightarrow> bool) \<Rightarrow> bool" where
+"enum_ex_TIDS_stm1 P = (\<exists>b ::  TIDS_stm1 \<in> set enum_class.enum. P b)"
+
+instance
+proof (intro_classes)
+  show "distinct (enum_class.enum :: TIDS_stm1 list)"
+    by (simp add: enum_TIDS_stm1_def)
+
+  show univ_eq: "UNIV = set (enum_class.enum:: TIDS_stm1 list)"
+    apply (simp add: enum_TIDS_stm1_def)
+    apply (auto simp add: enum_UNIV)
+    by (meson TIDS_stm1.exhaust)
+
+  fix P :: "TIDS_stm1 \<Rightarrow> bool"
+  show "enum_class.enum_all P = Ball UNIV P"
+    and "enum_class.enum_ex P = Bex UNIV P" 
+    by (simp_all add: univ_eq enum_all_TIDS_stm1_def enum_ex_TIDS_stm1_def)
+qed
+end
+
 definition "TIDS_stm1_list = [NULLTRANSITION_stm1, TID_stm1_t0, TID_stm1_t1, TID_stm1_t2, TID_stm1_t3]"
 definition "TIDS_stm1_set = set TIDS_stm1_list"
 
@@ -594,6 +624,11 @@ definition stm1_s0_triggers where
 )
 "
 
+definition stm1_l_events where
+"stm1_l_events = 
+  set (enumchans1 [get_l_stm1_C, set_l_stm1_C] rc.core_int_list)
+"
+
 definition stm1_x_events where
 "stm1_x_events = 
   set (enumchans1 [get_x_stm1_C, set_x_stm1_C] rc.core_int_list)
@@ -644,10 +679,10 @@ definition stm1_MemoryTransitions_opt_1 where
 "stm1_MemoryTransitions_opt_1 = 
   loop (\<lambda> id::integer. 
     do {
-      x \<leftarrow> inp_in get_x_stm1 rc.core_int_set ;
-      (do {inp_in update__stm1 (set [(TID_stm1_t1, din, x). x \<leftarrow> rc.core_int_list, x \<le> const_mod0_ctrl0_stm1_MAX]) ; 
+      (do {inp_in update__stm1 (set [(TID_stm1_t1, din, l). l \<leftarrow> rc.core_int_list, l \<le> const_mod0_ctrl0_stm1_MAX]) ; 
            Ret (id)} \<box> 
-       do {inp_in update__stm1 (set [(TID_stm1_t3, din, x). x \<leftarrow> rc.core_int_list, (x \<ge> rc.Neg const_mod0_ctrl0_stm1_MAX rc.core_int_set)]) ; 
+       do {inp_in update__stm1 (set [(TID_stm1_t3, din, l). l \<leftarrow> rc.core_int_list, 
+           (l \<ge> rc.Neg const_mod0_ctrl0_stm1_MAX rc.core_int_set)]) ; 
            Ret (id)}
       )
     }
@@ -692,12 +727,12 @@ definition State_stm1_s0 where
                 (
                 \<comment> \<open> @{text T_stm1_t1} \<close>
                 do {t \<leftarrow> inp_in update__stm1 (set [(TID_stm1_t1, din, l) . l \<leftarrow> rc.core_int_list]) ;
-                      outp set_x_stm1 (snd (snd t)) ; 
+                      outp set_l_stm1 (snd (snd t)) ; 
                       outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                       outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
-                      x \<leftarrow> inp_in get_x_stm1 rc.core_int_set ; 
+                      l \<leftarrow> inp_in get_l_stm1 rc.core_int_set ; 
                         \<comment> \<open> @{text \<open>outp set_x_stm1 (x+1);\<close>} \<close>
-                        outp set_x_stm1 (rc.Plus x 1 rc.core_int_set);
+                        outp set_x_stm1 (rc.Plus l 1 rc.core_int_set);
                         outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
                         Ret(True, fst (snd s), SID_stm1_s0)
                     } \<box>
@@ -711,12 +746,12 @@ definition State_stm1_s0 where
                     } \<box>
                 \<comment> \<open> @{text T_stm1_t3} \<close>
                 do {t \<leftarrow> inp_in update__stm1 (set [(TID_stm1_t3, din, l) . l \<leftarrow> rc.core_int_list]) ;
-                      outp set_x_stm1 (snd (snd t)) ; 
+                      outp set_l_stm1 (snd (snd t)) ; 
                       outp exit_stm1 (SID_stm1_s0, SID_stm1_s0);
                       outp exited_stm1 (SID_stm1_s0, SID_stm1_s0);
-                      x \<leftarrow> inp_in get_x_stm1 rc.core_int_set ; 
-                        \<comment> \<open> @{text \<open>outp set_x_stm1 (x-1);\<close>} \<close>
-                        outp set_x_stm1 (rc.Minus x 1 rc.core_int_set);
+                      l \<leftarrow> inp_in get_l_stm1 rc.core_int_set ; 
+                        \<comment> \<open> @{text \<open>outp set_x_stm1 (l-1);\<close>} \<close>
+                        outp set_x_stm1 (rc.Minus l 1 rc.core_int_set);
                         outp enter_stm1 (SID_stm1_s0, SID_stm1_s0);
                         Ret(True, fst (snd s), SID_stm1_s0)
                     } \<box>
@@ -799,11 +834,17 @@ definition MemorySTM_opt_stm1 where
         (
           (
             (
-              (discard_state (stm1_Memory_opt_x 0))
-              \<parallel>\<^bsub> stm1_x_events \<^esub>
-              (STM_stm1 idd)
-            ) \<setminus> (set [get_x_stm1_C n. n \<leftarrow> rc.core_int_list])
-          )
+              (discard_state (stm1_Memory_opt_l 0))
+              \<parallel>\<^bsub> stm1_l_events \<^esub>
+              (
+                (
+                  (discard_state (stm1_Memory_opt_x 0))
+                  \<parallel>\<^bsub> stm1_x_events \<^esub>
+                  (STM_stm1 idd)
+                ) \<setminus> (set [get_x_stm1_C n. n \<leftarrow> rc.core_int_list])
+              )
+            ) \<setminus> stm1_l_events
+          ) 
           \<parallel>\<^bsub> stm1_opt_0_internal_set \<^esub>
           (discard_state (stm1_MemoryTransitions_opt_0 idd))
         ) \<setminus> {internal_stm1_C TID_stm1_t0}
@@ -831,16 +872,35 @@ definition rename_stm1_events_others where
   (enumchansp2 [enter_stm1_C, entered_stm1_C, exit_stm1_C, exited_stm1_C] SIDS_stm1_list SIDS_stm1_list)
 "
 
+value "rename_stm1_events_others"
+(* For this syntax to work, the types in a channel type must be enumerable. Here integer seems not to be enumerable. *)
+value "\<lbrace>update__stm1 (t, d, x) \<mapsto> update_stm1 (d, x) | (t, d, x). d \<in> InOut_set \<and> x \<in> rc.core_int_set\<rbrace>"
+
+(*
+  How to rename this process to avoid deadlock (resolve nondeterminism in some ways) between two transitions
+from s0 with overlapped guards and the same trigger?
+Brain storms:
+S1. Preprocess renaming map (which is a list of pairs in this example) to drop the later pairs whose 
+range are the same as one of pair in the early (top) of the list.
+- This doesn't work because each renaming map should be only applied to the initial events of the process.
+so (a \<rightarrow> P \<box> b \<rightarrow> c \<rightarrow> Q) \<lbrace> (a, d), (c, d) \<rbrace> = (d \<rightarrow> P \<lbrace> (a, d), (c, d) \<rbrace>) \<box> (b \<rightarrow> d \<rightarrow> Q \<lbrace> (a, d), (c, d) \<rbrace>)
+
+*)
 definition rename_MemorySTM_opt_stm1 where
 "rename_MemorySTM_opt_stm1 idd = 
   ((MemorySTM_opt_stm1 idd) \<lbrace>(set (rename_stm1_events @ rename_stm1_events_others))\<rbrace>)
 "
 
+definition rename_MemorySTM_opt_stm1' where
+"rename_MemorySTM_opt_stm1' idd = 
+  renamel (rename_stm1_events @ rename_stm1_events_others) (MemorySTM_opt_stm1 idd)
+" 
+
 definition AUX_opt_stm1 where
 "AUX_opt_stm1 (idd::integer) = 
   ( 
     ( 
-      (rename_MemorySTM_opt_stm1 idd) \<lbrakk> set [terminate_stm1_C ()] \<Zrres> skip
+      (rename_MemorySTM_opt_stm1' idd) \<lbrakk> set [terminate_stm1_C ()] \<Zrres> skip
     ) \<setminus> stm1_MachineInternalEvents
   )
 "
@@ -1052,7 +1112,7 @@ text \<open>We can animate @{term D__mod0} in Isabelle/HOL by the @{term animate
 only works on a customised version of Isabelle, based on Isabelle2021.
 \<close>
 definition "D_mod0_sim = D__mod0 0"
-animate D_mod0_sim
+animate1 D_mod0_sim
  
 subsection \<open> Export code \<close>
 text \<open>We export various processes to Haskell. These processes can be animated with ghci. 
@@ -1080,6 +1140,8 @@ export_code
   State_stm1_s0_R
   STM_stm1
   MemorySTM_opt_stm1
+  rename_MemorySTM_opt_stm1
+  rename_MemorySTM_opt_stm1'
   D__stm1
   rename_D__stm0
   rename_D__stm1

@@ -87,7 +87,7 @@ Sect.~\ref{sec:chem_module}.
 section \<open> General definitions \label{sec:chem_general}\<close>
 
 theory RoboChart_ChemicalDetector_autonomous_general
-  imports "ITree_RoboChart.ITree_RoboChart" "RoboChart_Simulation"
+  imports "ITree_RoboChart.ITree_RoboChart" "ITree_RoboChart.RoboChart_Simulation"
           "Z_Toolkit.Bounded_List"
 begin
 
