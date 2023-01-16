@@ -169,10 +169,13 @@ definition int_int_CalSTM where
 )"
 
 text \<open> @{term "internal_events_CalSTM"} defines a set of internal flow control events. \<close>
-definition internal_events_CalSTM where
-"internal_events_CalSTM = 
-  set (enumchans2 [enter_CalSTM_C, entered_CalSTM_C, exit_CalSTM_C, exited_CalSTM_C] SIDS_CalSTM_list 
+definition internal_events_CalSTM_l where
+"internal_events_CalSTM_l = 
+  (enumchans2 [enter_CalSTM_C, entered_CalSTM_C, exit_CalSTM_C, exited_CalSTM_C] SIDS_CalSTM_list 
   SIDS_CalSTM_list)"
+
+definition internal_events_CalSTM where
+"internal_events_CalSTM = set internal_events_CalSTM_l"
 
 (*
 definition shared_variable_events_CalSTM where
@@ -201,9 +204,13 @@ definition CalSTM_s0_triggers where
 "
 
 text \<open> @{term "CalSTM_l_events"} defines a set of variable channel events for @{text "l"}. \<close>
+definition CalSTM_l_events_l where
+"CalSTM_l_events_l = 
+    (enumchans1 [get_l_CalSTM_C, set_l_CalSTM_C] rc.core_int_list)
+"
+
 definition CalSTM_l_events where
-"CalSTM_l_events = 
-    set (enumchans1 [get_l_CalSTM_C, set_l_CalSTM_C] rc.core_int_list)
+"CalSTM_l_events = set CalSTM_l_events_l
 "
 
 text \<open> @{term "CalSTM_x_events"} defines a set of variable channel events for @{text "x"}. \<close>
@@ -216,9 +223,13 @@ definition CalSTM_x_events where
 "
 
 text \<open> @{term "CalSTM_MachineInternalEvents"} defines a set of @{text "internal_"} channel events. \<close>
+definition CalSTM_MachineInternalEvents_l where
+"CalSTM_MachineInternalEvents_l = 
+  (enumchan1 internal_CalSTM_C TIDS_CalSTM_list)
+"
 definition CalSTM_MachineInternalEvents where
 "CalSTM_MachineInternalEvents = 
-  set (enumchan1 internal_CalSTM_C TIDS_CalSTM_list)
+  set CalSTM_MachineInternalEvents_l
 "
 
 subsubsection \<open> State Machine Memory \<close>
@@ -464,6 +475,27 @@ definition MemorySTM_opt_CalSTM where
   )   
 "
 
+definition MemorySTM_opt_CalSTM_p where
+"MemorySTM_opt_CalSTM_p (idd::integer) = 
+  (
+    (
+      (discard_state (CalSTM_Memory_opt_x 0))
+      \<parallel>\<^bsub> CalSTM_x_events \<^esub>
+      ( 
+        (
+          (par_hidep
+            (par_hidep (discard_state (CalSTM_Memory_opt_l 0)) CalSTM_l_events_l (STM_CalSTM idd))
+            [internal_CalSTM_C TID_CalSTM_t0]
+            (discard_state (CalSTM_MemoryTransitions_opt_0 idd))
+          )
+          \<parallel>\<^bsub> CalSTM_rec_x_internal_set \<^esub> 
+          (discard_state (CalSTM_MemoryTransitions_opt_1 idd))
+        ) \<setminus>\<^sub>p [internal_CalSTM_C TID_CalSTM_t2]
+      )
+    ) \<setminus>\<^sub>p ([get_x_CalSTM_C n. n \<leftarrow> rc.core_int_list])
+  )   
+"
+
 text \<open> This definition actually defines a non-injective mapping as shown below.
 @{text
   "[
@@ -500,6 +532,11 @@ definition rename_MemorySTM_opt_CalSTM where
     ((MemorySTM_opt_CalSTM idd) \<lbrace>(set (rename_CalSTM_events @ rename_CalSTM_events_others))\<rbrace>)
 "
 
+definition rename_MemorySTM_opt_CalSTM_p where
+"rename_MemorySTM_opt_CalSTM_p idd =
+    ((MemorySTM_opt_CalSTM_p idd) \<lbrace>(rename_CalSTM_events @ rename_CalSTM_events_others)\<rbrace>\<^sub>p)
+"
+
 text \<open>The exception operator allows @{term rename_MemorySTM_opt_CalSTM} to be terminated by the
 @{term terminate_CalSTM} event. Furthermore, the @{term internal_CalSTM} channel events will be hidden.
 \<close>
@@ -512,10 +549,24 @@ definition AUX_opt_CalSTM where
   )
 "
 
+definition AUX_opt_CalSTM_p where
+"AUX_opt_CalSTM_p (idd::integer) = 
+  ( 
+    ( 
+      (rename_MemorySTM_opt_CalSTM_p idd) \<lbrakk> set [terminate_CalSTM_C ()] \<Zrres> skip
+    ) \<setminus>\<^sub>p CalSTM_MachineInternalEvents_l
+  )
+"
+
 text \<open>Additionally, the flow channel events are hidden.\<close>
 definition D__CalSTM where
 "D__CalSTM (idd::integer) = 
   (AUX_opt_CalSTM idd) \<setminus> internal_events_CalSTM
+"
+
+definition D__CalSTM_p where
+"D__CalSTM_p (idd::integer) = 
+  (AUX_opt_CalSTM_p idd) \<setminus>\<^sub>p internal_events_CalSTM_l
 "
 
 subsection \<open> State machine @{text MoveSTM} \label{ssec:basic_MoveSTM}\<close>
@@ -603,10 +654,14 @@ definition int_int_MoveSTM where
        (enumchan1 internal_MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3])
 )"
 
-definition internal_events_MoveSTM where
-"internal_events_MoveSTM = 
-  set (enumchans2 [enter_MoveSTM_C, entered_MoveSTM_C, exit_MoveSTM_C, exited_MoveSTM_C] SIDS_MoveSTM_list SIDS_MoveSTM_list)
+definition internal_events_MoveSTM_l where
+"internal_events_MoveSTM_l = 
+  (enumchans2 [enter_MoveSTM_C, entered_MoveSTM_C, exit_MoveSTM_C, exited_MoveSTM_C] 
+              SIDS_MoveSTM_list SIDS_MoveSTM_list)
 "
+
+definition internal_events_MoveSTM where
+"internal_events_MoveSTM = set internal_events_MoveSTM_l"
 
 (*
 definition shared_variable_events_MoveSTM where
@@ -624,9 +679,13 @@ definition MoveSTM_s0_triggers where
 )
 "
 
+definition MoveSTM_l_events_l where
+"MoveSTM_l_events_l = 
+  (enumchans1 [get_l_MoveSTM_C, set_l_MoveSTM_C] rc.core_int_list)
+"
+
 definition MoveSTM_l_events where
-"MoveSTM_l_events = 
-  set (enumchans1 [get_l_MoveSTM_C, set_l_MoveSTM_C] rc.core_int_list)
+"MoveSTM_l_events = set MoveSTM_l_events_l
 "
 
 definition MoveSTM_x_events where
@@ -634,9 +693,11 @@ definition MoveSTM_x_events where
   set (enumchans1 [get_x_MoveSTM_C, set_x_MoveSTM_C] rc.core_int_list)
 "
 
+definition MoveSTM_MachineInternalEvents_l where
+"MoveSTM_MachineInternalEvents_l = (enumchan1 internal_MoveSTM_C TIDS_MoveSTM_list)"
+
 definition MoveSTM_MachineInternalEvents where
-"MoveSTM_MachineInternalEvents = 
-  set (enumchan1 internal_MoveSTM_C TIDS_MoveSTM_list)"
+"MoveSTM_MachineInternalEvents = set MoveSTM_MachineInternalEvents_l"
 
 subsubsection \<open> State Machine Memory \<close>
 text \<open> Memory cell processes \<close>
@@ -855,6 +916,35 @@ definition MemorySTM_opt_MoveSTM where
   )
 "
 
+definition MemorySTM_opt_MoveSTM_p where
+"MemorySTM_opt_MoveSTM_p (idd::integer) = 
+  (
+    (
+      (
+        (
+          (
+            (
+              (discard_state (MoveSTM_Memory_opt_l 0))
+              \<parallel>\<^bsub> MoveSTM_l_events \<^esub>
+              (
+                (
+                  (discard_state (MoveSTM_Memory_opt_x 0))
+                  \<parallel>\<^bsub> MoveSTM_x_events \<^esub>
+                  (STM_MoveSTM idd)
+                ) \<setminus>\<^sub>p ([get_x_MoveSTM_C n. n \<leftarrow> rc.core_int_list])
+              )
+            ) \<setminus>\<^sub>p MoveSTM_l_events_l
+          ) 
+          \<parallel>\<^bsub> MoveSTM_opt_0_internal_set \<^esub>
+          (discard_state (MoveSTM_MemoryTransitions_opt_0 idd))
+        ) \<setminus>\<^sub>p [internal_MoveSTM_C TID_MoveSTM_t0]
+      )
+      \<parallel>\<^bsub> MoveSTM_opt_1_internal_set \<^esub>
+      (discard_state (MoveSTM_MemoryTransitions_opt_1 idd))
+    ) \<setminus>\<^sub>p []
+  )
+"
+
 definition rename_MoveSTM_events where
 "rename_MoveSTM_events = 
   concat ((enumchan1 (forget_first reset__MoveSTM_C reset_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
@@ -891,23 +981,37 @@ definition rename_MemorySTM_opt_MoveSTM where
   ((MemorySTM_opt_MoveSTM idd) \<lbrace>(set (rename_MoveSTM_events @ rename_MoveSTM_events_others))\<rbrace>)
 "
 
-definition rename_MemorySTM_opt_MoveSTM' where
-"rename_MemorySTM_opt_MoveSTM' idd = 
-  renamel (rename_MoveSTM_events @ rename_MoveSTM_events_others) (MemorySTM_opt_MoveSTM idd)
-" 
+definition rename_MemorySTM_opt_MoveSTM_p where
+"rename_MemorySTM_opt_MoveSTM_p idd = 
+  ((MemorySTM_opt_MoveSTM_p idd) \<lbrace>(rename_MoveSTM_events @ rename_MoveSTM_events_others)\<rbrace>\<^sub>p)
+"
 
 definition AUX_opt_MoveSTM where
 "AUX_opt_MoveSTM (idd::integer) = 
   ( 
     ( 
-      (rename_MemorySTM_opt_MoveSTM' idd) \<lbrakk> set [terminate_MoveSTM_C ()] \<Zrres> skip
+      (rename_MemorySTM_opt_MoveSTM idd) \<lbrakk> set [terminate_MoveSTM_C ()] \<Zrres> skip
     ) \<setminus> MoveSTM_MachineInternalEvents
+  )
+"
+
+definition AUX_opt_MoveSTM_p where
+"AUX_opt_MoveSTM_p (idd::integer) = 
+  ( 
+    ( 
+      (rename_MemorySTM_opt_MoveSTM_p idd) \<lbrakk> set [terminate_MoveSTM_C ()] \<Zrres> skip
+    ) \<setminus>\<^sub>p MoveSTM_MachineInternalEvents_l
   )
 "
 
 definition D__MoveSTM where
 "D__MoveSTM (idd::integer) = 
   (AUX_opt_MoveSTM idd) \<setminus> internal_events_MoveSTM
+"
+
+definition D__MoveSTM_p where
+"D__MoveSTM_p (idd::integer) = 
+  (AUX_opt_MoveSTM_p idd) \<setminus>\<^sub>p internal_events_MoveSTM_l
 "
 
 subsection \<open> Controller \label{ssec:basic_Ctrl}\<close>
@@ -932,9 +1036,9 @@ chantype Chan_Ctrl =
   set_EXT_x_Ctrl_CalSTM :: core_int
 (* set_EXT_x of MoveSTM is mapped to this *)
   set_EXT_x_Ctrl_MoveSTM :: core_int
-(* e1 of CalSTM is mapped to it *)
+(* rec of CalSTM is mapped to it *)
   rec_Ctrl :: "InOut \<times> core_int"
-(* e2 of MoveSTM is mapped to it *)
+(* reset of MoveSTM is mapped to it *)
   reset_Ctrl :: "InOut"
 (* e3 of CalSTM is mapped to update_Ctrl.out and e3 of MoveSTM is mapped to update_Ctrl.in *)
   update_Ctrl :: "InOut \<times> core_int"
@@ -975,6 +1079,10 @@ definition rename_Ctrl_CalSTM_events where
 definition rename_D__CalSTM where
 "rename_D__CalSTM idd = ((D__CalSTM idd) \<lbrace>(set rename_Ctrl_CalSTM_events)\<rbrace>)"
 
+definition rename_D__CalSTM_p where
+"rename_D__CalSTM_p idd = ((D__CalSTM_p idd) \<lbrace>(rename_Ctrl_CalSTM_events)\<rbrace>\<^sub>p)"
+
+
 text \<open>For @{term D__MoveSTM}, its events are also renamed to the corresponding events in @{term Chan_Ctrl}. 
 The renaming relation is defined in @{term rename_Ctrl_MoveSTM_events} where the event of 
 @{term update_CalSTM_C} is renamed to that of @{term update_Ctrl_C} with the opposite direction and the same 
@@ -995,19 +1103,27 @@ definition rename_Ctrl_MoveSTM_events where
 definition rename_D__MoveSTM where
 "rename_D__MoveSTM idd = ((D__MoveSTM idd) \<lbrace>(set rename_Ctrl_MoveSTM_events)\<rbrace>)"
 
+definition rename_D__MoveSTM_p where
+"rename_D__MoveSTM_p idd = ((D__MoveSTM_p idd) \<lbrace>rename_Ctrl_MoveSTM_events\<rbrace>\<^sub>p)"
+
 text \<open>The @{term Ctrl_stms_events} below gives a set of synchronisation events between @{text CalSTM} 
 and @{text MoveSTM} which includes termination and @{text e3}.
 \<close>
-definition "Ctrl_stms_events = set (
-  enumchan1 terminate_Ctrl_C [()] @
+definition "Ctrl_stms_events_l = 
   enumchan2 update_Ctrl_C InOut_list rc.core_int_list
+"
+
+definition "Ctrl_stms_events = set (
+  enumchan1 terminate_Ctrl_C [()] @ Ctrl_stms_events_l
 )"
 
 text \<open>The memory update events for @{text CalSTM} and @{text MoveSTM} are defined in 
 @{term Ctrl_mem_events}. \<close>
-definition "Ctrl_mem_events = set (
+definition "Ctrl_mem_events_l = (
   enumchans1 [set_EXT_x_Ctrl_CalSTM_C, set_EXT_x_Ctrl_MoveSTM_C] rc.core_int_list
 )"
+
+definition "Ctrl_mem_events = set Ctrl_mem_events_l"
 
 text \<open>So the controller @{text Ctrl} is the composition of the renamed @{text CalSTM}, the renamed 
 @{text MoveSTM}, and its memory with appropriate event hiding. \<close>
@@ -1019,6 +1135,18 @@ definition D__Ctrl where
       \<setminus> (Ctrl_stms_events - set [terminate_Ctrl_C ()])
     )
     Ctrl_mem_events
+    (discard_state (Memory_Ctrl idd))
+  )  \<lbrakk> set [terminate_Ctrl_C ()] \<Zrres> skip
+"
+
+definition D__Ctrl_p where
+"D__Ctrl_p (idd::integer) = 
+  (par_hidep
+    ( 
+      ((rename_D__CalSTM_p idd) \<parallel>\<^bsub> Ctrl_stms_events \<^esub> (rename_D__MoveSTM_p idd))
+      \<setminus>\<^sub>p Ctrl_stms_events_l
+    )
+    Ctrl_mem_events_l
     (discard_state (Memory_Ctrl idd))
   )  \<lbrakk> set [terminate_Ctrl_C ()] \<Zrres> skip
 "
@@ -1069,17 +1197,26 @@ definition rename_PatrolMod_Ctrl_events where
 definition rename_D__Ctrl where
 "rename_D__Ctrl idd = ((D__Ctrl idd) \<lbrace>(set rename_PatrolMod_Ctrl_events)\<rbrace>)"
 
-definition "PatrolMod_set_x_events = set (
+definition rename_D__Ctrl_p where
+"rename_D__Ctrl_p idd = ((D__Ctrl_p idd) \<lbrace>rename_PatrolMod_Ctrl_events\<rbrace>\<^sub>p)"
+
+definition "PatrolMod_set_x_events_l = (
   enumchan1 set_x_PatrolMod_C  rc.core_int_list
 )"
 
-definition "PatrolMod_get_x_events = set (
+definition "PatrolMod_set_x_events = set PatrolMod_set_x_events_l"
+
+definition "PatrolMod_get_x_events_l = (
   enumchan1 get_x_PatrolMod_C  rc.core_int_list
 )"
 
-definition "PatrolMod_set_EXT_x_events = set (
+definition "PatrolMod_get_x_events = set PatrolMod_get_x_events_l"
+
+definition "PatrolMod_set_EXT_x_events_l = (
   enumchan1 set_EXT_x_PatrolMod_Ctrl_C  rc.core_int_list
 )"
+
+definition "PatrolMod_set_EXT_x_events = set PatrolMod_set_EXT_x_events_l"
 
 definition D__ctr_mem where
 "D__ctr_mem (idd::integer) = (
@@ -1105,6 +1242,23 @@ definition D__PatrolMod where
         )
       )  \<lbrakk> set [terminate_PatrolMod_C ()] \<Zrres> skip
     ) \<setminus> (set [terminate_PatrolMod_C ()])
+  )
+"
+
+definition D__PatrolMod_p where
+"D__PatrolMod_p (idd::integer) = 
+  (
+    (
+      (skip \<parallel>\<^bsub> {} \<^esub> 
+        (
+          (
+            (rename_D__Ctrl_p idd) 
+            \<parallel>\<^bsub> (PatrolMod_set_x_events \<union> PatrolMod_set_EXT_x_events) \<^esub> 
+            (discard_state (Memory_PatrolMod idd))
+          ) \<setminus>\<^sub>p ((PatrolMod_set_x_events_l @ PatrolMod_get_x_events_l) @ PatrolMod_set_EXT_x_events_l)
+        )
+      )  \<lbrakk> set [terminate_PatrolMod_C ()] \<Zrres> skip
+    ) \<setminus>\<^sub>p ([terminate_PatrolMod_C ()])
   )
 "
 
@@ -1141,7 +1295,7 @@ export_code
   STM_MoveSTM
   MemorySTM_opt_MoveSTM
   rename_MemorySTM_opt_MoveSTM
-  rename_MemorySTM_opt_MoveSTM'
+  rename_MemorySTM_opt_MoveSTM_p
   D__MoveSTM
   rename_D__CalSTM
   rename_D__MoveSTM

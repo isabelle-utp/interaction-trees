@@ -14,8 +14,11 @@ definition par_hide where
 "par_hide P s Q = (hide (P \<parallel>\<^bsub> s \<^esub> Q) s)"
 
 text \<open> Events are hidden based on their order in a list. \<close>
-definition prhide where
-"prhide P es = foldl (\<lambda> Q e. hide Q {e}) P es"
+definition hidep (infixl "\<setminus>\<^sub>p" 90) where 
+"hidep P es = foldl (\<lambda> Q e. hide Q {e}) P es"
+
+definition par_hidep where
+"par_hidep P s Q = (hidep (P \<parallel>\<^bsub> set s \<^esub> Q) s)"
 
 text \<open> A process's state must be discarded before being in parallel composition. \<close>
 definition discard_state where
@@ -50,12 +53,15 @@ abbreviation "drop_dup' l \<equiv> drop_dup l {}"
 text \<open> Another form of renaming whose renaming maps are an associative list. Priority, therefore, 
 can be given to the pairs in the beginning of the list when renaming causes nondeterminism. 
 \<close>
-primcorec renamel :: "('e\<^sub>1 \<times> 'e\<^sub>2) list \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
-"renamel \<rho> P = 
+primcorec renamep :: "('e\<^sub>1 \<times> 'e\<^sub>2) list \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
+"renamep \<rho> P = 
   (case P of
     Ret x \<Rightarrow> Ret x |
-    Sil P \<Rightarrow> Sil (renamel \<rho> P) |
-    Vis F \<Rightarrow> Vis (map_pfun (renamel \<rho>) (F \<circ>\<^sub>p graph_pfun ((set (drop_dup' (pdom F \<lhd>\<^sub>r\<^sub>l \<rho>)))\<inverse>))))"
+    Sil P \<Rightarrow> Sil (renamep \<rho> P) |
+    Vis F \<Rightarrow> Vis (map_pfun (renamep \<rho>) (F \<circ>\<^sub>p graph_pfun ((set (drop_dup' (pdom F \<lhd>\<^sub>r\<^sub>l \<rho>)))\<inverse>))))"
+
+abbreviation renamep':: "('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>1 \<times> 'e\<^sub>2) list \<Rightarrow> ('e\<^sub>2, 'a) itree" ("_\<lbrace>_\<rbrace>\<^sub>p" 59) where
+"renamep' P \<rho> \<equiv> renamep \<rho> P"
 
 subsection \<open> RoboChart types \<close>
 type_synonym core_bool = bool

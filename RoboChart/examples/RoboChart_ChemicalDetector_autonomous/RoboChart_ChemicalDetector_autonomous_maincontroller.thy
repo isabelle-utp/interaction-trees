@@ -750,8 +750,14 @@ definition rename_GasAnalysis_events where
   )
 "
 
-term "\<lbrace>resume__GasAnalysis (t, x) \<mapsto> resume_GasAnalysis x | (x, t). x \<in> InOut_set\<rbrace>"
-term "\<lbrace>terminate_GasAnalysis () \<mapsto> terminate_GasAnalysis () | _. True\<rbrace>"
+(* A set of maps: relations *)
+term "\<lbrace>resume__GasAnalysis (t, x) \<mapsto> resume_GasAnalysis x | (t, x). x \<in> InOut_set\<rbrace>"
+term "\<lbrace>terminate_GasAnalysis () \<mapsto> terminate_GasAnalysis () | x. True\<rbrace>"
+(* A set of events. *)
+value "\<lbrace>resume__GasAnalysis (TID_GasAnalysis_t1, din)\<rbrace>"
+term "\<lbrace>resume__GasAnalysis (TID_GasAnalysis_t1, din)\<rbrace>"
+term "\<lbrace>resume__GasAnalysis x \<in> {(TID_GasAnalysis_t1, din), (TID_GasAnalysis_t2, dout)}. snd x = din \<rbrace>"
+value "\<lbrace>resume__GasAnalysis x \<in> {(TID_GasAnalysis_t1, din), (TID_GasAnalysis_t2, dout)}. snd x = din \<rbrace>"
 
 definition rename_GasAnalysis_events_others where
 "rename_GasAnalysis_events_others = 
