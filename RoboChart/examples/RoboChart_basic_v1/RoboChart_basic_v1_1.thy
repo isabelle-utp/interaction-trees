@@ -33,7 +33,7 @@ channel @{verbatim "enter"} should be included, but channel @{verbatim "enterV"}
 This theory, on the contrary, is built from the bottom up because the definition of a top process 
 relies on the definitions of other processes in the top process. 
 \<close>
-theory RoboChart_basic_v1
+theory RoboChart_basic_v1_1
   imports "ITree_RoboChart.ITree_RoboChart" 
     "ITree_Simulation.ITree_Simulation"
     "ITree_RoboChart.RoboChart_Simulation"
@@ -83,7 +83,7 @@ conflict with @{text SIDS} for other state machines. For this reason, we add a s
 \<close>
 
 text \<open> @{term "SIDS_CalSTM"} defines state identifiers for @{text "CalSTM"}, which include 
-the machine itself and the state @{text "s0"}.
+the machine itself and the state @{text "Cal"}.
 Another possibly better way to define such a type for identifiers is through a more generic typedef 
 with two type variables: one to make the type distinct for a particular state machine, and another 
 is a enumerable type (@{class enum}), such as a numeral type (@{typ "2"}), to denote all identifiers 
@@ -93,15 +93,15 @@ details. At this moment, we cannot use it now because we have not instantiated @
 @{term "SIDS_CalSTM_list"} below.
 \<close>
 datatype SIDS_CalSTM = SID_CalSTM
-                   | SID_CalSTM_s0
+                   | SID_CalSTM_Cal
 
 text \<open> @{term "SIDS_CalSTM_list"} defines a list of all possible values in @{term "SIDS_CalSTM"}.\<close>
-definition "SIDS_CalSTM_list = [SID_CalSTM, SID_CalSTM_s0]"
+definition "SIDS_CalSTM_list = [SID_CalSTM, SID_CalSTM_Cal]"
 
 text \<open> @{term "SIDS_CalSTM_set"} defines a set of all possible values in @{term "SIDS_CalSTM"}.\<close>
 definition "SIDS_CalSTM_set = set SIDS_CalSTM_list"
 
-definition "SIDS_CalSTM_without_s0 = (removeAll SID_CalSTM_s0 SIDS_CalSTM_list)"
+definition "SIDS_CalSTM_without_Cal = (removeAll SID_CalSTM_Cal SIDS_CalSTM_list)"
 
 text \<open> @{term "TIDS_CalSTM"} defines transition identifiers for state machine @{text "CalSTM"}.\<close>
 datatype TIDS_CalSTM = NULLTRANSITION_CalSTM
@@ -185,19 +185,19 @@ definition shared_variable_events_CalSTM where
 )"
 *)
 
-definition CS_CalSTM_s0_sync where
-"CS_CalSTM_s0_sync = 
+definition CS_CalSTM_Cal_sync where
+"CS_CalSTM_Cal_sync = 
   set (
       \<comment> \<open> enter and exit from x to y \<close>
-      (enumchans2 [enter_CalSTM_C, entered_CalSTM_C, exit_CalSTM_C, exited_CalSTM_C] [SID_CalSTM_s0] [SID_CalSTM_s0])@
+      (enumchans2 [enter_CalSTM_C, entered_CalSTM_C, exit_CalSTM_C, exited_CalSTM_C] [SID_CalSTM_Cal] [SID_CalSTM_Cal])@
       \<comment> \<open> enter and exit from y to x \<close>
-      (enumchans2 [enter_CalSTM_C, entered_CalSTM_C, exit_CalSTM_C, exited_CalSTM_C] [SID_CalSTM_s0] [SID_CalSTM_s0])
+      (enumchans2 [enter_CalSTM_C, entered_CalSTM_C, exit_CalSTM_C, exited_CalSTM_C] [SID_CalSTM_Cal] [SID_CalSTM_Cal])
 )"
 
-text \<open> @{term "CalSTM_s0_triggers"} defines a set of channel events that act as triggers of transitions
+text \<open> @{term "CalSTM_Cal_triggers"} defines a set of channel events that act as triggers of transitions
 . \<close>
-definition CalSTM_s0_triggers where
-"CalSTM_s0_triggers = 
+definition CalSTM_Cal_triggers where
+"CalSTM_Cal_triggers = 
   set ((enumchan3 cal__CalSTM_C [TID_CalSTM_t1,TID_CalSTM_t2] [din, dout] rc.core_int_list) @
   (enumchan1 internal_CalSTM_C [TID_CalSTM_t2])
 )
@@ -291,10 +291,10 @@ subsubsection \<open> States \<close>
 text \<open> This section defines processes for junctions and states in the state machine. \<close>
 
 text \<open> @{term "I_CalSTM_i0"} is for the initial junction @{verbatim i0} and the only transition from it
-is @{verbatim t0} (to the state @{verbatim s0}). This transition has no trigger (and so an internal 
+is @{verbatim t0} (to the state @{verbatim Cal}). This transition has no trigger (and so an internal 
 trigger channel @{term internal_CalSTM} is used to model it), no guard (and so 
 @{term CalSTM_MemoryTransitions_opt_0} has no guard), has an action @{verbatim "x=0"} (update through 
-a channel @{term set_x_CalSTM} with value @{term 0}. After it, @{text CalSTM} enters @{text s0}. 
+a channel @{term set_x_CalSTM} with value @{term 0}. After it, @{text CalSTM} enters @{text Cal}. 
 We note @{term "I_CalSTM_i0"} is not a loop because it only executes once and then terminates.
 \<close>
 
@@ -302,91 +302,91 @@ definition I_CalSTM_i0 where
 "I_CalSTM_i0 = (\<lambda> (id::integer) . 
   do {outp internal_CalSTM TID_CalSTM_t0 ; 
       outp set_x_CalSTM 0; 
-      outp enter_CalSTM (SID_CalSTM, SID_CalSTM_s0);
-      outp entered_CalSTM (SID_CalSTM, SID_CalSTM_s0)
+      outp enter_CalSTM (SID_CalSTM, SID_CalSTM_Cal);
+      outp entered_CalSTM (SID_CalSTM, SID_CalSTM_Cal)
   })
 "
 
-definition tids_CalSTM_s0 where
-" tids_CalSTM_s0 = 
+definition tids_CalSTM_Cal where
+" tids_CalSTM_Cal = 
     (filter 
         (\<lambda> s. s \<notin> {NULLTRANSITION_CalSTM,TID_CalSTM_t1,TID_CalSTM_t2})
         ITIDS_CalSTM_list)"
 
-text \<open> The definition of the CSP process @{verbatim State_CalSTM_s0} has a mutual recursion. 
-The process calls @{verbatim State_CalSTM_s0_execute} with an extra parameter for the source state of 
-a transition entering this state @{text s0}, in addition to a normal @{verbatim id} parameter.
-The process @{verbatim State_CalSTM_s0_execute} also calls @{verbatim State_CalSTM_s0}. Here, in the 
-definition @{term State_CalSTM_s0} below, we use a 
-loop (a special iteration whose boolean condition is always true) to model @{verbatim State_CalSTM_s0}
- and an embedded iteration to model @{verbatim State_CalSTM_s0_execute}. 
+text \<open> The definition of the CSP process @{verbatim State_CalSTM_Cal} has a mutual recursion. 
+The process calls @{verbatim State_CalSTM_Cal_execute} with an extra parameter for the source state of 
+a transition entering this state @{text Cal}, in addition to a normal @{verbatim id} parameter.
+The process @{verbatim State_CalSTM_Cal_execute} also calls @{verbatim State_CalSTM_Cal}. Here, in the 
+definition @{term State_CalSTM_Cal} below, we use a 
+loop (a special iteration whose boolean condition is always true) to model @{verbatim State_CalSTM_Cal}
+ and an embedded iteration to model @{verbatim State_CalSTM_Cal_execute}. 
 \<close>
-definition State_CalSTM_s0 where 
-"State_CalSTM_s0 = 
+definition State_CalSTM_Cal where 
+"State_CalSTM_Cal = 
   loop (\<lambda> (id::integer).
     do {sd \<leftarrow> inp_in enter_CalSTM (set 
-          [(s, SID_CalSTM_s0) . s \<leftarrow> (removeAll SID_CalSTM_s0 SIDS_CalSTM_list)]) ; 
+          [(s, SID_CalSTM_Cal) . s \<leftarrow> (removeAll SID_CalSTM_Cal SIDS_CalSTM_list)]) ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> @{text State_CalSTM_s0_execute} \<close>
+        \<comment> \<open> @{text State_CalSTM_Cal_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
            \<comment> \<open> P \<close>
            (\<lambda> s.
             do {
-              outp entered_CalSTM (snd (snd s), SID_CalSTM_s0);
+              outp entered_CalSTM (snd (snd s), SID_CalSTM_Cal);
               (do {skip ; stop} \<triangle>
                 (
                 \<comment> \<open> @{text T_CalSTM_t1} \<close>
                 do {t \<leftarrow> inp_in cal__CalSTM (set [(TID_CalSTM_t1, din, l) . l \<leftarrow> rc.core_int_list]) ;
                       outp set_l_CalSTM (snd (snd t)) ; 
-                      outp exit_CalSTM (SID_CalSTM_s0, SID_CalSTM_s0);
-                      outp exited_CalSTM (SID_CalSTM_s0, SID_CalSTM_s0);
+                      outp exit_CalSTM (SID_CalSTM_Cal, SID_CalSTM_Cal);
+                      outp exited_CalSTM (SID_CalSTM_Cal, SID_CalSTM_Cal);
                       l \<leftarrow> inp_in get_l_CalSTM rc.core_int_set ; 
                         outp set_x_CalSTM (l);
-                        outp enter_CalSTM (SID_CalSTM_s0, SID_CalSTM_s0);
-                        Ret(True, fst (snd s), SID_CalSTM_s0)
+                        outp enter_CalSTM (SID_CalSTM_Cal, SID_CalSTM_Cal);
+                        Ret(True, fst (snd s), SID_CalSTM_Cal)
                     } \<box>
                 \<comment> \<open> @{text T_CalSTM_t2} \<close>
                 do {outp internal_CalSTM TID_CalSTM_t2;
-                    outp exit_CalSTM (SID_CalSTM_s0, SID_CalSTM_s0);
-                    outp exited_CalSTM (SID_CalSTM_s0, SID_CalSTM_s0);
+                    outp exit_CalSTM (SID_CalSTM_Cal, SID_CalSTM_Cal);
+                    outp exited_CalSTM (SID_CalSTM_Cal, SID_CalSTM_Cal);
                       x \<leftarrow> inp_in get_x_CalSTM rc.core_int_set ; 
                         outp update_CalSTM (dout, x);
-                        outp enter_CalSTM (SID_CalSTM_s0, SID_CalSTM_s0);
-                        Ret(True, fst (snd s), SID_CalSTM_s0)
+                        outp enter_CalSTM (SID_CalSTM_Cal, SID_CalSTM_Cal);
+                        Ret(True, fst (snd s), SID_CalSTM_Cal)
                     } \<box>
                 \<comment> \<open> @{text internal_CalSTM} \<close>
                 do {
                     x \<leftarrow> inp_in internal_CalSTM 
-                      (set tids_CalSTM_s0);
+                      (set tids_CalSTM_Cal);
                     y \<leftarrow> inp_in exit_CalSTM (set 
-                      [(s, SID_CalSTM_s0) . s \<leftarrow> (removeAll SID_CalSTM_s0 SIDS_CalSTM_list)]);
-                      outp exited_CalSTM (fst y, SID_CalSTM_s0);
-                      Ret (False, fst (snd s), SID_CalSTM_s0)
+                      [(s, SID_CalSTM_Cal) . s \<leftarrow> (removeAll SID_CalSTM_Cal SIDS_CalSTM_list)]);
+                      outp exited_CalSTM (fst y, SID_CalSTM_Cal);
+                      Ret (False, fst (snd s), SID_CalSTM_Cal)
                     } \<box>
                 \<comment> \<open> @{text cal__CalSTM} \<close>
                 do {
                     x \<leftarrow> inp_in cal__CalSTM (set [(s, d, l) . 
-                        s \<leftarrow> tids_CalSTM_s0, 
+                        s \<leftarrow> tids_CalSTM_Cal, 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_CalSTM (set 
-                        [(s, SID_CalSTM_s0) . s \<leftarrow> (removeAll SID_CalSTM_s0 SIDS_CalSTM_list)]);
-                      outp exited_CalSTM (fst y, SID_CalSTM_s0);
-                      Ret (False, fst (snd s), SID_CalSTM_s0)
+                        [(s, SID_CalSTM_Cal) . s \<leftarrow> (removeAll SID_CalSTM_Cal SIDS_CalSTM_list)]);
+                      outp exited_CalSTM (fst y, SID_CalSTM_Cal);
+                      Ret (False, fst (snd s), SID_CalSTM_Cal)
                     } \<box>
                 \<comment> \<open> @{text update__CalSTM} \<close>
                 do {
                     x \<leftarrow> inp_in update__CalSTM (set [(s, d, l) . 
-                        s \<leftarrow> tids_CalSTM_s0, 
+                        s \<leftarrow> tids_CalSTM_Cal, 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_CalSTM (set 
-                        [(s, SID_CalSTM_s0) . s \<leftarrow> (removeAll SID_CalSTM_s0 SIDS_CalSTM_list)]);
-                      outp exited_CalSTM (fst y, SID_CalSTM_s0);
-                      Ret (False, fst (snd s), SID_CalSTM_s0)
+                        [(s, SID_CalSTM_Cal) . s \<leftarrow> (removeAll SID_CalSTM_Cal SIDS_CalSTM_list)]);
+                      outp exited_CalSTM (fst y, SID_CalSTM_Cal);
+                      Ret (False, fst (snd s), SID_CalSTM_Cal)
                     }
                 )
               )
@@ -401,46 +401,46 @@ definition State_CalSTM_s0 where
 
 text \<open>In the definition above, we assemble the return value of the embedded iteration as a triple 
 @{text ret}, whose first element is a boolean value denoting the condition of this iteration, whose 
-second element is @{text id} from the parameter of @{term State_CalSTM_s0}, and whose third element is 
-the source state of a transition entering @{text s0}. So in the body of the loop, we return a triple 
+second element is @{text id} from the parameter of @{term State_CalSTM_Cal}, and whose third element is 
+the source state of a transition entering @{text Cal}. So in the body of the loop, we return a triple 
 and pass it to the embedded iteration. Inside the iteration, if a process (such as the one for 
 @{text T_CalSTM_t1}) continues the iteration (the definition of @{verbatim T_CalSTM_t1} calls 
-@{verbatim State_CalSTM_s0_execute}), it just returns with a triple whose first element is 
+@{verbatim State_CalSTM_Cal_execute}), it just returns with a triple whose first element is 
 true. Otherwise, the first element is false (see the process for the trigger event @{text cal__CalSTM}).
 This corresponds to the termination of the iteration. In the body of the loop, then only @{text id} 
 is returned to the loop. 
 \<close>
 
-text \<open>In the definition of @{term State_CalSTM_s0_R} below, its parameter is named @{text idd}, 
+text \<open>In the definition of @{term State_CalSTM_Cal_R} below, its parameter is named @{text idd}, 
 instead of @{text id}, due to the fact that @{term "id"} is a predefined identity function in 
 Isabelle/HOL. 
-We also note that @{term State_CalSTM_s0} is not directly in parallel with @{term skip}. 
+We also note that @{term State_CalSTM_Cal} is not directly in parallel with @{term skip}. 
 Instead, its return value is discarded by @{term discard_state} (simply by being sequentially 
 composed with @{term skip}, and so the type of the return value matches with the type @{type unit} 
 of the return value in @{term skip}. This is necessary for the parallel composition.
 \<close>
-definition State_CalSTM_s0_R where
-"State_CalSTM_s0_R (idd::integer) = 
-   (discard_state (State_CalSTM_s0 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
-    \<parallel>\<^bsub> (int_int_CalSTM - CalSTM_s0_triggers) \<^esub> 
+definition State_CalSTM_Cal_R where
+"State_CalSTM_Cal_R (idd::integer) = 
+   (discard_state (State_CalSTM_Cal idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_CalSTM - CalSTM_Cal_triggers) \<^esub> 
    skip
 "
 
-text \<open> The @{term flow_event_CalSTM_not_s0} defined below gives a set of flow events that represents 
-entering (or exiting from) @{text s0} from the all other states. 
+text \<open> The @{term flow_event_CalSTM_not_Cal} defined below gives a set of flow events that represents 
+entering (or exiting from) @{text Cal} from the all other states. 
 \<close>
-definition flow_event_CalSTM_not_s0 where 
-"flow_event_CalSTM_not_s0 = set (
+definition flow_event_CalSTM_not_Cal where 
+"flow_event_CalSTM_not_Cal = set (
   enumchans2 [enter_CalSTM_C, entered_CalSTM_C,exit_CalSTM_C,exited_CalSTM_C] 
-             SIDS_CalSTM_without_s0 [SID_CalSTM_s0]
+             SIDS_CalSTM_without_Cal [SID_CalSTM_Cal]
 )"
 
 text \<open> @{term STM_CalSTM} is the composition of the processes for the initial junction and states. \<close>
 definition STM_CalSTM where
 "STM_CalSTM (idd::integer) = 
    (I_CalSTM_i0(idd))
-    \<parallel>\<^bsub> flow_event_CalSTM_not_s0 \<^esub> 
-   State_CalSTM_s0_R(idd)
+    \<parallel>\<^bsub> flow_event_CalSTM_not_Cal \<^esub> 
+   State_CalSTM_Cal_R(idd)
 "
 
 subsubsection \<open> State machine \<close>
@@ -573,11 +573,11 @@ subsection \<open> State machine @{text MoveSTM} \label{ssec:basic_MoveSTM}\<clo
 
 definition "const_PatrolMod_ctrl0_MoveSTM_MAX \<equiv> 1"
 
-datatype SIDS_MoveSTM = SID_MoveSTM | SID_MoveSTM_s0
+datatype SIDS_MoveSTM = SID_MoveSTM | SID_MoveSTM_Move
 
-definition "SIDS_MoveSTM_list = [SID_MoveSTM, SID_MoveSTM_s0]"
+definition "SIDS_MoveSTM_list = [SID_MoveSTM, SID_MoveSTM_Move]"
 definition "SIDS_MoveSTM_set = set SIDS_MoveSTM_list"
-definition "SIDS_MoveSTM_without_s0 = (removeAll SID_MoveSTM_s0 SIDS_MoveSTM_list)"
+definition "SIDS_MoveSTM_without_Move = (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)"
 
 datatype TIDS_MoveSTM = NULLTRANSITION_MoveSTM
 	              | TID_MoveSTM_t0
@@ -645,13 +645,19 @@ chantype Chan_MoveSTM =
   reset_MoveSTM :: "InOut"
   update__MoveSTM :: "TIDS_MoveSTM \<times> InOut \<times> core_int"
   update_MoveSTM :: "InOut \<times> core_int"
+  left__MoveSTM :: "TIDS_MoveSTM \<times> InOut"
+  left_MoveSTM :: "InOut"
+  right__MoveSTM :: "TIDS_MoveSTM \<times> InOut"
+  right_MoveSTM :: "InOut"
 
 subsubsection \<open> Sets of events \<close>
 definition int_int_MoveSTM where
 "int_int_MoveSTM = 
   set ((enumchan2 reset__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout]) @
        (enumchan3 update__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout] rc.core_int_list) @
-       (enumchan1 internal_MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3])
+       (enumchan1 internal_MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3]) @
+       (enumchan2 left__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout]) @
+       (enumchan2 right__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout])
 )"
 
 definition internal_events_MoveSTM_l where
@@ -671,8 +677,8 @@ definition shared_variable_events_MoveSTM where
 )"
 *)
 
-definition MoveSTM_s0_triggers where
-"MoveSTM_s0_triggers = 
+definition MoveSTM_Move_triggers where
+"MoveSTM_Move_triggers = 
   set ((enumchan2 reset__MoveSTM_C [TID_MoveSTM_t2] [din, dout]) @
        (enumchan3 update__MoveSTM_C [TID_MoveSTM_t1] [din, dout] rc.core_int_list)@
        (enumchan3 update__MoveSTM_C [TID_MoveSTM_t3] [din, dout] rc.core_int_list)
@@ -755,92 +761,112 @@ subsubsection \<open> States \<close>
 definition I_MoveSTM_i0 where
 "I_MoveSTM_i0 = (\<lambda> (id::integer) . 
   do {outp internal_MoveSTM TID_MoveSTM_t0 ; 
-      outp enter_MoveSTM (SID_MoveSTM, SID_MoveSTM_s0);
-      outp entered_MoveSTM (SID_MoveSTM, SID_MoveSTM_s0)
+      outp enter_MoveSTM (SID_MoveSTM, SID_MoveSTM_Move);
+      outp entered_MoveSTM (SID_MoveSTM, SID_MoveSTM_Move)
   })
 "
 
 
-definition tids_MoveSTM_s0 where
-" tids_MoveSTM_s0 = 
+definition tids_MoveSTM_Move where
+" tids_MoveSTM_Move = 
     (filter 
         (\<lambda> s. s \<notin> {NULLTRANSITION_MoveSTM,TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3}) 
         ITIDS_MoveSTM_list)"
 
 (* We need an interrupt operator for during actions *) 
 (* ::"integer \<Rightarrow> SIDS_CalSTM \<Rightarrow> (Chan_CalSTM, SIDS_CalSTM) itree" *)
-definition State_MoveSTM_s0 where 
-"State_MoveSTM_s0 = 
+definition State_MoveSTM_Move where 
+"State_MoveSTM_Move = 
   loop (\<lambda> (id::integer).
     do {sd \<leftarrow> inp_in enter_MoveSTM (set 
-          [(s, SID_MoveSTM_s0) . s \<leftarrow> (removeAll SID_MoveSTM_s0 SIDS_MoveSTM_list)]) ; 
+          [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]) ; 
         \<comment> \<open> State passed to next loop, including a condition initially True. \<close>
         ret \<leftarrow> Ret (True, id, fst sd) ; 
-        \<comment> \<open> @{text State_MoveSTM_s0_execute} \<close>
+        \<comment> \<open> @{text State_MoveSTM_Move_execute} \<close>
         (iterate 
            \<comment> \<open> condition \<close>
            (\<lambda> s. fst s) 
            \<comment> \<open> P \<close>
            (\<lambda> s.
             do {
-              outp entered_MoveSTM (snd (snd s), SID_MoveSTM_s0);
+              outp entered_MoveSTM (snd (snd s), SID_MoveSTM_Move);
               (do {skip ; stop} \<triangle>
                 (
                 \<comment> \<open> @{text T_MoveSTM_t1} \<close>
                 do {t \<leftarrow> inp_in update__MoveSTM (set [(TID_MoveSTM_t1, din, l) . l \<leftarrow> rc.core_int_list]) ;
                       outp set_l_MoveSTM (snd (snd t)) ; 
-                      outp exit_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
-                      outp exited_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
+                      outp exit_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                      outp exited_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                      outp right_MoveSTM (dout);
                       l \<leftarrow> inp_in get_l_MoveSTM rc.core_int_set ; 
                         \<comment> \<open> @{text \<open>outp set_x_MoveSTM (x+1);\<close>} \<close>
                         outp set_x_MoveSTM (rc.Plus l 1 rc.core_int_set);
-                        outp enter_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
-                        Ret(True, fst (snd s), SID_MoveSTM_s0)
+                        outp enter_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                        Ret(True, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
                 \<comment> \<open> @{text T_MoveSTM_t2} \<close>
                 do {outp reset__MoveSTM (TID_MoveSTM_t2, din);
-                    outp exit_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
-                    outp exited_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
+                    outp exit_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                    outp exited_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
                     outp set_x_MoveSTM 0;
-                    outp enter_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
-                    Ret(True, fst (snd s), SID_MoveSTM_s0)
+                    outp enter_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                    Ret(True, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
                 \<comment> \<open> @{text T_MoveSTM_t3} \<close>
                 do {t \<leftarrow> inp_in update__MoveSTM (set [(TID_MoveSTM_t3, din, l) . l \<leftarrow> rc.core_int_list]) ;
                       outp set_l_MoveSTM (snd (snd t)) ; 
-                      outp exit_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
-                      outp exited_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
+                      outp exit_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                      outp exited_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                      outp left_MoveSTM (dout);
                       l \<leftarrow> inp_in get_l_MoveSTM rc.core_int_set ; 
                         \<comment> \<open> @{text \<open>outp set_x_MoveSTM (l-1);\<close>} \<close>
                         outp set_x_MoveSTM (rc.Minus l 1 rc.core_int_set);
-                        outp enter_MoveSTM (SID_MoveSTM_s0, SID_MoveSTM_s0);
-                        Ret(True, fst (snd s), SID_MoveSTM_s0)
+                        outp enter_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
+                        Ret(True, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in internal_MoveSTM(set tids_MoveSTM_s0);
+                    x \<leftarrow> inp_in internal_MoveSTM(set tids_MoveSTM_Move);
                     y \<leftarrow> inp_in exit_MoveSTM (set 
-                      [(s, SID_MoveSTM_s0) . s \<leftarrow> (removeAll SID_MoveSTM_s0 SIDS_MoveSTM_list)]);
-                      outp exited_MoveSTM (fst y, SID_MoveSTM_s0);
-                      Ret (False, fst (snd s), SID_MoveSTM_s0)
+                      [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]);
+                      outp exited_MoveSTM (fst y, SID_MoveSTM_Move);
+                      Ret (False, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
                 do {
                     x \<leftarrow> inp_in reset__MoveSTM (set [(s, d) . 
-                        s \<leftarrow> tids_MoveSTM_s0, 
+                        s \<leftarrow> tids_MoveSTM_Move, 
                         d \<leftarrow> InOut_list]) ;
                     y \<leftarrow> inp_in exit_MoveSTM (set 
-                        [(s, SID_MoveSTM_s0) . s \<leftarrow> (removeAll SID_MoveSTM_s0 SIDS_MoveSTM_list)]);
-                      outp exited_MoveSTM (fst y, SID_MoveSTM_s0);
-                      Ret (False, fst (snd s), SID_MoveSTM_s0)
+                        [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]);
+                      outp exited_MoveSTM (fst y, SID_MoveSTM_Move);
+                      Ret (False, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
                 do {
                     x \<leftarrow> inp_in update__MoveSTM (set [(s, d, l) . 
-                        s \<leftarrow> tids_MoveSTM_s0, 
+                        s \<leftarrow> tids_MoveSTM_Move, 
                         d \<leftarrow> InOut_list,
                         l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_MoveSTM (set 
-                        [(s, SID_MoveSTM_s0) . s \<leftarrow> (removeAll SID_MoveSTM_s0 SIDS_MoveSTM_list)]);
-                      outp exited_MoveSTM (fst y, SID_MoveSTM_s0);
-                      Ret (False, fst (snd s), SID_MoveSTM_s0)
+                        [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]);
+                      outp exited_MoveSTM (fst y, SID_MoveSTM_Move);
+                      Ret (False, fst (snd s), SID_MoveSTM_Move)
+                    } \<box>
+                do {
+                    x \<leftarrow> inp_in left__MoveSTM (set [(s, d) . 
+                        s \<leftarrow> tids_MoveSTM_Move, 
+                        d \<leftarrow> InOut_list]) ;
+                    y \<leftarrow> inp_in exit_MoveSTM (set 
+                        [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]);
+                      outp exited_MoveSTM (fst y, SID_MoveSTM_Move);
+                      Ret (False, fst (snd s), SID_MoveSTM_Move)
+                    } \<box>
+                do {
+                    x \<leftarrow> inp_in right__MoveSTM (set [(s, d) . 
+                        s \<leftarrow> tids_MoveSTM_Move, 
+                        d \<leftarrow> InOut_list]) ;
+                    y \<leftarrow> inp_in exit_MoveSTM (set 
+                        [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]);
+                      outp exited_MoveSTM (fst y, SID_MoveSTM_Move);
+                      Ret (False, fst (snd s), SID_MoveSTM_Move)
                     }
                 )
               )
@@ -854,24 +880,24 @@ definition State_MoveSTM_s0 where
 "
 
 
-definition State_MoveSTM_s0_R where
-"State_MoveSTM_s0_R (idd::integer) = 
-   (discard_state (State_MoveSTM_s0 idd)) \<comment> \<open> discard state to match with skip on the right\<close>
-    \<parallel>\<^bsub> (int_int_MoveSTM - MoveSTM_s0_triggers) \<^esub> 
+definition State_MoveSTM_Move_R where
+"State_MoveSTM_Move_R (idd::integer) = 
+   (discard_state (State_MoveSTM_Move idd)) \<comment> \<open> discard state to match with skip on the right\<close>
+    \<parallel>\<^bsub> (int_int_MoveSTM - MoveSTM_Move_triggers) \<^esub> 
    skip
 "
 
-definition flow_event_MoveSTM_not_s0 where 
-"flow_event_MoveSTM_not_s0 = set (
+definition flow_event_MoveSTM_not_Move where 
+"flow_event_MoveSTM_not_Move = set (
   enumchans2 [enter_MoveSTM_C, entered_MoveSTM_C,exit_MoveSTM_C,exited_MoveSTM_C] 
-             SIDS_MoveSTM_without_s0 [SID_MoveSTM_s0]
+             SIDS_MoveSTM_without_Move [SID_MoveSTM_Move]
 )"
 
 definition STM_MoveSTM where
 "STM_MoveSTM (idd::integer) = 
    (I_MoveSTM_i0(idd))
-    \<parallel>\<^bsub> flow_event_MoveSTM_not_s0 \<^esub> 
-   State_MoveSTM_s0_R(idd)
+    \<parallel>\<^bsub> flow_event_MoveSTM_not_Move \<^esub> 
+   State_MoveSTM_Move_R(idd)
 "
 
 definition MoveSTM_opt_0_internal_set where
@@ -946,9 +972,12 @@ definition MemorySTM_opt_MoveSTM_p where
 "
 
 definition rename_MoveSTM_events where
-"rename_MoveSTM_events = 
-  concat ((enumchan1 (forget_first reset__MoveSTM_C reset_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
-  (enumchan2 (forget_first2 update__MoveSTM_C update_MoveSTM_C TIDS_MoveSTM_list) InOut_list rc.core_int_list))
+"rename_MoveSTM_events = concat (
+  (enumchan1 (forget_first reset__MoveSTM_C reset_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
+  (enumchan1 (forget_first left__MoveSTM_C left_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
+  (enumchan1 (forget_first right__MoveSTM_C right_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
+  (enumchan2 (forget_first2 update__MoveSTM_C update_MoveSTM_C TIDS_MoveSTM_list) InOut_list rc.core_int_list)
+)
 "
 
 value "rename_MoveSTM_events"
@@ -958,6 +987,8 @@ definition rename_MoveSTM_events_others where
   (enumchanp1 terminate_MoveSTM_C [()]) @
   (enumchansp1 [get_x_MoveSTM_C, set_x_MoveSTM_C, set_EXT_x_MoveSTM_C] rc.core_int_list) @
   (enumchansp1 [reset_MoveSTM_C] InOut_list) @
+  (enumchansp1 [left_MoveSTM_C] InOut_list) @
+  (enumchansp1 [right_MoveSTM_C] InOut_list) @
   (enumchansp2 [update_MoveSTM_C] InOut_list rc.core_int_list) @
   (enumchansp2 [enter_MoveSTM_C, entered_MoveSTM_C, exit_MoveSTM_C, exited_MoveSTM_C] SIDS_MoveSTM_list SIDS_MoveSTM_list)
 "
@@ -968,7 +999,7 @@ value "\<lbrace>update__MoveSTM (t, d, x) \<mapsto> update_MoveSTM (d, x) | (t, 
 
 (*
   How to rename this process to avoid deadlock (resolve nondeterminism in some ways) between two transitions
-from s0 with overlapped guards and the same trigger?
+from Move with overlapped guards and the same trigger?
 Brain storms:
 S1. Preprocess renaming map (which is a list of pairs in this example) to drop the later pairs whose 
 range are the same as one of pair in the early (top) of the list.
@@ -1040,6 +1071,8 @@ chantype Chan_Ctrl =
   cal_Ctrl :: "InOut \<times> core_int"
 (* reset of MoveSTM is mapped to it *)
   reset_Ctrl :: "InOut"
+  left_Ctrl :: "InOut"
+  right_Ctrl :: "InOut"
 (* update of CalSTM is mapped to update_Ctrl.out and update of MoveSTM is mapped to update_Ctrl.in *)
   update_Ctrl :: "InOut \<times> core_int"
 
@@ -1095,6 +1128,8 @@ definition rename_Ctrl_MoveSTM_events where
   (enumchansp2_1 [(set_x_MoveSTM_C, set_x_Ctrl_C), (get_x_MoveSTM_C, get_x_Ctrl_C), 
       (set_EXT_x_MoveSTM_C, set_EXT_x_Ctrl_MoveSTM_C)] rc.core_int_list) @
   (enumchansp2_1 [(reset_MoveSTM_C, reset_Ctrl_C)] InOut_list) @
+  (enumchansp2_1 [(left_MoveSTM_C, left_Ctrl_C)] InOut_list) @
+  (enumchansp2_1 [(right_MoveSTM_C, right_Ctrl_C)] InOut_list) @
 \<comment> \<open>It is important to invert directions in one side: either CalSTM or MoveSTM \<close>
   (enumchansp2_1 [((curry update_MoveSTM_C) din, (curry update_Ctrl_C) dout), 
       ((curry update_MoveSTM_C) dout, (curry update_Ctrl_C) din)] rc.core_int_list)
@@ -1168,6 +1203,8 @@ chantype Chan_PatrolMod =
   cal_PatrolMod :: "InOut \<times> core_int"
 (* e2 of MoveSTM is mapped to it *)
   reset_PatrolMod :: "InOut"
+  left_PatrolMod :: "InOut"
+  right_PatrolMod :: "InOut"
 
 subsubsection \<open> Memory \<close>
 text \<open>The memory of @{text PatrolMod} accepts an update to @{text x} and then propagates this update to 
@@ -1191,6 +1228,8 @@ definition rename_PatrolMod_Ctrl_events where
   (enumchansp2_1 [(set_x_Ctrl_C, set_x_PatrolMod_C), (get_x_Ctrl_C, get_x_PatrolMod_C), 
       (set_EXT_x_Ctrl_C, set_EXT_x_PatrolMod_Ctrl_C)] rc.core_int_list) @
   (enumchanp2_1 (reset_Ctrl_C, reset_PatrolMod_C) InOut_list) @
+  (enumchanp2_1 (left_Ctrl_C, left_PatrolMod_C) InOut_list) @
+  (enumchanp2_1 (right_Ctrl_C, right_PatrolMod_C) InOut_list) @
   (enumchanp2_2 (cal_Ctrl_C, cal_PatrolMod_C) InOut_list rc.core_int_list)
 "
 
@@ -1255,21 +1294,40 @@ definition D__PatrolMod_p where
             (rename_D__Ctrl_p idd) 
             \<parallel>\<^bsub> (PatrolMod_set_x_events \<union> PatrolMod_set_EXT_x_events) \<^esub> 
             (discard_state (Memory_PatrolMod idd))
-          ) \<setminus>\<^sub>p ((PatrolMod_set_x_events_l @ PatrolMod_get_x_events_l) @ PatrolMod_set_EXT_x_events_l)
+          ) \<setminus>\<^sub>p []
         )
       )  \<lbrakk> set [terminate_PatrolMod_C ()] \<Zrres> skip
     ) \<setminus>\<^sub>p ([terminate_PatrolMod_C ()])
   )
 "
 
+(*
+definition D__PatrolMod_p where
+"D__PatrolMod_p (idd::integer) = 
+  (
+    (
+      (skip \<parallel>\<^bsub> {} \<^esub> 
+        (
+          (
+            (rename_D__Ctrl_p idd) 
+            \<parallel>\<^bsub> (PatrolMod_set_x_events \<union> PatrolMod_set_EXT_x_events) \<^esub> 
+            (discard_state (Memory_PatrolMod idd))
+          ) \<setminus>\<^sub>p ((PatrolMod_set_x_events_l @ PatrolMod_get_x_events_l) @ PatrolMod_set_EXT_x_events_l)
+        )
+      )  \<lbrakk> set [terminate_PatrolMod_C ()] \<Zrres> skip
+    ) \<setminus>\<^sub>p ([terminate_PatrolMod_C ()])
+  )
+"
+*)
+
 text \<open>We can animate @{term D__PatrolMod} in Isabelle/HOL by the @{term animate} command. This command 
 only works on a customised version of Isabelle, based on Isabelle2021.
 \<close>
 definition "D_PatrolMod_sim = D__PatrolMod 0"
-animate1 D_PatrolMod_sim
+(* animate1 D_PatrolMod_sim *)
 
 definition "D_PatrolMod_p_sim = D__PatrolMod_p 0"
-(*animate1 D_PatrolMod_p_sim*)
+animate1 D_PatrolMod_p_sim
 
 subsection \<open> Export code \<close>
 text \<open>We export various processes to Haskell. These processes can be animated with ghci. 
@@ -1284,8 +1342,8 @@ export_code
   CalSTM_MemoryTransitions_opt_0
   CalSTM_MemoryTransitions_opt_1
   I_CalSTM_i0
-  State_CalSTM_s0
-  State_CalSTM_s0_R
+  State_CalSTM_Cal
+  State_CalSTM_Cal_R
   STM_CalSTM
   MemorySTM_opt_CalSTM 
   rename_MemorySTM_opt_CalSTM
@@ -1293,8 +1351,8 @@ export_code
   MoveSTM_Memory_opt_x
   MoveSTM_MemoryTransitions_opt_0
   I_MoveSTM_i0
-  State_MoveSTM_s0
-  State_MoveSTM_s0_R
+  State_MoveSTM_Move
+  State_MoveSTM_Move_R
   STM_MoveSTM
   MemorySTM_opt_MoveSTM
   rename_MemorySTM_opt_MoveSTM
