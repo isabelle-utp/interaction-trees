@@ -97,6 +97,17 @@ lemma thl_for_inv [hoare_safe]:
   unfolding for_inv_def
   by (rule thl_conseq[OF thl_for[of xs R S, OF assms(1)]], simp_all add: assms)
 
+lemma thl_for_to_inv [hoare_safe]:
+  assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> H[@(R i)] S i [@(R (i + 1))]"
+   "`P \<longrightarrow> @(R m)`" "`@(R (n+1 - m+m)) \<longrightarrow> Q`"
+  shows "H[P] for i := m to n inv @(R i) do S i od [Q]"
+  unfolding for_to_inv_def fst_conv snd_conv
+  using assms
+  apply (rule_tac thl_for_inv, simp_all only: length_upt)
+  apply (metis ab_semigroup_add_class.add_ac(1) add.commute assms(1) le_add2 less_Suc_eq_le less_diff_conv nth_upt plus_1_eq_Suc)
+  apply (simp add: assms(2))
+  done 
+
 lemma thl_while [hoare_safe]:
   fixes V :: "'s \<Rightarrow> 'a::wellorder"
   assumes "\<And> z. H[P \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [P \<and> V < \<guillemotleft>z\<guillemotright>]"
