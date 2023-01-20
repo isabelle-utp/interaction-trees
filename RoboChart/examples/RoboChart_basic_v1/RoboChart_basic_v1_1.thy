@@ -1,3 +1,8 @@
+(* History of changes:
+v1.1: add two left and right events to indicate required actions for RP with current value of x
+v1: add another one transition to MoveSTM to have a nondeterministic choice between the triggers 
+  (update) of t1 and t3
+*)
 section \<open> Simulation of a very basic RoboChart model \<close>
 text \<open> This theory aims for simulation of a trivial RoboChart model (see 
 Figure~\ref{fig:robochart_basic}) based on its CSP semantics. 
@@ -52,7 +57,7 @@ text \<open> The interpretation of the locale @{text robochart_confs} below inst
 and @{term "max_real"}, to -1, 1, 1, -1, and 1 separately. In the CSP semantics, these values are 
 set in the @{verbatim "instantiation.csp"} file.
 \<close>
-interpretation rc: robochart_confs "-2" "2" "1" "-1" "1".
+interpretation rc: robochart_confs "-3" "3" "1" "-1" "1".
 
 (* We can animate this theory with [-50, 50]. 
 For the input E2, the animation is very smooth, and we can see the next events available to execute 
@@ -571,7 +576,7 @@ definition D__CalSTM_p where
 
 subsection \<open> State machine @{text MoveSTM} \label{ssec:basic_MoveSTM}\<close>
 
-definition "const_PatrolMod_ctrl0_MoveSTM_MAX \<equiv> 1"
+definition "const_PatrolMod_ctrl0_MoveSTM_MAX \<equiv> 2"
 
 datatype SIDS_MoveSTM = SID_MoveSTM | SID_MoveSTM_Move
 
@@ -645,10 +650,10 @@ chantype Chan_MoveSTM =
   reset_MoveSTM :: "InOut"
   update__MoveSTM :: "TIDS_MoveSTM \<times> InOut \<times> core_int"
   update_MoveSTM :: "InOut \<times> core_int"
-  left__MoveSTM :: "TIDS_MoveSTM \<times> InOut"
-  left_MoveSTM :: "InOut"
-  right__MoveSTM :: "TIDS_MoveSTM \<times> InOut"
-  right_MoveSTM :: "InOut"
+  left__MoveSTM :: "TIDS_MoveSTM \<times> InOut \<times> core_int"
+  left_MoveSTM :: "InOut \<times> core_int"
+  right__MoveSTM :: "TIDS_MoveSTM \<times> InOut \<times> core_int"
+  right_MoveSTM :: "InOut \<times> core_int"
 
 subsubsection \<open> Sets of events \<close>
 definition int_int_MoveSTM where
@@ -656,8 +661,8 @@ definition int_int_MoveSTM where
   set ((enumchan2 reset__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout]) @
        (enumchan3 update__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout] rc.core_int_list) @
        (enumchan1 internal_MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3]) @
-       (enumchan2 left__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout]) @
-       (enumchan2 right__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout])
+       (enumchan3 left__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout] rc.core_int_list) @
+       (enumchan3 right__MoveSTM_C [TID_MoveSTM_t1,TID_MoveSTM_t2,TID_MoveSTM_t3] [din, dout] rc.core_int_list)
 )"
 
 definition internal_events_MoveSTM_l where
@@ -746,10 +751,10 @@ definition MoveSTM_MemoryTransitions_opt_1 where
 "MoveSTM_MemoryTransitions_opt_1 = 
   loop (\<lambda> id::integer. 
     do {
-      (do {inp_in update__MoveSTM (set [(TID_MoveSTM_t1, din, l). l \<leftarrow> rc.core_int_list, l \<le> const_PatrolMod_ctrl0_MoveSTM_MAX]) ; 
+      (do {inp_in update__MoveSTM (set [(TID_MoveSTM_t1, din, l). l \<leftarrow> rc.core_int_list, l < const_PatrolMod_ctrl0_MoveSTM_MAX]) ; 
            Ret (id)} \<box> 
        do {inp_in update__MoveSTM (set [(TID_MoveSTM_t3, din, l). l \<leftarrow> rc.core_int_list, 
-           (l \<ge> rc.Neg const_PatrolMod_ctrl0_MoveSTM_MAX rc.core_int_set)]) ; 
+           (l > rc.Neg const_PatrolMod_ctrl0_MoveSTM_MAX rc.core_int_set)]) ; 
            Ret (id)}
       )
     }
@@ -797,10 +802,11 @@ definition State_MoveSTM_Move where
                       outp set_l_MoveSTM (snd (snd t)) ; 
                       outp exit_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
                       outp exited_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
-                      outp right_MoveSTM (dout);
                       l \<leftarrow> inp_in get_l_MoveSTM rc.core_int_set ; 
                         \<comment> \<open> @{text \<open>outp set_x_MoveSTM (x+1);\<close>} \<close>
                         outp set_x_MoveSTM (rc.Plus l 1 rc.core_int_set);
+                        x \<leftarrow> inp_in get_x_MoveSTM rc.core_int_set ; 
+                        outp right_MoveSTM (dout, x);
                         outp enter_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
                         Ret(True, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
@@ -817,10 +823,11 @@ definition State_MoveSTM_Move where
                       outp set_l_MoveSTM (snd (snd t)) ; 
                       outp exit_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
                       outp exited_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
-                      outp left_MoveSTM (dout);
                       l \<leftarrow> inp_in get_l_MoveSTM rc.core_int_set ; 
                         \<comment> \<open> @{text \<open>outp set_x_MoveSTM (l-1);\<close>} \<close>
                         outp set_x_MoveSTM (rc.Minus l 1 rc.core_int_set);
+                      x \<leftarrow> inp_in get_x_MoveSTM rc.core_int_set ; 
+                        outp left_MoveSTM (dout, x);
                         outp enter_MoveSTM (SID_MoveSTM_Move, SID_MoveSTM_Move);
                         Ret(True, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
@@ -851,18 +858,20 @@ definition State_MoveSTM_Move where
                       Ret (False, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in left__MoveSTM (set [(s, d) . 
+                    x \<leftarrow> inp_in left__MoveSTM (set [(s, d, l) . 
                         s \<leftarrow> tids_MoveSTM_Move, 
-                        d \<leftarrow> InOut_list]) ;
+                        d \<leftarrow> InOut_list,
+                        l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_MoveSTM (set 
                         [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]);
                       outp exited_MoveSTM (fst y, SID_MoveSTM_Move);
                       Ret (False, fst (snd s), SID_MoveSTM_Move)
                     } \<box>
                 do {
-                    x \<leftarrow> inp_in right__MoveSTM (set [(s, d) . 
+                    x \<leftarrow> inp_in right__MoveSTM (set [(s, d, l) . 
                         s \<leftarrow> tids_MoveSTM_Move, 
-                        d \<leftarrow> InOut_list]) ;
+                        d \<leftarrow> InOut_list,
+                        l \<leftarrow> rc.core_int_list]) ;
                     y \<leftarrow> inp_in exit_MoveSTM (set 
                         [(s, SID_MoveSTM_Move) . s \<leftarrow> (removeAll SID_MoveSTM_Move SIDS_MoveSTM_list)]);
                       outp exited_MoveSTM (fst y, SID_MoveSTM_Move);
@@ -971,11 +980,12 @@ definition MemorySTM_opt_MoveSTM_p where
   )
 "
 
+(* [..., (update__MoveSTM_C. TID_MoveSTM_t1), ..., (update__MoveSTM_C. TID_MoveSTM_t3), ...] *)
 definition rename_MoveSTM_events where
 "rename_MoveSTM_events = concat (
   (enumchan1 (forget_first reset__MoveSTM_C reset_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
-  (enumchan1 (forget_first left__MoveSTM_C left_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
-  (enumchan1 (forget_first right__MoveSTM_C right_MoveSTM_C TIDS_MoveSTM_list) InOut_list) @
+  (enumchan2 (forget_first2 left__MoveSTM_C left_MoveSTM_C TIDS_MoveSTM_list) InOut_list rc.core_int_list) @
+  (enumchan2 (forget_first2 right__MoveSTM_C right_MoveSTM_C TIDS_MoveSTM_list) InOut_list rc.core_int_list) @
   (enumchan2 (forget_first2 update__MoveSTM_C update_MoveSTM_C TIDS_MoveSTM_list) InOut_list rc.core_int_list)
 )
 "
@@ -987,8 +997,8 @@ definition rename_MoveSTM_events_others where
   (enumchanp1 terminate_MoveSTM_C [()]) @
   (enumchansp1 [get_x_MoveSTM_C, set_x_MoveSTM_C, set_EXT_x_MoveSTM_C] rc.core_int_list) @
   (enumchansp1 [reset_MoveSTM_C] InOut_list) @
-  (enumchansp1 [left_MoveSTM_C] InOut_list) @
-  (enumchansp1 [right_MoveSTM_C] InOut_list) @
+  (enumchansp2 [left_MoveSTM_C] InOut_list rc.core_int_list) @
+  (enumchansp2 [right_MoveSTM_C] InOut_list rc.core_int_list) @
   (enumchansp2 [update_MoveSTM_C] InOut_list rc.core_int_list) @
   (enumchansp2 [enter_MoveSTM_C, entered_MoveSTM_C, exit_MoveSTM_C, exited_MoveSTM_C] SIDS_MoveSTM_list SIDS_MoveSTM_list)
 "
@@ -1012,6 +1022,9 @@ definition rename_MemorySTM_opt_MoveSTM where
   ((MemorySTM_opt_MoveSTM idd) \<lbrace>(set (rename_MoveSTM_events @ rename_MoveSTM_events_others))\<rbrace>)
 "
 
+text \<open>In the renaming list, @{text "(update__MoveSTM_C. TID_MoveSTM_t1)"}  has a higher priority than 
+@{text "(update__MoveSTM_C. TID_MoveSTM_t3)"}, and finally moving right (the @{text "right"} event) 
+is chosen. \<close>
 definition rename_MemorySTM_opt_MoveSTM_p where
 "rename_MemorySTM_opt_MoveSTM_p idd = 
   ((MemorySTM_opt_MoveSTM_p idd) \<lbrace>(rename_MoveSTM_events @ rename_MoveSTM_events_others)\<rbrace>\<^sub>p)
@@ -1071,8 +1084,8 @@ chantype Chan_Ctrl =
   cal_Ctrl :: "InOut \<times> core_int"
 (* reset of MoveSTM is mapped to it *)
   reset_Ctrl :: "InOut"
-  left_Ctrl :: "InOut"
-  right_Ctrl :: "InOut"
+  left_Ctrl :: "InOut \<times> core_int"
+  right_Ctrl :: "InOut \<times> core_int"
 (* update of CalSTM is mapped to update_Ctrl.out and update of MoveSTM is mapped to update_Ctrl.in *)
   update_Ctrl :: "InOut \<times> core_int"
 
@@ -1128,8 +1141,8 @@ definition rename_Ctrl_MoveSTM_events where
   (enumchansp2_1 [(set_x_MoveSTM_C, set_x_Ctrl_C), (get_x_MoveSTM_C, get_x_Ctrl_C), 
       (set_EXT_x_MoveSTM_C, set_EXT_x_Ctrl_MoveSTM_C)] rc.core_int_list) @
   (enumchansp2_1 [(reset_MoveSTM_C, reset_Ctrl_C)] InOut_list) @
-  (enumchansp2_1 [(left_MoveSTM_C, left_Ctrl_C)] InOut_list) @
-  (enumchansp2_1 [(right_MoveSTM_C, right_Ctrl_C)] InOut_list) @
+  (enumchansp2_2 [(left_MoveSTM_C, left_Ctrl_C)] InOut_list rc.core_int_list) @
+  (enumchansp2_2 [(right_MoveSTM_C, right_Ctrl_C)] InOut_list rc.core_int_list) @
 \<comment> \<open>It is important to invert directions in one side: either CalSTM or MoveSTM \<close>
   (enumchansp2_1 [((curry update_MoveSTM_C) din, (curry update_Ctrl_C) dout), 
       ((curry update_MoveSTM_C) dout, (curry update_Ctrl_C) din)] rc.core_int_list)
@@ -1203,8 +1216,8 @@ chantype Chan_PatrolMod =
   cal_PatrolMod :: "InOut \<times> core_int"
 (* e2 of MoveSTM is mapped to it *)
   reset_PatrolMod :: "InOut"
-  left_PatrolMod :: "InOut"
-  right_PatrolMod :: "InOut"
+  left_PatrolMod :: "InOut \<times> core_int"
+  right_PatrolMod :: "InOut \<times> core_int"
 
 subsubsection \<open> Memory \<close>
 text \<open>The memory of @{text PatrolMod} accepts an update to @{text x} and then propagates this update to 
@@ -1228,8 +1241,8 @@ definition rename_PatrolMod_Ctrl_events where
   (enumchansp2_1 [(set_x_Ctrl_C, set_x_PatrolMod_C), (get_x_Ctrl_C, get_x_PatrolMod_C), 
       (set_EXT_x_Ctrl_C, set_EXT_x_PatrolMod_Ctrl_C)] rc.core_int_list) @
   (enumchanp2_1 (reset_Ctrl_C, reset_PatrolMod_C) InOut_list) @
-  (enumchanp2_1 (left_Ctrl_C, left_PatrolMod_C) InOut_list) @
-  (enumchanp2_1 (right_Ctrl_C, right_PatrolMod_C) InOut_list) @
+  (enumchanp2_2 (left_Ctrl_C, left_PatrolMod_C) InOut_list rc.core_int_list) @
+  (enumchanp2_2 (right_Ctrl_C, right_PatrolMod_C) InOut_list rc.core_int_list) @
   (enumchanp2_2 (cal_Ctrl_C, cal_PatrolMod_C) InOut_list rc.core_int_list)
 "
 
@@ -1294,7 +1307,7 @@ definition D__PatrolMod_p where
             (rename_D__Ctrl_p idd) 
             \<parallel>\<^bsub> (PatrolMod_set_x_events \<union> PatrolMod_set_EXT_x_events) \<^esub> 
             (discard_state (Memory_PatrolMod idd))
-          ) \<setminus>\<^sub>p []
+          ) \<setminus>\<^sub>p (PatrolMod_set_EXT_x_events_l @ (PatrolMod_set_x_events_l @ PatrolMod_get_x_events_l))
         )
       )  \<lbrakk> set [terminate_PatrolMod_C ()] \<Zrres> skip
     ) \<setminus>\<^sub>p ([terminate_PatrolMod_C ()])
