@@ -100,13 +100,23 @@ lemma thl_for_inv [hoare_safe]:
 lemma thl_for_to_inv [hoare_safe]:
   assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> H[@(R i)] S i [@(R (i + 1))]"
    "`P \<longrightarrow> @(R m)`" "`@(R (n+1 - m+m)) \<longrightarrow> Q`"
-  shows "H[P] for i := m to n inv @(R i) do S i od [Q]"
+  shows "H[P] for i = m to n inv @(R i) do S i od [Q]"
   unfolding for_to_inv_def fst_conv snd_conv
   using assms
   apply (rule_tac thl_for_inv, simp_all only: length_upt)
   apply (metis ab_semigroup_add_class.add_ac(1) add.commute assms(1) le_add2 less_Suc_eq_le less_diff_conv nth_upt plus_1_eq_Suc)
   apply (simp add: assms(2))
   done 
+
+lemma thl_for_downto_inv [hoare_safe]:
+  assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> H[@(R i)] S i [@(R (i - 1))]"
+    "`P \<longrightarrow> @(R n)`" "`@(R (n - (Suc n - m))) \<longrightarrow> Q`"
+  shows "H[P] for i = n downto m inv @(R i) do S i od [Q]"
+  unfolding for_downto_inv_def fst_conv snd_conv
+  apply (rule thl_for_inv)
+    apply (simp_all add: rev_nth less_diff_conv assms del: upt_Suc)
+  apply (metis Nat.le_diff_conv2 add.commute add_lessD1 assms(1) diff_diff_left diff_le_self less_Suc_eq_le plus_1_eq_Suc)
+  done
 
 lemma thl_while [hoare_safe]:
   fixes V :: "'s \<Rightarrow> 'a::wellorder"

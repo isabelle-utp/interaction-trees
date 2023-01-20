@@ -183,13 +183,21 @@ text \<open> For loops counting for m to n with invariant annotations. We use a 
 definition for_to_inv :: "nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "for_to_inv m n IC \<equiv> for_inv [m..<n+1] (\<lambda> i. fst (IC (i + m))) (\<lambda> i. snd (IC i))"
 
+definition for_downto_inv :: "nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_downto_inv n m IC \<equiv> for_inv (rev [m..<n+1]) (\<lambda> i. fst (IC (n - i))) (\<lambda> i. snd (IC i))"
+
+lemma for_to_inv_empty: "n < m \<Longrightarrow> for_to_inv m n IC = Skip"
+  by (simp add: for_to_inv_def for_inv_def for_empty)
+
 syntax 
   "_for_inv_itree" :: "id \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ inv _. _ do _ od")
-  "_for_to_inv_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ := _ to _ inv _ do _ od")
+  "_for_to_inv_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ to _ inv _ do _ od")
+  "_for_downto_inv_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ downto _ inv _ do _ od")
 
 translations 
   "_for_inv_itree x I i P S" == "CONST for_inv I (\<lambda> i. (P)\<^sub>e) (\<lambda> x. S)"
-  "for i := m to n inv I do C od" == "CONST for_to_inv m n (\<lambda> i. ((I)\<^sub>e, C))"
+  "for i = m to n inv I do C od" == "CONST for_to_inv m n (\<lambda> i. ((I)\<^sub>e, C))"
+  "for i = m downto n inv I do C od" == "CONST for_downto_inv m n (\<lambda> i. ((I)\<^sub>e, C))"
 
 lemma hoare_for_inv [hoare_safe]:
   assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
@@ -201,7 +209,7 @@ lemma hoare_for_inv [hoare_safe]:
 lemma hl_for_to_inv [hoare_safe]:
   assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i + 1))\<^bold>}"
    "`P \<longrightarrow> @(R m)`" "`@(R (n+1 - m+m)) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for i := m to n inv @(R i) do S i od \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} for i = m to n inv @(R i) do S i od \<^bold>{Q\<^bold>}"
   unfolding for_to_inv_def fst_conv snd_conv
   using assms
   apply (rule_tac hoare_for_inv, simp_all only: length_upt)
@@ -209,6 +217,16 @@ lemma hl_for_to_inv [hoare_safe]:
   apply (simp add: assms(2))
   done 
 
+lemma hl_for_downto_inv [hoare_safe]:
+  assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i - 1))\<^bold>}"
+    "`P \<longrightarrow> @(R n)`" "`@(R (n - (Suc n - m))) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for i = n downto m inv @(R i) do S i od \<^bold>{Q\<^bold>}"
+  unfolding for_downto_inv_def fst_conv snd_conv
+  apply (rule hoare_for_inv)
+    apply (simp_all add: rev_nth less_diff_conv assms del: upt_Suc)
+  apply (metis Nat.le_diff_conv2 add.commute add_lessD1 assms(1) diff_diff_left diff_le_self less_Suc_eq_le plus_1_eq_Suc)
+  done
+  
 lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
   shows "\<^bold>{P\<^bold>} while B do S od \<^bold>{\<not> B \<and> P\<^bold>}"
