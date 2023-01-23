@@ -175,7 +175,7 @@ qed
 text \<open> For loops with invariant annotations \<close>
 
 definition for_inv :: "'i list \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_inv I P S = for_itree I S"
+[code_unfold]: "for_inv I P S = for_itree I S"
 
 text \<open> For loops counting for m to n with invariant annotations. We use a new constant, as the form
   of invariant can be simplified in this case. \<close>
@@ -183,8 +183,17 @@ text \<open> For loops counting for m to n with invariant annotations. We use a 
 definition for_to_inv :: "nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "for_to_inv m n IC \<equiv> for_inv [m..<n+1] (\<lambda> i. fst (IC (i + m))) (\<lambda> i. snd (IC i))"
 
+text \<open> The next code unfold law is important to ensure that invariants are not code generated, as
+  they are not typically computable. \<close>
+
+lemma for_to_inv_code [code_unfold]: "for_to_inv m n (\<lambda> i. (I i, C i)) = for_itree [m..<n+1] C"
+  by (simp add: for_to_inv_def for_inv_def)
+
 definition for_downto_inv :: "nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "for_downto_inv n m IC \<equiv> for_inv (rev [m..<n+1]) (\<lambda> i. fst (IC (n - i))) (\<lambda> i. snd (IC i))"
+
+lemma for_downto_inv_code [code_unfold]: "for_downto_inv n m (\<lambda> i. (I i, C i)) = for_itree (rev [m..<n+1]) C"
+  by (simp add: for_downto_inv_def for_inv_def)
 
 lemma for_to_inv_empty: "n < m \<Longrightarrow> for_to_inv m n IC = Skip"
   by (simp add: for_to_inv_def for_inv_def for_empty)
