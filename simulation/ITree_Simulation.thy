@@ -1,14 +1,27 @@
 subsection \<open> Simulation Harness \<close>
 
 theory ITree_Simulation
-  imports "Interaction_Trees.ITree_Extraction"
+  imports Executable_Universe "Interaction_Trees.ITree_Extraction" 
   keywords "animate" :: "thy_defn"
 begin
+
+text \<open> The following additional constructor for partial functions allows us to request an
+  value covered by @{typ uval}. \<close>
+
+definition pfun_of_ufun :: "(uval \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> utyp \<Rightarrow> (uval \<Rightarrow> 'b) \<Rightarrow> 'e \<Zpfun> 'b" where
+"pfun_of_ufun c t P = (\<lambda> e\<in>{build\<^bsub>c\<^esub> v | v. v \<in> uvals t} \<bullet> P (the (match\<^bsub>c\<^esub> e)))"
+
+lemma map_pfun_pfun_of_ufun [code]: "map_pfun f (pfun_of_ufun c t P) = pfun_of_ufun c t (f \<circ> P)"
+  by (simp add: pfun_of_ufun_def pfun_eq_iff)
+
+code_datatype pfun_of_alist pfun_of_map pfun_of_ufun
 
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
 module Simulate (simulate) where
 import Interaction_Trees;
+import Executable_Universe;
 import Partial_Fun;
+import Prelude;
 import System.IO;
 
 -- These library functions help us to trim the "_C" strings from pretty printed events
@@ -21,6 +34,16 @@ isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
 removeSubstr :: String -> String -> String;
 removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
+
+mk_readUval :: Read a => (a -> Uval) -> String -> IO Uval
+mk_readUval f n = 
+  do { putStr ("Input <" ++ n ++ "> value: ")
+     ; e <- getLine
+     ; return (f (read e)) }
+
+readUtyp :: Utyp -> IO Uval
+readUtyp BoolT = mk_readUval BoolV "bool"
+readUtyp IntT = mk_readUval IntV "int"
 
 simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
@@ -44,6 +67,9 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
                        then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        else simulate_cnt 0 (snd (m !! (v - 1)))
      };                                                            
+simulate_cnt n t@(Vis (Pfun_of_ufun chan typ m)) = 
+  do { v <- readUtyp typ; 
+       simulate_cnt 0 (m v) }
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Show s) => Itree e s -> Prelude.IO ();
 simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
