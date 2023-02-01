@@ -83,6 +83,8 @@ syntax
   "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
   "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
+  "_for_to_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ to _ do _ od")
+  "_for_downto_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ downto _ do _ od")
 
 translations
   "_cond_itree b P Q" == "CONST cond_itree P (b)\<^sub>e Q"
@@ -91,6 +93,8 @@ translations
   "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
   "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
   "_for_itree i I P" == "CONST for_itree I (\<lambda> i. P)"
+  "_for_to_itree i m n P" == "_for_itree i [m..<CONST Suc n] P"
+  "_for_downto_itree i n m P" == "_for_itree i (CONST rev [m..<CONST Suc n]) P"
 
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
