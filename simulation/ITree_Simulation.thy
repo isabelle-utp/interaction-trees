@@ -22,7 +22,7 @@ removeSubstr :: String -> String -> String;
 removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
-simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
+simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
 simulate_cnt n (Sil p) = 
   do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
@@ -43,7 +43,15 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
          [(v, _)] -> if (v > Prelude.length m)
                        then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        else simulate_cnt 0 (snd (m !! (v - 1)))
-     };
+     };                                                            
+
+simulate :: (Eq e, Prelude.Show e, Prelude.Show s) => Itree e s -> Prelude.IO ();
+simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
+\<close>
+
+(* The code below is the case for an opaque map function. It depends on there being a Read instance. *)
+
+(*
 simulate_cnt n t@(Vis (Pfun_of_map f)) = 
   do { Prelude.putStr ("Enter an event:");
        e <- Prelude.getLine;
@@ -55,11 +63,8 @@ simulate_cnt n t@(Vis (Pfun_of_map f)) =
          [(v, _)] -> case f v of
                        Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        Just t' -> simulate_cnt 0 t'
-     };                                                                
-
-simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
-simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
-\<close>
+     };    
+*)
 
 ML \<open> 
 
@@ -122,7 +127,7 @@ fun run_simulation thy =
 fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
       val ctx' =
-        (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), (Token.explode (Thy_Header.get_keywords' @{context}) Position.none "string_classes"))] ctx)
+        (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), [])] ctx)
         |> prep_simulation model (Context.theory_name thy)
   in run_simulation (Local_Theory.exit_global ctx'); (Local_Theory.exit_global ctx')
   end 
