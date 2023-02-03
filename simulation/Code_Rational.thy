@@ -1,5 +1,7 @@
+section \<open>Rational types for code generation\<close>
+
 theory Code_Rational
-  imports "HOL.Rat" "HOL-Library.Code_Target_Nat"
+  imports "HOL.Real" "HOL-Library.Code_Target_Nat"
 begin
 
 subsection \<open>Type of target language rationals\<close>
@@ -158,8 +160,6 @@ lemma [transfer_rule]:
 
 end
 
-
-
 lemma "(numeral x :: rat) / numeral y = Frct(numeral x, numeral y)"
   using Frct_code_post(6) by force
 
@@ -173,29 +173,28 @@ lift_definition Frct_integer :: "integer \<times> integer \<Rightarrow> rational
 definition rational_of_integer :: "integer \<Rightarrow> rational" where
 "rational_of_integer x = Frct_integer (x, 1)"
 
-lemma divide_numeral_rational: 
-  "(numeral x :: rational) / numeral y = Frct_integer (numeral x, numeral y)"
-  by (transfer, simp only: Frct_code_post(6)[THEN sym])
+lemma numeral_rational_integer: "numeral n = rational_of_integer (numeral n)"
+  unfolding rational_of_integer_def
+  by (transfer, simp only: Frct_code_post(4)[THEN sym])
 
-lemma divide_integer_rational: 
+lemma divide_integer_rational:
   "rational_of_integer x / rational_of_integer y = Frct_integer (x, y)"
   unfolding rational_of_integer_def
   by (transfer, simp add: Fract_of_int_quotient)
 
-lemma divide_numeral_integer: 
-  "numeral x / rational_of_integer y = Frct_integer (numeral x, y)"
-  unfolding rational_of_integer_def
-  by (transfer, simp add: Fract_of_int_quotient)
+lemma uminus_Frct_integer: "- Frct_integer (x, y) = Frct_integer (- x, y)"
+  by (transfer, simp)
 
-lemma rational_power: "(numeral x :: rational) ^ n = rational_of_integer (numeral x ^ n)"
+lemma rational_power: "(rational_of_integer x :: rational) ^ n = rational_of_integer (x ^ n)"
   unfolding rational_of_integer_def
   by (transfer, simp add: Fract_of_int_eq)
 
 end
 
-declare divide_numeral_rational [code_unfold]
+declare numeral_rational_integer [code_unfold]
+declare divide_integer_rational [code_unfold]
 declare rational_power [code_unfold]
-declare divide_numeral_integer [code_unfold]
+declare uminus_Frct_integer [code_unfold]
 
 code_printing code_module Rational \<rightharpoonup> (Haskell)
  \<open>module Rational(fract, numerator, denominator) where
@@ -208,8 +207,8 @@ code_printing code_module Rational \<rightharpoonup> (Haskell)
 code_printing
   type_constructor rational \<rightharpoonup> (Haskell) "Prelude.Rational"
   | class_instance rational :: "HOL.equal" \<rightharpoonup> (Haskell) -
-  | constant "0 :: rational" \<rightharpoonup> (Haskell) "(Prelude.toRational (0::Integer))"
-  | constant "1 :: rational" \<rightharpoonup> (Haskell) "(Prelude.toRational (1::Integer))"
+  | constant "0 :: rational" \<rightharpoonup> (Haskell) "(0::Rational)"
+  | constant "1 :: rational" \<rightharpoonup> (Haskell) "(1::Rational)"
   | constant "Frct_integer" \<rightharpoonup> (Haskell) "Rational.fract (_)"
   | constant "HOL.equal :: rational \<Rightarrow> rational \<Rightarrow> bool" \<rightharpoonup>
     (Haskell) "(_) == (_)"
@@ -224,26 +223,19 @@ code_printing
   | constant "(*) :: rational \<Rightarrow> rational \<Rightarrow> rational" \<rightharpoonup>
     (Haskell) "(_) * (_)"
   | constant "(/) :: rational \<Rightarrow> rational \<Rightarrow> rational" \<rightharpoonup>
-    (Haskell) " (_) '/ (_)"
+    (Haskell) "(_) '/ (_)"
  | constant "uminus :: rational \<Rightarrow> rational" \<rightharpoonup>
     (Haskell) "Prelude.negate"
 
-term "nat"
+text \<open> We add a specific version of integer powers, so we can map these to the target function. \<close>
 
-definition integer_power :: "integer \<Rightarrow> integer \<Rightarrow> integer" where
-"integer_power x y = x ^ (nat (int_of_integer y))"
+definition integer_power :: "'a::power \<Rightarrow> integer \<Rightarrow> 'a" where
+"integer_power x y = x ^ (nat_of_integer y)"
 
 lemma power_nat_of_integer [code_unfold]: "x ^ (nat_of_integer y) = integer_power x y"
-  using integer_power_def nat_of_integer.rep_eq by presburger
+  by (simp add: integer_power_def nat_of_integer_def)
 
 code_printing
   constant "integer_power" \<rightharpoonup> (Haskell) "(_) ^ (_)"
-
-
-definition "myint = (142 :: integer)"
-
-definition "myrat = (3.789 :: rational)"
-
-export_code myint myrat in Haskell
 
 end
