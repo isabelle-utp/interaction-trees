@@ -11,6 +11,9 @@ type_synonym uname = String.literal
 
 text \<open> The following universe contains types that have direct equivalents in Haskell. \<close>
 
+datatype utyp =
+  UnitT | BoolT | IntT | RatT | StringT | EnumT "uname set" | PairT "utyp \<times> utyp" | ListT utyp
+
 datatype uval = 
   UnitV |
   BoolV (ofBoolV: bool) |
@@ -19,10 +22,7 @@ datatype uval =
   StringV (ofStringV: String.literal) | 
   EnumV (ofEnums: "uname set") (ofEnumV: "uname")  |
   PairV (ofPairV: "uval \<times> uval") |
-  ListV (ofListV: "uval list")
-
-datatype utyp =
-  UnitT | BoolT | IntT | RatT | StringT | EnumT "uname set" | PairT "utyp \<times> utyp" | ListT utyp
+  ListV utyp (ofListV: "uval list")
 
 instantiation utyp :: "show"
 begin
@@ -45,13 +45,24 @@ fun utyp_of :: "uval \<Rightarrow> utyp option" where
 "utyp_of (StringV _) = Some StringT" |
 "utyp_of (EnumV A _) = Some (EnumT A)" |
 "utyp_of (PairV p) = do { a \<leftarrow> utyp_of (fst p); b \<leftarrow> utyp_of (snd p); Some (PairT (a, b)) }" |
-"utyp_of (ListV xs) = do { as \<leftarrow> those (map utyp_of xs);
-                           case as of
-                             [] \<Rightarrow> None 
-                           | (a # as) \<Rightarrow> if (\<forall> b \<in> set as. a = b) then Some a else None }"
+"utyp_of (ListV a xs) = do { as \<leftarrow> those (map utyp_of xs);
+                             if (as = [] \<or> (\<forall> a'\<in> set as. a' = a)) then Some (ListT a) else None }"
 
 definition uvals :: "utyp \<Rightarrow> uval set" where
 "uvals a = {x. utyp_of x = Some a}"
+
+fun default_uval :: "utyp \<Rightarrow> uval" where
+"default_uval UnitT = UnitV" |
+"default_uval BoolT = (BoolV False)" |
+"default_uval IntT = (IntV 0)" |
+"default_uval RatT = (RatV 0)" |
+"default_uval StringT = (StringV STR '''')" |
+"default_uval (EnumT A) = (EnumV A STR '''')" |
+"default_uval (PairT (a, b)) = (PairV (default_uval a, default_uval b))" |
+"default_uval (ListT a) = (ListV a [])"
+
+lemma utyp_of_default_uval: "utyp_of (default_uval t) = Some t"
+  by (induct t rule:default_uval.induct, simp_all)
 
 text \<open> A class to declare injections between HOL types and parts of the universe. \<close>
 
