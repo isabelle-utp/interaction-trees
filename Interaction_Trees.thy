@@ -36,8 +36,11 @@ translations
 
 text \<open> A stable process has no possible internal activity \<close>
 
-abbreviation "unstable P \<equiv> is_Sil P"
-abbreviation "stable P \<equiv> \<not> unstable P"
+abbreviation unstable :: "('e, 's) itree \<Rightarrow> bool" where
+"unstable P \<equiv> is_Sil P"
+
+abbreviation stable :: "('e, 's) itree \<Rightarrow> bool" where
+"stable P \<equiv> \<not> unstable P"
 
 translations "CONST stable P" <= "\<not> CONST unstable P"
 
