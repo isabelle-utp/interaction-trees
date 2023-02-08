@@ -1,7 +1,7 @@
 section \<open> Executable Universe for Interaction Trees \<close>
 
 theory Executable_Universe
-  imports "Z_Toolkit.Z_Toolkit"
+  imports Code_Target_Rational "Z_Toolkit.Z_Toolkit" 
 begin
 
 text \<open> Aim: To support a flexible animator that can display information about the type of data that
@@ -18,7 +18,7 @@ datatype uval =
   UnitV |
   BoolV (ofBoolV: bool) |
   IntV (ofIntV: integer)| 
-  RatV (ofRatV: rat) |
+  RatV (ofRatV: rational) |
   StringV (ofStringV: String.literal) | 
   EnumV (ofEnums: "uname set") (ofEnumV: "uname")  |
   PairV (ofPairV: "uval \<times> uval") |
@@ -72,6 +72,12 @@ class uvals =
   and utyp :: "'a itself \<Rightarrow> utyp" \<comment> \<open> Give the equivalent universe type for the HOL type \<close>
   assumes to_uval_typ [simp]: "utyp_of (to_uval x) = Some (utyp TYPE('a))"
   and to_uval_inv [simp]: "from_uval (to_uval x) = x"
+
+lemma utyp_of_comp_to_uval: "(utyp_of \<circ> (to_uval :: 'a \<Rightarrow> uval)) = (\<lambda> _. Some (utyp TYPE('a::uvals)))"
+  by (simp add: comp_def fun_eq_iff)
+
+lemma from_after_to_uval [simp]: "from_uval \<circ> to_uval = id"
+  by (simp add: comp_def fun_eq_iff)
 
 syntax "_utyp" :: "type \<Rightarrow> logic" ("UTYPE'(_')")
 translations "UTYPE('a)" == "CONST utyp TYPE('a)"
@@ -141,6 +147,26 @@ definition utyp_prod :: "('a \<times> 'b) itself \<Rightarrow> utyp" where
 
 instance
   by (intro_classes; simp add: to_uval_prod_def from_uval_prod_def utyp_prod_def prod.case_eq_if)
+
+end
+
+lemma those_replicate_Some [simp]: "those (replicate n (Some v)) = Some (replicate n v)"
+  by (induct n, simp_all)
+
+instantiation list :: (uvals) uvals
+begin
+
+definition to_uval_list :: "'a list \<Rightarrow> uval" where
+  "to_uval_list = (\<lambda> xs. ListV UTYPE('a) (map to_uval xs))"
+
+definition from_uval_list :: "uval \<Rightarrow> 'a list" where
+  "from_uval_list xs = map from_uval (ofListV xs)"
+
+definition utyp_list :: "'a list itself \<Rightarrow> utyp" where
+  "utyp_list a = ListT UTYPE('a)"
+
+instance
+  by (intro_classes, simp_all add: to_uval_list_def from_uval_list_def utyp_list_def utyp_of_comp_to_uval map_replicate_const)
 
 end
 
