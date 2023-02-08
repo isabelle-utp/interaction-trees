@@ -14,8 +14,6 @@ definition pfun_of_ufun :: "(uval \<Longrightarrow>\<^sub>\<triangle> 'e) \<Righ
 lemma map_pfun_pfun_of_ufun [code]: "map_pfun f (pfun_of_ufun c t P) = pfun_of_ufun c t (f \<circ> P)"
   by (simp add: pfun_of_ufun_def pfun_eq_iff)
 
-code_datatype pfun_of_alist pfun_of_map pfun_of_ufun
-
 text \<open> There follows a class for representing channel types \<close>
 
 class uchantyperep =
@@ -32,11 +30,11 @@ class uchantyperep =
   \<comment> \<open> Every value conveyed by a channel has the prescribed type \<close>
   and "utyp_of (uchan_val x) = Some(uchans a(uchan_name x)\<^sub>p)"
 
-record ('e, 'b) chf =
-  chf_chn  :: "(uname \<times> uval \<times> uval \<Longrightarrow>\<^sub>\<triangle> 'e)" \<comment> \<open> The channel, including a name, output value, and input value \<close>
-  chf_out  :: "uname \<times> uval" \<comment> \<open> The value output by the process (displayed in the animator) \<close>
-  chf_typ  :: "utyp" \<comment> \<open> The type of data requested by the animator \<close>
-  chf_cont :: "uval \<Rightarrow> 'b" \<comment> \<open> The continuation for each kind of value received \<close>
+datatype ('e, 'b) chf =
+  ChanF (chf_chn: "(uname \<times> uval \<times> uval \<Longrightarrow>\<^sub>\<triangle> 'e)") \<comment> \<open> The channel, including a name, output value, and input value \<close>
+        (chf_out: "uname \<times> uval") \<comment> \<open> The value output by the process (displayed in the animator) \<close>
+        (chf_typ: "utyp") \<comment> \<open> The type of data requested by the animator \<close>
+        (chf_cont: "uval \<Rightarrow> 'b") \<comment> \<open> The continuation for each kind of value received \<close>
 
 definition pfun_of_chfun :: 
   "('e, 'b) chf \<Rightarrow> 'e \<Zpfun> 'b" where
@@ -44,17 +42,42 @@ definition pfun_of_chfun ::
     (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> (fst (chf_out chf), snd (chf_out chf), v) | v. v \<in> uvals (chf_typ chf)} 
     \<bullet> (chf_cont chf) (snd (snd (the (match\<^bsub>chf_chn chf\<^esub> e)))))"
 
+definition
+  "map_chfun f chf = ChanF (chf_chn chf) (chf_out chf) (chf_typ chf) (f \<circ> chf_cont chf)"
+
+lemma map_pfun_pfun_of_chfun: 
+  "map_pfun f (pfun_of_chfun chf) = pfun_of_chfun (map_chfun f chf)"
+  by (simp add: map_chfun_def pfun_of_chfun_def pfun_eq_iff)
+
+definition pfun_of_chfuns ::
+  "('e, 'b) chf list \<Rightarrow> 'e \<Zpfun> 'b" where
+"pfun_of_chfuns chfs = foldr (\<lambda> c f. pfun_of_chfun c \<oplus> f) chfs {}\<^sub>p"
+
+lemma map_pfun_pfun_of_chfuns [code]:
+  "map_pfun f (pfun_of_chfuns chfs) = pfun_of_chfuns (map (map_chfun f) chfs)"
+  by (induct chfs, simp_all add: pfun_of_chfuns_def map_pfun_pfun_of_chfun)
+
+definition itree_chf :: "String.literal \<Rightarrow> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, ('e, 's) itree) chf" where
+"itree_chf n c out P = ChanF undefined (n, to_uval out) UTYPE('inp) (P \<circ> from_uval)"
+
 (* The conceptual type for the ITree structure we'd like is as below: *)
 
 typ \<open> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<close>
+
+code_datatype pfun_of_alist pfun_of_map pfun_of_ufun pfun_of_chfuns
+
+code_identifier
+  code_module ITree_Simulation \<rightharpoonup> (Haskell) Interaction_Trees
+| code_module Partial_Fun \<rightharpoonup> (Haskell) Interaction_Trees
+| code_module Interaction_Trees \<rightharpoonup> (Haskell) Interaction_Trees
 
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
 module Simulate (simulate) where
 import Interaction_Trees;
 import Executable_Universe;
-import Partial_Fun;
 import Prelude;
 import System.IO;
+import Data.Ratio;
 
 -- These library functions help us to trim the "_C" strings from pretty printed events
 
@@ -67,6 +90,16 @@ removeSubstr :: String -> String -> String;
 removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
+instance Show Uval where
+  show UnitV = "()"
+  show (BoolV x) = show x
+  show (IntV x) = show x
+  show (RatV x) = show (fromRational x)
+  show (StringV x) = show x
+  show (EnumV _ x) = x
+  show (PairV xy) = show xy
+  show (ListV typ xs) = show xs
+
 mk_readUval :: Read a => (a -> Uval) -> String -> IO Uval
 mk_readUval f n = 
   do { putStr ("Input <" ++ n ++ "> value: ")
@@ -76,6 +109,7 @@ mk_readUval f n =
 readUtyp :: Utyp -> IO Uval
 readUtyp BoolT = mk_readUval BoolV "bool"
 readUtyp IntT = mk_readUval IntV "int"
+readUtyp UnitT = return UnitV
 
 simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
@@ -102,6 +136,21 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
 simulate_cnt n t@(Vis (Pfun_of_ufun chan typ m)) = 
   do { v <- readUtyp typ; 
        simulate_cnt 0 (m v) }
+simulate_cnt n (Vis (Pfun_of_chfuns [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n t@(Vis (Pfun_of_chfuns m)) =
+  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(i, ChanF c (n, p) _ _) -> " (" ++ show i ++ ") " ++ n ++ " " ++ show p ++ ";") (zip [1..] m)));
+       e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
+       case (Prelude.reads e) of
+         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > Prelude.length m)
+                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       else let (typ, p) = (\(ChanF _ _ t p) -> (t, p)) (m!!(v - 1)) 
+                            in do { val <- readUtyp typ
+                                  ; simulate_cnt 0 (p val) } -- Ask for any inputs needed
+     };                                                            
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Show s) => Itree e s -> Prelude.IO ();
 simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
