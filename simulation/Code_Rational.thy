@@ -238,4 +238,14 @@ lemma power_nat_of_integer [code_unfold]: "x ^ (nat_of_integer y) = integer_powe
 code_printing
   constant "integer_power" \<rightharpoonup> (Haskell) "(_) ^ (_)"
 
+definition numerator :: "rational \<Rightarrow> integer" where
+"numerator x = integer_of_int (fst (quotient_of (rat_of_rational x)))"
+
+definition denominator :: "rational \<Rightarrow> integer" where
+"denominator x = integer_of_int (snd (quotient_of (rat_of_rational x)))"
+
+code_printing
+  constant numerator \<rightharpoonup> (Haskell) "numerator"
+| constant denominator \<rightharpoonup> (Haskell) "denominator" 
+
 end

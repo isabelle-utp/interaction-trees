@@ -48,6 +48,9 @@ lemma [code_unfold]: "power (rat_of_rational x) (nat_of_integer y)
        = rat_of_rational (integer_power x y)"
   by (simp add: integer_power_def rat_of_rational_power)
 
+lemma [code]: "quotient_of (rat_of_rational x) = (int_of_integer (numerator x), int_of_integer (denominator x))"
+  by (simp add: denominator_def numerator_def)
+  
 (*
 definition vel :: "real \<Rightarrow> real" where
 "vel t = 10 * t^2 + 8"
