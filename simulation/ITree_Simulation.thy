@@ -23,6 +23,8 @@ class uchantyperep =
   and uchan_name :: "'a \<Rightarrow> uname"
   \<comment> \<open> The type of value carried over the channel \<close>
   and uchan_val :: "'a \<Rightarrow> uval"
+  \<comment> \<open> Make an instance of the channel type \<close>
+  and uchan_mk :: "uname \<Rightarrow> uval \<Rightarrow> 'a"
   \<comment> \<open> There is a finite number of channels \<close>
   assumes finite_chans: "finite (pdom (uchans a))"
   \<comment> \<open> Every name used in an event is a prescribed channel \<close>
@@ -49,6 +51,12 @@ lemma map_pfun_pfun_of_chfun:
   "map_pfun f (pfun_of_chfun chf) = pfun_of_chfun (map_chfun f chf)"
   by (simp add: map_chfun_def pfun_of_chfun_def pfun_eq_iff)
 
+lemma "pfun_app (pfun_of_chfun chf) e = undefined"
+  apply (simp add: pfun_of_chfun_def)
+  apply (subst pabs_apply)
+    apply simp
+  oops
+
 definition pfun_of_chfuns ::
   "('e, 'b) chf list \<Rightarrow> 'e \<Zpfun> 'b" where
 "pfun_of_chfuns chfs = foldr (\<lambda> c f. pfun_of_chfun c \<oplus> f) chfs {}\<^sub>p"
@@ -64,7 +72,7 @@ definition itree_chf :: "String.literal \<Rightarrow> ('inp::uvals \<times> 'out
 
 typ \<open> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<close>
 
-code_datatype pfun_of_alist pfun_of_map pfun_of_ufun pfun_of_chfuns
+code_datatype pfun_of_alist pfun_of_map pfun_of_ufun pfun_of_chfuns pfun_entries
 
 code_identifier
   code_module ITree_Simulation \<rightharpoonup> (Haskell) Interaction_Trees
