@@ -109,6 +109,37 @@ instance
   apply (auto simp add: uchan_mk_chan_def)
 *)
 
+datatype ('e, 'b) chf =
+  ChanF (chf_chn: "(uname \<times> uval \<times> uval \<Longrightarrow>\<^sub>\<triangle> 'e)") \<comment> \<open> The channel, including a name, output value, and input value \<close>
+        (chf_out: "uname \<times> uval") \<comment> \<open> The value output by the process (displayed in the animator) \<close>
+        (chf_typ: "utyp") \<comment> \<open> The type of data requested by the animator \<close>
+        (chf_cont: "uval \<Rightarrow> 'b") \<comment> \<open> The continuation for each kind of value received \<close>
 
+definition pfun_of_chfun :: 
+  "('e, 'b) chf \<Rightarrow> 'e \<Zpfun> 'b" where
+"pfun_of_chfun chf = 
+    (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> (fst (chf_out chf), snd (chf_out chf), v) | v. v \<in> uvals (chf_typ chf)} 
+    \<bullet> (chf_cont chf) (snd (snd (the (match\<^bsub>chf_chn chf\<^esub> e)))))"
+
+definition
+  "map_chfun f chf = ChanF (chf_chn chf) (chf_out chf) (chf_typ chf) (f \<circ> chf_cont chf)"
+
+lemma map_pfun_pfun_of_chfun: 
+  "map_pfun f (pfun_of_chfun chf) = pfun_of_chfun (map_chfun f chf)"
+  by (simp add: map_chfun_def pfun_of_chfun_def pfun_eq_iff)
+
+lemma "pfun_app (pfun_of_chfun chf) e = undefined"
+  apply (simp add: pfun_of_chfun_def)
+  apply (subst pabs_apply)
+    apply simp
+  oops
+
+definition pfun_of_chfuns ::
+  "('e, 'b) chf list \<Rightarrow> 'e \<Zpfun> 'b" where
+"pfun_of_chfuns chfs = foldr (\<lambda> c f. pfun_of_chfun c \<oplus> f) chfs {}\<^sub>p"
+
+lemma map_pfun_pfun_of_chfuns [code]:
+  "map_pfun f (pfun_of_chfuns chfs) = pfun_of_chfuns (map (map_chfun f) chfs)"
+  by (induct chfs, simp_all add: pfun_of_chfuns_def map_pfun_pfun_of_chfun)
 
 end

@@ -48,6 +48,37 @@ fun utyp_of :: "uval \<Rightarrow> utyp option" where
 "utyp_of (ListV a xs) = do { as \<leftarrow> those (map utyp_of xs);
                              if (as = [] \<or> (\<forall> a'\<in> set as. a' = a)) then Some (ListT a) else None }"
 
+abbreviation utyp_rel :: "uval \<Rightarrow> utyp \<Rightarrow> bool" (infix ":\<^sub>u" 50) where
+"x :\<^sub>u t \<equiv> utyp_of x = Some t"
+
+lemma utyp_UnitT_is_UnitV [elim]: "\<lbrakk> x :\<^sub>u UnitT; x = UnitV \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (induct x, auto)
+
+lemma utyp_BoolT_is_BoolV [elim]: "\<lbrakk> x :\<^sub>u BoolT; \<And> n. x = BoolV n \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (induct x, auto)
+
+lemma utyp_IntT_is_IntV [elim]: "\<lbrakk> x :\<^sub>u IntT; \<And> n. x = IntV n \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (induct x, auto)
+
+lemma utyp_RatT_is_RatV [elim]: "\<lbrakk> x :\<^sub>u RatT; \<And> n. x = RatV n \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (induct x, auto)
+
+lemma utyp_StringT_is_StringV [elim]: "\<lbrakk> x :\<^sub>u StringT; \<And> n. x = StringV n \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (induct x, auto)
+
+lemma utyp_EnumT_is_EnumV [elim]: "\<lbrakk> x :\<^sub>u EnumT A; \<And> n. x = EnumV A n \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (induct x, auto)
+
+lemma utyp_PairT_is_PairV [elim]: "\<lbrakk> x :\<^sub>u PairT (a, b); \<And> y z. \<lbrakk> x = PairV (y, z); y :\<^sub>u a; z :\<^sub>u b \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  by (induct x, auto)
+
+lemma utyp_ListT_ListV_ex: "x :\<^sub>u ListT a \<Longrightarrow> \<exists> xs. x = ListV a xs \<and> (\<forall> y\<in>set xs. y :\<^sub>u a)"
+  apply (induct x, auto)
+  sorry
+
+lemma utyp_ListT_is_ListV [elim]: "\<lbrakk> x :\<^sub>u ListT a; \<And> xs. \<lbrakk> x = ListV a xs; (\<forall> y\<in>set xs. y :\<^sub>u a) \<rbrakk>  \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  using utyp_ListT_ListV_ex by blast
+  
 definition uvals :: "utyp \<Rightarrow> uval set" where
 "uvals a = {x. utyp_of x = Some a}"
 
@@ -70,9 +101,9 @@ class uvals =
   fixes to_uval :: "'a \<Rightarrow> uval" \<comment> \<open> Inject into the universe \<close>
   and from_uval :: "uval \<Rightarrow> 'a" \<comment> \<open> Project from the universe \<close>
   and utyp :: "'a itself \<Rightarrow> utyp" \<comment> \<open> Give the equivalent universe type for the HOL type \<close>
-  assumes to_uval_typ [simp]: "utyp_of (to_uval x) = Some (utyp TYPE('a))"
+  assumes to_uval_typ [simp]: "to_uval x :\<^sub>u utyp TYPE('a)"
   and to_uval_inv [simp]: "from_uval (to_uval x) = x"
- (*  and from_uval_inv: "\<lbrakk> utyp_of v = Some (utyp TYPE('a)) \<rbrakk> \<Longrightarrow> to_uval (from_uval v) = v" *)
+  and from_uval_inv: "\<lbrakk> v :\<^sub>u utyp TYPE('a) \<rbrakk> \<Longrightarrow> to_uval (from_uval v) = v"
 
 lemma utyp_of_comp_to_uval: "(utyp_of \<circ> (to_uval :: 'a \<Rightarrow> uval)) = (\<lambda> _. Some (utyp TYPE('a::uvals)))"
   by (simp add: comp_def fun_eq_iff)
@@ -96,7 +127,7 @@ definition utyp_unit :: "unit itself \<Rightarrow> utyp" where
   "utyp_unit a = UnitT"
 
 instance
-  by (intro_classes; simp add: to_uval_unit_def utyp_unit_def)
+  by (intro_classes; auto simp add: to_uval_unit_def utyp_unit_def)
 
 end
 
@@ -113,7 +144,7 @@ definition utyp_int :: "int itself \<Rightarrow> utyp" where
   "utyp_int a = IntT"
 
 instance
-  by (intro_classes; simp add: to_uval_int_def utyp_int_def)
+  by (intro_classes; auto simp add: to_uval_int_def utyp_int_def)
 
 end
 
@@ -130,7 +161,7 @@ definition utyp_integer :: "integer itself \<Rightarrow> utyp" where
   "utyp_integer a = IntT"
 
 instance
-  by (intro_classes; simp add: to_uval_integer_def utyp_integer_def)
+  by (intro_classes; auto simp add: to_uval_integer_def utyp_integer_def)
 
 end
 
@@ -147,7 +178,7 @@ definition utyp_prod :: "('a \<times> 'b) itself \<Rightarrow> utyp" where
   "utyp_prod a = PairT (UTYPE('a), UTYPE('b))"
 
 instance
-  by (intro_classes; simp add: to_uval_prod_def from_uval_prod_def utyp_prod_def prod.case_eq_if)
+  by (intro_classes; auto simp add: to_uval_prod_def from_uval_prod_def utyp_prod_def prod.case_eq_if from_uval_inv)
 
 end
 
@@ -167,7 +198,7 @@ definition utyp_list :: "'a list itself \<Rightarrow> utyp" where
   "utyp_list a = ListT UTYPE('a)"
 
 instance
-  by (intro_classes, simp_all add: to_uval_list_def from_uval_list_def utyp_list_def utyp_of_comp_to_uval map_replicate_const)
+  by (intro_classes, auto simp add: to_uval_list_def from_uval_list_def utyp_list_def utyp_of_comp_to_uval map_replicate_const from_uval_inv map_idI)
 
 end
 

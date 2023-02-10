@@ -1,7 +1,7 @@
 subsection \<open> Simulation Harness \<close>
 
 theory ITree_Simulation
-  imports Executable_Universe "Interaction_Trees.ITree_Extraction" 
+  imports Executable_Universe Channel_Type_Rep "Interaction_Trees.ITree_Extraction" 
   keywords "animate" :: "thy_defn"
 begin
 
@@ -14,58 +14,7 @@ definition pfun_of_ufun :: "(uval \<Longrightarrow>\<^sub>\<triangle> 'e) \<Righ
 lemma map_pfun_pfun_of_ufun [code]: "map_pfun f (pfun_of_ufun c t P) = pfun_of_ufun c t (f \<circ> P)"
   by (simp add: pfun_of_ufun_def pfun_eq_iff)
 
-text \<open> There follows a class for representing channel types \<close>
-
-class uchantyperep =
-  \<comment> \<open> A mapping from channel names to types \<close>
-  fixes uchans :: "'a itself \<Rightarrow> (uname \<Zpfun> utyp)"
-  \<comment> \<open> The name of a channel used by an event in @{typ 'a} \<close>
-  and uchan_name :: "'a \<Rightarrow> uname"
-  \<comment> \<open> The type of value carried over the channel \<close>
-  and uchan_val :: "'a \<Rightarrow> uval"
-  \<comment> \<open> Make an instance of the channel type \<close>
-  and uchan_mk :: "uname \<Rightarrow> uval \<Rightarrow> 'a"
-  \<comment> \<open> There is a finite number of channels \<close>
-  assumes finite_chans: "finite (pdom (uchans a))"
-  \<comment> \<open> Every name used in an event is a prescribed channel \<close>
-  and "uchan_name x \<in> pdom (uchans a)"
-  \<comment> \<open> Every value conveyed by a channel has the prescribed type \<close>
-  and "utyp_of (uchan_val x) = Some(uchans a(uchan_name x)\<^sub>p)"
-
-datatype ('e, 'b) chf =
-  ChanF (chf_chn: "(uname \<times> uval \<times> uval \<Longrightarrow>\<^sub>\<triangle> 'e)") \<comment> \<open> The channel, including a name, output value, and input value \<close>
-        (chf_out: "uname \<times> uval") \<comment> \<open> The value output by the process (displayed in the animator) \<close>
-        (chf_typ: "utyp") \<comment> \<open> The type of data requested by the animator \<close>
-        (chf_cont: "uval \<Rightarrow> 'b") \<comment> \<open> The continuation for each kind of value received \<close>
-
-definition pfun_of_chfun :: 
-  "('e, 'b) chf \<Rightarrow> 'e \<Zpfun> 'b" where
-"pfun_of_chfun chf = 
-    (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> (fst (chf_out chf), snd (chf_out chf), v) | v. v \<in> uvals (chf_typ chf)} 
-    \<bullet> (chf_cont chf) (snd (snd (the (match\<^bsub>chf_chn chf\<^esub> e)))))"
-
-definition
-  "map_chfun f chf = ChanF (chf_chn chf) (chf_out chf) (chf_typ chf) (f \<circ> chf_cont chf)"
-
-lemma map_pfun_pfun_of_chfun: 
-  "map_pfun f (pfun_of_chfun chf) = pfun_of_chfun (map_chfun f chf)"
-  by (simp add: map_chfun_def pfun_of_chfun_def pfun_eq_iff)
-
-lemma "pfun_app (pfun_of_chfun chf) e = undefined"
-  apply (simp add: pfun_of_chfun_def)
-  apply (subst pabs_apply)
-    apply simp
-  oops
-
-definition pfun_of_chfuns ::
-  "('e, 'b) chf list \<Rightarrow> 'e \<Zpfun> 'b" where
-"pfun_of_chfuns chfs = foldr (\<lambda> c f. pfun_of_chfun c \<oplus> f) chfs {}\<^sub>p"
-
-lemma map_pfun_pfun_of_chfuns [code]:
-  "map_pfun f (pfun_of_chfuns chfs) = pfun_of_chfuns (map (map_chfun f) chfs)"
-  by (induct chfs, simp_all add: pfun_of_chfuns_def map_pfun_pfun_of_chfun)
-
-definition itree_chf :: "String.literal \<Rightarrow> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, ('e, 's) itree) chf" where
+definition itree_chf :: "uname \<Rightarrow> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, ('e, 's) itree) chf" where
 "itree_chf n c out P = ChanF undefined (n, to_uval out) UTYPE('inp) (P \<circ> from_uval)"
 
 (* The conceptual type for the ITree structure we'd like is as below: *)
@@ -83,6 +32,7 @@ generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
 module Simulate (simulate) where
 import Interaction_Trees;
 import Executable_Universe;
+import Channel_Type_Rep;
 import Prelude;
 import System.IO;
 import Data.Ratio;
