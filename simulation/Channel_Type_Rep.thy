@@ -34,11 +34,22 @@ definition "uchan_val x = snd (uchan_dest x)"
 
 end
 
-typedef (overloaded) ('a::uvals, 'c::pre_uchantyperep) name = 
-  "{(n, t). n \<in> unames TYPE('c) \<and> (uchans TYPE('c))(n)\<^sub>p = t}"
+typedef (overloaded) 'c::pre_uchantyperep name = 
+  "{n. n \<in> unames TYPE('c)}"
   by (simp add: nonempty_chans unames_def)
 
+(* The following type should be isomorphic to 'c, but conveys more structure *)
+
+typedef (overloaded) 'c::pre_uchantyperep event =
+  "{(n, v). n \<in> unames TYPE('c) \<and> utyp_of v = Some ((uchans TYPE('c))(n)\<^sub>p)}"
+  using nonempty_chans unames_def utyp_of_default_uval by blast
+
 setup_lifting type_definition_name
+
+type_synonym 'c chan = unit
+
+definition mk_chan :: "'c name \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'c) \<Rightarrow> 'c chan" where
+"mk_chan = undefined"
 
 (* I want to achieve a type something like "forall 'a\<in>unames. (('a, 'c) name, 'a \<Longrightarrow>\<^sub>\<triangle> 'c) *)
 
