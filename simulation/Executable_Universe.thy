@@ -72,6 +72,7 @@ class uvals =
   and utyp :: "'a itself \<Rightarrow> utyp" \<comment> \<open> Give the equivalent universe type for the HOL type \<close>
   assumes to_uval_typ [simp]: "utyp_of (to_uval x) = Some (utyp TYPE('a))"
   and to_uval_inv [simp]: "from_uval (to_uval x) = x"
+ (*  and from_uval_inv: "\<lbrakk> utyp_of v = Some (utyp TYPE('a)) \<rbrakk> \<Longrightarrow> to_uval (from_uval v) = v" *)
 
 lemma utyp_of_comp_to_uval: "(utyp_of \<circ> (to_uval :: 'a \<Rightarrow> uval)) = (\<lambda> _. Some (utyp TYPE('a::uvals)))"
   by (simp add: comp_def fun_eq_iff)

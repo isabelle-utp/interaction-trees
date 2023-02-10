@@ -7,10 +7,6 @@ text \<open> There follows a class for representing channel types \<close>
 class pre_uchantyperep =
   \<comment> \<open> A mapping from channel names to types \<close>
   fixes uchans :: "'a itself \<Rightarrow> (uname \<Zpfun> utyp)"
-  \<comment> \<open> Make an instance of the channel type \<close>
-  and uchan_mk :: "uname \<times> uval \<Rightarrow> 'a" 
-  \<comment> \<open> Deconstruct an instance of the channel type \<close>
-  and uchan_dest :: "'a \<Rightarrow> uname \<times> uval"
 
   assumes finite_chans: "finite (pdom (uchans a))"
   and nonempty_chans: "\<exists> n. n \<in> pdom (uchans a)"
@@ -18,9 +14,6 @@ begin
 
 definition unames :: "'a itself \<Rightarrow> uname set" where
 "unames a = pdom (uchans a)"
-
-text \<open> The name of a channel used by an event in @{typ 'a} \<close>
-definition "uchan_name x = fst (uchan_dest x)"
 
 lemma finite_names: "finite (unames a)"
   by (simp add: local.finite_chans unames_def)
@@ -30,8 +23,6 @@ lemma names_nonempty: "unames a \<noteq> {}"
 
 text \<open> The value carried over the channel \<close>
   
-definition "uchan_val x = snd (uchan_dest x)"
-
 end
 
 typedef (overloaded) 'c::pre_uchantyperep name = 
@@ -42,23 +33,82 @@ typedef (overloaded) 'c::pre_uchantyperep name =
 
 typedef (overloaded) 'c::pre_uchantyperep event =
   "{(n, v). n \<in> unames TYPE('c) \<and> utyp_of v = Some ((uchans TYPE('c))(n)\<^sub>p)}"
+  morphisms of_event event_of
   using nonempty_chans unames_def utyp_of_default_uval by blast
 
-setup_lifting type_definition_name
+setup_lifting type_definition_event
 
+lift_definition ev_name :: "'c::pre_uchantyperep event \<Rightarrow> uname" is fst .
+definition ev_type :: "'c::pre_uchantyperep event \<Rightarrow> utyp"
+  where "ev_type e = (uchans TYPE('c))(ev_name e)\<^sub>p"
+lift_definition ev_val :: "'c::pre_uchantyperep event \<Rightarrow> 'a::uvals" is "from_uval \<circ> snd" .
+lift_definition mk_event :: "uname \<Rightarrow> 'a::uvals \<Rightarrow> 'c::pre_uchantyperep event"
+  is "\<lambda> n v. if (n \<in> unames TYPE('c) \<and> (uchans TYPE('c))(n)\<^sub>p = UTYPE('a))
+             then (n, to_uval v) 
+             else (let sn = SOME n. n \<in> unames TYPE('c) in (sn, default_uval ((uchans TYPE('c))(sn)\<^sub>p)))"
+  apply auto
+  apply (metis nonempty_chans old.prod.inject someI unames_def)
+  apply (metis fst_conv snd_conv utyp_of_default_uval)
+  apply (metis nonempty_chans prod.inject someI unames_def)
+  apply (metis fst_conv snd_conv utyp_of_default_uval)
+  done
+
+lemma 
+  assumes "UTYPE('a) = ev_type x"
+  shows "mk_event (ev_name x) (ev_val x :: 'a::uvals) = x"
+  using assms
+  apply (simp add: ev_val_def ev_type_def)
+  apply (transfer)
+  apply auto
+  oops
+
+(*
 type_synonym 'c chan = unit
 
 definition mk_chan :: "'c name \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'c) \<Rightarrow> 'c chan" where
 "mk_chan = undefined"
+*)
 
 (* I want to achieve a type something like "forall 'a\<in>unames. (('a, 'c) name, 'a \<Longrightarrow>\<^sub>\<triangle> 'c) *)
 
 
 class uchantyperep = pre_uchantyperep +
-  \<comment> \<open> Every name used in an event is a prescribed channel \<close>
-  assumes uchan_names: "uchan_name x \<in> unames a"
-  \<comment> \<open> Every value conveyed by a channel has the prescribed type \<close>
-  and uchan_types: "utyp_of (uchan_val x) = Some(uchans a(uchan_name x)\<^sub>p)"
-  and "\<lbrakk> n \<in> unames a; utyp_of v = Some(uchans a(n)\<^sub>p) \<rbrakk> \<Longrightarrow> uchan_dest (uchan_mk (n, v)) = (n, v)"
+  fixes uchan_mk :: "'a event \<Rightarrow> 'a"
+  and uchan_dest :: "'a \<Rightarrow> 'a event"
+  assumes "uchan_dest (uchan_mk x) = x"
+
+chantype chan = 
+  Input :: unit
+  Output :: integer
+
+instantiation chan :: pre_uchantyperep
+begin
+
+definition uchans_chan :: "chan itself \<Rightarrow> String.literal \<Zpfun> utyp"
+  where "uchans_chan x = {STR ''Input'' \<mapsto> UnitT, STR ''Output'' \<mapsto> IntT}"
+
+instance
+  by (intro_classes, auto simp add: uchans_chan_def)
+
+end
+
+(*
+instantiation chan :: uchantyperep
+begin
+
+definition uchan_mk_chan :: "chan event \<Rightarrow> chan"
+  where "uchan_mk_chan e = (if (ev_name e = STR ''Input'') then Input_C (ev_val e)
+                            else Output_C (ev_val e))"
+
+fun uchan_dest_chan :: "chan \<Rightarrow> chan event" where
+"uchan_dest (Input_C v) = mk_event (STR ''Input'', to_uval v)" |
+"uchan_dest (Output_C v) = mk_event (STR ''Output'', to_uval v)" 
+
+instance
+  apply (intro_classes)
+  apply (auto simp add: uchan_mk_chan_def)
+*)
+
+
 
 end
