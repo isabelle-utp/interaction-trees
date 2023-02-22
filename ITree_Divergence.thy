@@ -447,6 +447,12 @@ lemma un_Sils_n_Sils_stable: "\<lbrakk> n \<le> m; stable P \<rbrakk> \<Longrigh
   apply (metis Suc_le_D Suc_le_lessD less_Suc_eq_le un_Sils_n.simps(2))+
   done
 
+lemma un_Sils_n_code [code]:
+  "un_Sils_n n P = (if n = 0 then P
+                    else if is_Sil P then un_Sils_n (n - 1) (un_Sil P) 
+                    else P)"
+  by (induct n, auto simp add: stable_un_Sils_n, metis itree.collapse(2) un_Sils_n.simps(2))
+
 lemma stabilises_un_Sils_n: "stabilises P \<Longrightarrow> \<exists> n. un_Sils P = un_Sils_n n P"
   by (metis lessI less_Suc_eq_le stabilises_def stable_un_Sils un_Sils_n_Sils_stable)
 
