@@ -344,8 +344,16 @@ syntax
 translations
   "_cguard b P" == "(CONST test (b)\<^sub>e) ;; P"
 
+text \<open> The frame operator deletes updates made outside of the frame @{term a}. \<close>
+
 definition frame :: "'s scene \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
-"frame a P = (\<lambda> s. P s \<bind> (\<lambda> s'. Ret (s' \<oplus>\<^sub>S s on a)))"
+"frame a P = (\<lambda> s. P s \<bind> (\<lambda> s'. Ret (s \<oplus>\<^sub>S s' on a)))"
+
+syntax
+  "_frame" :: "salpha \<Rightarrow> logic \<Rightarrow> logic" ("(frame _ in (_))" [0, 10] 10)
+
+translations
+  "_frame a P" == "CONST ITree_Circus.frame a P"
 
 definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>1) htree \<Rightarrow> ('e, 's\<^sub>2) htree" where
 "frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"

@@ -150,6 +150,15 @@ lemma hoare_let [hoare_safe]:
   shows "\<^bold>{P\<^bold>} let x \<leftarrow> e in S x \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def let_itree_def lens_defs)
 
+text \<open> If @{term a} is a frame for @{term C}, then we can show that any @{term I} is an invariant
+  provided it only refers to variables outside of the frame. \<close>
+
+lemma hl_frame [hoare_safe]:
+  assumes "a \<sharp> (I)\<^sub>e"
+  shows "\<^bold>{I\<^bold>} frame a in C \<^bold>{I\<^bold>}"
+  using assms
+  by (force elim: trace_to_bindE simp add: hoare_alt_def frame_def unrest_expr_def)
+
 lemma hl_for:
   assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
   shows "\<^bold>{@(R 0)\<^bold>} for i in xs do S i od \<^bold>{@(R (length xs))\<^bold>}"
