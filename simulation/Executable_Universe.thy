@@ -72,9 +72,11 @@ lemma utyp_EnumT_is_EnumV [elim]: "\<lbrakk> x :\<^sub>u EnumT A; \<And> n. x = 
 lemma utyp_PairT_is_PairV [elim]: "\<lbrakk> x :\<^sub>u PairT (a, b); \<And> y z. \<lbrakk> x = PairV (y, z); y :\<^sub>u a; z :\<^sub>u b \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (induct x, auto)
 
+lemma those_Some_iff: "those xs = Some ys \<longleftrightarrow> xs = map Some ys"
+  by (induct xs arbitrary: ys, auto simp add: option.case_eq_if)
+
 lemma utyp_ListT_ListV_ex: "x :\<^sub>u ListT a \<Longrightarrow> \<exists> xs. x = ListV a xs \<and> (\<forall> y\<in>set xs. y :\<^sub>u a)"
-  apply (induct x, auto)
-  sorry
+  by (induct x, auto simp add: those_Some_iff, metis (mono_tags, opaque_lifting) image_iff list.set_map)
 
 lemma utyp_ListT_is_ListV [elim]: "\<lbrakk> x :\<^sub>u ListT a; \<And> xs. \<lbrakk> x = ListV a xs; (\<forall> y\<in>set xs. y :\<^sub>u a) \<rbrakk>  \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   using utyp_ListT_ListV_ex by blast
