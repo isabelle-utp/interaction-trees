@@ -1,3 +1,8 @@
+(* History of changes:
+v1: add another one transition to MoveSTM to have a nondeterministic choice between the triggers 
+  (update) of t1 and t3
+basic: 
+*)
 section \<open> Simulation of a very basic RoboChart model \<close>
 text \<open> This theory aims for simulation of a trivial RoboChart model (see 
 Figure~\ref{fig:robochart_basic}) based on its CSP semantics. 
