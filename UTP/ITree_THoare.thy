@@ -136,13 +136,35 @@ proof -
     using partial thoareI wS_term by fastforce
 qed
 
-definition while_inv_var :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a::wellorder) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+definition while_inv_var :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a::wellorder) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv_var B I V P = iterate B P"
 
 syntax 
   "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ var _ do _ od")
   "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ invariant _ variant _ do _ od")
-translations "_while_inv_var_itree B I V P" == "CONST while_inv_var (B)\<^sub>e (I)\<^sub>e (V)\<^sub>e P"
+translations 
+  "_while_inv_var_itree B I V P" => "CONST while_inv_var (B)\<^sub>e (\<lambda> _ghost_old. (I)\<^sub>e) (V)\<^sub>e P"
+  "_while_inv_var_itree B I V P" <= "CONST while_inv_var (B)\<^sub>e (\<lambda> g. (I)\<^sub>e) (V)\<^sub>e P"
+
+lemma thl_intro_ghost:
+  assumes "\<And> s. H[\<guillemotleft>s\<guillemotright> = $\<^bold>v \<and> P] C [Q]"
+  shows "H[P] C [Q]"
+  using assms 
+  by (auto simp add: thoare_triple_def hoare_alt_def taut_def lens_defs)
+
+
+lemma thl_while_inv_var_ghost [hoare_safe]:
+  assumes "\<And> old z. H[@(I old) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I old) \<and> V < \<guillemotleft>z\<guillemotright>]" 
+          "\<And> old. `\<guillemotleft>old\<guillemotright> = $\<^bold>v \<and> P \<longrightarrow> @(I old)`" "\<And> old. `(\<not> B \<and> @(I old)) \<longrightarrow> Q`"
+  shows "H[P] while B inv @(I old) var V do S od [Q]"
+proof (rule thl_intro_ghost)
+  fix s
+  have 1:"H[@(I s)]while B do S od[\<not> B \<and> @(I s)]"
+    by (rule thl_while, rule assms(1))
+  from thl_conseq[OF 1 assms(2) assms(3)]
+  show "H[\<guillemotleft>s\<guillemotright> = $\<^bold>v \<and> P] while B invariant @(I old) variant V do S od [Q]"
+    by (simp add: while_inv_var_def)
+qed    
 
 lemma thl_while_inv_var [hoare_safe]:
   assumes "\<And> z. H[I \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [I \<and> V < \<guillemotleft>z\<guillemotright>]" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
@@ -159,6 +181,8 @@ proof -
   have "while B inv I var V do S od = while B inv I do S od"
     by (simp add: while_inv_var_def while_inv_def)
   with assms show ?thesis
+    apply simp
+    apply (rule hl_while_inv)
     by (simp add: hl_while_inv)
 qed
 

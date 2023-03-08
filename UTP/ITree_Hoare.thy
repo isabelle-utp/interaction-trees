@@ -292,8 +292,14 @@ text \<open> Our invariant-annotated while loop can use the state at the start o
 definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv B I P = iterate B P"
 
+definition old_expr :: "'s \<Rightarrow> ('a, 's) expr \<Rightarrow> ('a, 's) expr" where
+[expr_defs]: "old_expr s e = (\<lambda> s'. e s)"
+
+expr_constructor old_expr
+
 syntax
   "_ghost_old" :: "id" \<comment> \<open> A distinguished name for the ghost state ("old") \<close>
+  "_old_expr" :: "logic \<Rightarrow> logic" ("old[_]")
   "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ do _ od")
   "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ invariant _ do _ od")
 
@@ -303,6 +309,8 @@ parse_translation \<open>
 translations
   "_while_inv_itree B I P" => "CONST while_inv (B)\<^sub>e (\<lambda> _ghost_old. (I)\<^sub>e) P"
   "_while_inv_itree B I P" <= "CONST while_inv (B)\<^sub>e (\<lambda> g. (I)\<^sub>e) P"
+  "_old_expr e" => "(CONST old_expr _ghost_old) (e)\<^sub>e"
+  "_old_expr e" <= "CONST old_expr x (e)\<^sub>e"
 
 lemma hl_intro_ghost:
   assumes "\<And> s. \<^bold>{\<guillemotleft>s\<guillemotright> = $\<^bold>v \<and> P\<^bold>} C \<^bold>{Q\<^bold>}"
