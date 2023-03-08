@@ -145,7 +145,7 @@ lemma hl_choice [hoare_safe]:
   apply (metis (mono_tags, lifting) Un_iff extchoice_fun_def in_mono retvals_extchoice)
   done
 
-lemma hoare_let [hoare_safe]:
+lemma hl_let [hoare_safe]:
   assumes "\<And> s. \<^bold>{P \<and> \<guillemotleft>s\<guillemotright> = \<^bold>v\<^bold>} (S (e s)) \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} let x \<leftarrow> e in S x \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def let_itree_def lens_defs)
@@ -287,22 +287,42 @@ qed
 
 lemmas hl_while = hoare_while_partial
 
-definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+text \<open> Our invariant-annotated while loop can use the state at the start of the loop in the invariant. \<close>
+
+definition while_inv :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv B I P = iterate B P"
 
-syntax 
+syntax
+  "_ghost_old" :: "id" \<comment> \<open> A distinguished name for the ghost state ("old") \<close>
   "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ do _ od")
   "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ invariant _ do _ od")
-translations "_while_inv_itree B I P" == "CONST while_inv (B)\<^sub>e (I)\<^sub>e P"
+
+parse_translation \<open> 
+  [(@{syntax_const "_ghost_old"}, fn ctx => fn term => Syntax.free "old")]\<close>
+
+translations
+  "_while_inv_itree B I P" => "CONST while_inv (B)\<^sub>e (\<lambda> _ghost_old. (I)\<^sub>e) P"
+  "_while_inv_itree B I P" <= "CONST while_inv (B)\<^sub>e (\<lambda> g. (I)\<^sub>e) P"
+
+lemma hl_intro_ghost:
+  assumes "\<And> s. \<^bold>{\<guillemotleft>s\<guillemotright> = $\<^bold>v \<and> P\<^bold>} C \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} C \<^bold>{Q\<^bold>}"
+  using assms by (auto simp add: hoare_alt_def taut_def lens_defs)
+
+lemma hl_while_inv_ghost [hoare_safe]:
+  assumes "\<And> old. \<^bold>{@(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}" "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" "\<And> old. `(\<not> B \<and> @(I old)) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>}while B inv @(I old) do S od\<^bold>{Q\<^bold>}"
+proof -
+  have 1:"\<And> old. \<^bold>{@(I old)\<^bold>}while B do S od\<^bold>{\<not> B \<and> @(I old)\<^bold>}"
+    by (simp add: assms(1) hoare_while_partial while_inv_def)
+  from hl_conseq[OF 1 assms(2) assms(3)] show ?thesis
+    by (auto simp add: hoare_alt_def while_inv_def)
+qed
 
 lemma hl_while_inv [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>}while B inv I do S od\<^bold>{Q\<^bold>}"
-proof -
-  have 1:"\<^bold>{I\<^bold>}while B inv I do S od\<^bold>{\<not> B \<and> I\<^bold>}"
-    by (simp add: assms(1) hoare_while_partial while_inv_def)
-  from hl_conseq[OF 1 assms(2) assms(3)] show ?thesis by simp
-qed
+  using assms by (rule_tac hl_while_inv_ghost, auto, expr_auto)
 
 lemma hl_while_inv_init [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> \<sigma> \<dagger> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
