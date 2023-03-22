@@ -200,6 +200,11 @@ fun simulate model thy =
 end;
 \<close>
 
+definition show_channel :: "String.literal \<Rightarrow> 'a::show \<Rightarrow> String.literal" where
+"show_channel c p = c + STR '' '' + show p"
+
+ML_file \<open>Show_Channel.ML\<close>
+
 ML \<open>
   Outer_Syntax.command @{command_keyword animate} "animate an ITree"
   (Parse.name >> (fn model => Toplevel.theory (ITree_Simulator.simulate model)));
