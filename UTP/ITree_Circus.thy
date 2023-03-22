@@ -222,6 +222,11 @@ text \<open> Hide the state of an action to produce a process \<close>
 definition process :: "'s::default subst \<Rightarrow> ('e, 's, 'a) ktree \<Rightarrow> 'e process" where
 "process I A = (\<langle>(\<lambda> _. default)\<rangle>\<^sub>a ;; \<langle>I\<rangle>\<^sub>a ;; A ;; assigns (\<lambda> s. ())) ()"
 
+text \<open> Animatable processes -- need a show instance for the event type \<close>
+
+definition anim_process :: "'s::default subst \<Rightarrow> ('e::show, 's, 'a) ktree \<Rightarrow> 'e process" where
+"anim_process = process"
+
 lemma deadlock_free_processI: "(\<And> s. deadlock_free ((\<langle>\<sigma>\<rangle>\<^sub>a ;; P) s)) \<Longrightarrow> deadlock_free (process \<sigma> P)"
   by (simp add: process_def seq_itree_def kleisli_comp_def deadlock_free_bind_iff assigns_def deadlock_free_Ret)
 
