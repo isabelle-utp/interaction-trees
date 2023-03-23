@@ -363,6 +363,22 @@ translations
 definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>1) htree \<Rightarrow> ('e, 's\<^sub>2) htree" where
 "frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
 
+definition not_modifies :: "('e, 's) htree \<Rightarrow> ('a, 's) expr \<Rightarrow> bool" where
+"not_modifies P e = (\<forall> s s'. s' \<in> \<^bold>R(P s) \<longrightarrow> e s' = e s)"
+
+syntax
+  "_nmods" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_ nmods _" [40, 41] 40)
+
+translations
+  "P nmods e" == "CONST not_modifies P (e)\<^sub>e"
+
+lemma assigns_nmods: "\<langle>\<sigma>\<rangle>\<^sub>a nmods e \<longleftrightarrow> \<sigma> \<dagger> e = e"
+  by (simp add: not_modifies_def assigns_def subst_app_def fun_eq_iff)
+
+lemma seq_nmods: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> P ;; Q nmods e"
+  by (auto elim!:trace_to_bindE bind_RetE' simp add: seq_itree_def kleisli_comp_def not_modifies_def retvals_def)
+     (metis trace_to_Nil)+
+
 definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
 [code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! ;; frame_ext a P"
 

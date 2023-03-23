@@ -159,6 +159,11 @@ lemma hl_frame [hoare_safe]:
   using assms
   by (force elim: trace_to_bindE simp add: hoare_alt_def frame_def unrest_expr_def)
 
+lemma hl_frame_rule:
+  assumes "C nmods I" "H{P} C {Q}"
+  shows "H{I \<and> P} C {I \<and> Q}"
+  using assms by (force simp add: hoare_alt_def not_modifies_def retvals_def)
+
 lemma hl_for:
   assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
   shows "\<^bold>{@(R 0)\<^bold>} for i in xs do S i od \<^bold>{@(R (length xs))\<^bold>}"
@@ -342,6 +347,9 @@ method hoare = ((simp add: prog_defs assigns_combine usubst usubst_eval)?, (auto
 method vcg = (hoare; expr_taut?; safe?; simp?)
 
 method hoare_auto = (hoare; expr_auto)
+
+lemma nmods_via_hl: "P nmods e \<longleftrightarrow> (\<forall> v. H{e = \<guillemotleft>v\<guillemotright>} P {e = \<guillemotleft>v\<guillemotright>})"
+  by (simp add: not_modifies_def hoare_alt_def retvals_def)
 
 theorem hl_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
   by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
