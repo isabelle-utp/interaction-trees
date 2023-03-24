@@ -366,6 +366,9 @@ definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow>
 definition not_modifies :: "('e, 's) htree \<Rightarrow> ('a, 's) expr \<Rightarrow> bool" where
 "not_modifies P e = (\<forall> s s'. s' \<in> \<^bold>R(P s) \<longrightarrow> e s' = e s)"
 
+lemma not_modifiesI: "(\<And> s s'. s' \<in> \<^bold>R(P s) \<Longrightarrow> e s' = e s) \<Longrightarrow> not_modifies P e"
+  by (auto simp add: not_modifies_def)
+
 syntax
   "_nmods" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_ nmods _" [40, 41] 40)
 
@@ -378,6 +381,34 @@ lemma assigns_nmods: "\<langle>\<sigma>\<rangle>\<^sub>a nmods e \<longleftright
 lemma seq_nmods: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> P ;; Q nmods e"
   by (auto elim!:trace_to_bindE bind_RetE' simp add: seq_itree_def kleisli_comp_def not_modifies_def retvals_def)
      (metis trace_to_Nil)+
+
+lemma while_nmods_lemma: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; P nmods e; s\<^sub>0 \<in> chain_states chn \<rbrakk> \<Longrightarrow> e s = e s\<^sub>0"
+  by (induct arbitrary: s\<^sub>0 rule: itree_chain.induct)
+     (auto simp add: SEXP_def not_modifies_def retvals_def, metis+)
+
+lemma while_nmods: 
+  assumes "P nmods e"
+  shows "while b do P od nmods e"
+proof (rule not_modifiesI, simp add: SEXP_def)
+  fix s s'
+  assume s': "s' \<in> \<^bold>R (iterate b P s)"
+  show "e s' = e s"
+  proof (cases "b s")
+    case True
+    with s' obtain chn s\<^sub>0 tr\<^sub>0 where "b s" "\<not> b s'" "s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>x\<in>chain_states chn. b x" "P s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'"
+      by (auto simp add: retvals_def iterate_term_chain_iff itree_term_chain.simps)
+    have "\<forall> s\<^sub>0 \<in> chain_states chn. e s = e s\<^sub>0"
+      by (meson \<open>s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0\<close> assms while_nmods_lemma)
+    hence "e s = e s\<^sub>0"
+      by (metis \<open>s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0\<close> final_state_in_chain itree_chain.cases list.discI)
+    then show ?thesis
+      by (metis SEXP_def \<open>P s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'\<close> assms not_modifies_def retvals_traceI)
+  next
+    case False
+    then show ?thesis
+      using s' by force
+  qed
+qed
 
 definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
 [code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! ;; frame_ext a P"
