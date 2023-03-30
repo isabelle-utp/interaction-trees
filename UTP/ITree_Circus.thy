@@ -375,18 +375,32 @@ syntax
 translations
   "P nmods e" == "CONST not_modifies P (e)\<^sub>e"
 
-lemma assigns_nmods: "\<langle>\<sigma>\<rangle>\<^sub>a nmods e \<longleftrightarrow> \<sigma> \<dagger> e = e"
+named_theorems nmods
+
+lemma assigns_nmods_iff : "\<langle>\<sigma>\<rangle>\<^sub>a nmods e \<longleftrightarrow> \<sigma> \<dagger> (e)\<^sub>e = (e)\<^sub>e"
   by (simp add: not_modifies_def assigns_def subst_app_def fun_eq_iff)
 
-lemma seq_nmods: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> P ;; Q nmods e"
+lemma assigns_nmods [nmods]: "\<sigma> \<dagger> (e)\<^sub>e = (e)\<^sub>e \<Longrightarrow> \<langle>\<sigma>\<rangle>\<^sub>a nmods e"
+  by (simp add: assigns_nmods_iff)
+
+lemma Skip_nmods [nmods]: "Skip nmods e"
+  by (simp add: Skip_def not_modifies_def)
+
+lemma seq_nmods [nmods]: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> P ;; Q nmods e"
   by (auto elim!:trace_to_bindE bind_RetE' simp add: seq_itree_def kleisli_comp_def not_modifies_def retvals_def)
      (metis trace_to_Nil)+
+
+text \<open> The following law ignore the condition when checking for modification. However, if we were
+  checking for modification conditions, we could make use of it. \<close>
+
+lemma cond_nmods [nmods]: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> if b then P else Q fi nmods e"
+  by (simp add: not_modifies_def cond_itree_def)
 
 lemma while_nmods_lemma: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; P nmods e; s\<^sub>0 \<in> chain_states chn \<rbrakk> \<Longrightarrow> e s = e s\<^sub>0"
   by (induct arbitrary: s\<^sub>0 rule: itree_chain.induct)
      (auto simp add: SEXP_def not_modifies_def retvals_def, metis+)
 
-lemma while_nmods: 
+lemma while_nmods [nmods]: 
   assumes "P nmods e"
   shows "while b do P od nmods e"
 proof (rule not_modifiesI, simp add: SEXP_def)
@@ -409,6 +423,11 @@ proof (rule not_modifiesI, simp add: SEXP_def)
       using s' by force
   qed
 qed
+
+text \<open> @{const not_modifies} is quite useful as a predicate to determine whether expressions are
+  invariant under a program by checking whether variables are updated. However, it may be better
+  to have a ``weakest modification condition'' calculus, that allows us to determine the weakest
+  precondition under which a program will not modify a particular expression. \<close>
 
 definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
 [code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! ;; frame_ext a P"
@@ -452,5 +471,14 @@ lemma extchoice_event_block:
   shows "event_block c A P\<sigma> \<box> event_block d B Q\<sigma> = event_block (c +\<^sub>\<triangle> d) (A <+> B)\<^sub>e (case_sum P\<sigma> Q\<sigma>)"
   using assms
   by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
+
+(*
+syntax
+  "_match_syntax" :: "['a, cases_syn] \<Rightarrow> 'b"  ("(match _ of/ _)" 10)
+
+translations
+  "_match_syntax e y" => "\<lambda> _sexp_state. _case_syntax ((e)\<^sub>e _sexp_state) y"
+  "_match_syntax e y" <= "\<lambda> s. _case_syntax (e)\<^sub>e y"
+*)
 
 end
