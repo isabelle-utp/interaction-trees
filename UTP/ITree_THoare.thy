@@ -12,7 +12,7 @@ definition thoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htre
 "thoare_triple P S Q = (hoare_triple P S Q \<and> `P \<longrightarrow> pre S`)"
 
 syntax
-  "_thoare"          :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("H[_]/ _/ [_]")
+  "_thoare"          :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H[_] /_) /[_]")
 
 translations
   "_thoare P S Q" == "CONST thoare_triple (P)\<^sub>e S (Q)\<^sub>e"
@@ -140,8 +140,8 @@ definition while_inv_var :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightar
 [code_unfold]: "while_inv_var B I V P = iterate B P"
 
 syntax 
-  "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ inv _ var _ do _ od")
-  "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ invariant _ variant _ do _ od")
+  "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2while _ /inv/ _ /var/ _ /do/ _ /od)")
+  "_while_inv_var_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(while _ /(2invariant/ _) /variant _ //(2do //_) //od)")
 translations 
   "_while_inv_var_itree B I V P" => "CONST while_inv_var (B)\<^sub>e (\<lambda> _ghost_old. (I)\<^sub>e) (V)\<^sub>e P"
   "_while_inv_var_itree B I V P" <= "CONST while_inv_var (B)\<^sub>e (\<lambda> g. (I)\<^sub>e) (V)\<^sub>e P"

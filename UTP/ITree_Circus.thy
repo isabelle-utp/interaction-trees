@@ -77,8 +77,8 @@ definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree)
 "for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) I Skip) s)"
 
 syntax 
-  "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
-  "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ fi")
+  "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2if _ /then /_ /else /_ /fi)")
+  "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2if _ /then /_ /fi)")
   "_cond_itree_infix"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(3_ \<lhd> _ \<rhd>/ _)" [52,0,53] 52)
   "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
