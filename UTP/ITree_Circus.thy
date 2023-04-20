@@ -480,13 +480,14 @@ lemma extchoice_event_block:
   using assms
   by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
 
-(*
+definition match_itree :: "('a, 's) expr \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"match_itree e P = (\<lambda> s. P (e s) s)"
+
 syntax
   "_match_syntax" :: "['a, cases_syn] \<Rightarrow> 'b"  ("(match _ of/ _)" 10)
 
 translations
-  "_match_syntax e y" => "\<lambda> _sexp_state. _case_syntax ((e)\<^sub>e _sexp_state) y"
-  "_match_syntax e y" <= "\<lambda> s. _case_syntax (e)\<^sub>e y"
-*)
+  "_match_syntax e P" => "CONST match_itree (e)\<^sub>e (\<lambda> _sexp_state. (_case_syntax _sexp_state P))"
+  "_match_syntax e P" <= "CONST match_itree (e)\<^sub>e (\<lambda> s. (_case_syntax s2 P))"
 
 end

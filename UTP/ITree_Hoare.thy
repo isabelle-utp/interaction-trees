@@ -136,6 +136,11 @@ lemma hl_cond [hoare_safe]:
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def cond_itree_def)
 
+lemma hl_match [hoare_safe]:
+  assumes "\<And> v. \<^bold>{\<guillemotleft>v\<guillemotright> = e \<and> P\<^bold>} C(v) \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} match_itree (e)\<^sub>e C \<^bold>{Q\<^bold>}"
+  using assms by (simp add: match_itree_def hoare_alt_def)
+
 lemma hl_choice [hoare_safe]:
   assumes "\<^bold>{P\<^bold>} C\<^sub>1 \<^bold>{Q\<^bold>}" "\<^bold>{P\<^bold>} C\<^sub>2 \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} C\<^sub>1 \<box> C\<^sub>2 \<^bold>{Q\<^bold>}"
@@ -346,8 +351,6 @@ lemma hl_while_inv_init [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> \<sigma> \<dagger> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>}\<langle>\<sigma>\<rangle>\<^sub>a ;; while B inv I do S od\<^bold>{Q\<^bold>}"
   by (auto intro!: hl_seq[where Q="I"] hl_while_inv hoare_assigns_impl assms)
-
-thm while_nmods
 
 lemma while_inv_nmods [nmods]:
   "P nmods e \<Longrightarrow> while b invariant I do P od nmods e"
