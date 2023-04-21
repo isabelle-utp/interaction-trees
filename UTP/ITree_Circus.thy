@@ -79,10 +79,11 @@ definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree)
 nonterminal elsebranch
 
 syntax 
-  "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> elsebranch \<Rightarrow> logic" ("(2if _ /then /_ /_ /fi)")
-  "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2if _ /then /_ /fi)")
-  "_cond_elseif" :: "logic \<Rightarrow> logic \<Rightarrow> elsebranch \<Rightarrow> elsebranch" ("(elseif _ /then /_ _)")
-  "_cond_else" :: "logic \<Rightarrow> elsebranch" ("else /_")
+  "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> elsebranch \<Rightarrow> logic" ("(2if _ /then /_/_ /fi)")
+(*  "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2if _ /then /_ /fi)") *)
+  "_cond_elseif" :: "logic \<Rightarrow> logic \<Rightarrow> elsebranch \<Rightarrow> elsebranch" ("( elseif _ /then /_/_)")
+  "_cond_else" :: "logic \<Rightarrow> elsebranch" (" else /_")
+  "_cond_no_else" :: "elsebranch" ("")
   "_cond_itree_infix"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(3_ \<lhd> _ \<rhd>/ _)" [52,0,53] 52)
   "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
@@ -93,10 +94,11 @@ syntax
 translations
   "_cond_itree b P Q" => "CONST cond_itree P (b)\<^sub>e Q"
   "_cond_else P" => "P"
+  "_cond_no_else" => "CONST Skip"
   "_cond_itree b P (_cond_else Q)" <= "CONST cond_itree P (b)\<^sub>e Q"
   "_cond_elseif b P Q" => "CONST cond_itree P (b)\<^sub>e Q"
   "_cond_elseif c Q (_cond_else R)" <= "_cond_else (CONST cond_itree Q (c)\<^sub>e R)"
-  "if b then P fi" == "if b then P else CONST Skip fi"
+  "_cond_no_else" <= "_cond_else CONST Skip"
   "_cond_itree_infix P b Q" => "_cond_itree b P (_cond_else Q)"
   "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
   "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
