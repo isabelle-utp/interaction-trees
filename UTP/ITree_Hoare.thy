@@ -356,12 +356,13 @@ qed
 
 text \<open> The following law generalises the while law in several ways:
        (1) the invariant may refer to the initial state of the loop via "old";
-       (2) the precondition holding on the initial state may be used in the invariant proof 
+       (2) the precondition holding on the initial state may be used in the invariant proof;
        (3) it can also be used in both the implications. 
        As a result, this law allows better support for invariant framing. \<close>
 
 lemma hl_while_inv_prestate [hoare_safe]:
   assumes 
+    \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>} means the @{term P} holds on the initial state @{term old}. \<close>
     "\<And> old. \<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}" 
     "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" 
     "\<And> old. `(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I old)) \<longrightarrow> Q`"
