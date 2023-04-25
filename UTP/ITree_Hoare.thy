@@ -389,7 +389,7 @@ qed
 lemma hl_while_inv [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>}while B inv I do S od\<^bold>{Q\<^bold>}"
-proof (rule hl_while_inv_ghost)
+proof (rule hl_while_inv_prestate)
   fix old
   from assms(1) show "\<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> I \<and> B\<^bold>} S \<^bold>{I\<^bold>}"
     by (rule hl_conseq; simp)
