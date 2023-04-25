@@ -33,6 +33,11 @@ lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leads
 lemma hoare_ref_by: "hoare_triple P C Q \<longleftrightarrow> (P\<^sup>< \<longrightarrow> Q\<^sup>>)\<^sub>e \<sqsubseteq> \<lbrakk>C\<rbrakk>\<^sub>p"
   by (auto simp add: hoare_triple_def itree_rel_def spec_def ref_by_fun_def ref_by_bool_def)
 
+lemma hl_prestate:
+  assumes "\<And> old. \<^bold>{\<guillemotleft>old\<guillemotright> = \<^bold>v \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>\<^bold>} C \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} C \<^bold>{Q\<^bold>}"
+  using assms by (simp add: hoare_alt_def lens_defs, expr_auto)
+
 lemma hl_conseq:
   assumes "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}" "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "`Q\<^sub>2 \<longrightarrow> Q\<^sub>1`"
   shows "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}"
@@ -166,6 +171,11 @@ lemma hl_frame [hoare_safe]:
 
 lemma hl_frame_rule:
   assumes "C nmods I" "H{P} C {Q}"
+  shows "H{I \<and> P} C {I \<and> Q}"
+  using assms by (force simp add: hoare_alt_def not_modifies_def retvals_def)
+
+lemma hl_frame_rule':
+  assumes "C nmods I" "H{I \<and> P} C {Q}"
   shows "H{I \<and> P} C {I \<and> Q}"
   using assms by (force simp add: hoare_alt_def not_modifies_def retvals_def)
 
@@ -332,6 +342,7 @@ lemma hl_intro_ghost:
   shows "\<^bold>{P\<^bold>} C \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def taut_def lens_defs)
 
+(*
 lemma hl_while_inv_ghost [hoare_safe]:
   assumes "\<And> old. \<^bold>{@(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}" "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" "\<And> old. `(\<not> B \<and> @(I old)) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>}while B inv @(I old) do S od\<^bold>{Q\<^bold>}"
@@ -341,11 +352,51 @@ proof -
   from hl_conseq[OF 1 assms(2) assms(3)] show ?thesis
     by (auto simp add: hoare_alt_def while_inv_def)
 qed
+*)
+
+text \<open> The following law generalises the while law in several ways:
+       (1) the invariant may refer to the initial state of the loop via "old";
+       (2) the precondition holding on the initial state may be used in the invariant proof 
+       (3) it can also be used in both the implications. 
+       As a result, this law allows better support for invariant framing. \<close>
+
+lemma hl_while_inv_prestate [hoare_safe]:
+  assumes 
+    "\<And> old. \<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}" 
+    "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" 
+    "\<And> old. `(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I old)) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>}while B inv @(I old) do S od\<^bold>{Q\<^bold>}"
+proof (rule_tac hl_prestate)
+  fix old
+  show "\<^bold>{\<guillemotleft>old\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>\<^bold>} while B inv @(I old) do S od \<^bold>{Q\<^bold>}"
+  proof -
+    have "\<^bold>{(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)) \<and> B\<^bold>} S \<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)\<^bold>}"
+    proof (simp, rule hl_frame_rule')
+      show "S nmods P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"
+        by (expr_simp add: not_modifies_def)
+      show "\<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}"
+        by (fact assms(1))
+    qed
+    hence w:"\<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)\<^bold>} while B do S od \<^bold>{\<not> B \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)\<^bold>}"
+      by (simp add: hoare_while_partial)
+    from assms(2-3) show ?thesis
+      unfolding while_inv_def
+      by (rule_tac hl_conseq[OF w]; expr_auto)
+  qed
+qed
 
 lemma hl_while_inv [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>}while B inv I do S od\<^bold>{Q\<^bold>}"
-  using assms by (rule_tac hl_while_inv_ghost, auto, expr_auto)
+proof (rule hl_while_inv_ghost)
+  fix old
+  from assms(1) show "\<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> I \<and> B\<^bold>} S \<^bold>{I\<^bold>}"
+    by (rule hl_conseq; simp)
+  from assms(2) show "`P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> I`"
+    by (expr_simp)
+  from assms(3) show "`P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> I \<longrightarrow> Q`"
+    by (expr_simp)
+qed
 
 lemma hl_while_inv_init [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> \<sigma> \<dagger> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
