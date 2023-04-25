@@ -362,7 +362,7 @@ text \<open> The following law generalises the while law in several ways:
 
 lemma hl_while_inv_prestate [hoare_safe]:
   assumes 
-    \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>} means the @{term P} holds on the initial state @{term old}. \<close>
+    \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term old}. \<close>
     "\<And> old. \<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}" 
     "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" 
     "\<And> old. `(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I old)) \<longrightarrow> Q`"
