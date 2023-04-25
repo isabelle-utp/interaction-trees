@@ -146,25 +146,53 @@ translations
   "_while_inv_var_itree B I V P" => "CONST while_inv_var (B)\<^sub>e (\<lambda> _ghost_old. (I)\<^sub>e) (V)\<^sub>e P"
   "_while_inv_var_itree B I V P" <= "CONST while_inv_var (B)\<^sub>e (\<lambda> g. (I)\<^sub>e) (V)\<^sub>e P"
 
-lemma thl_intro_ghost:
-  assumes "\<And> s. H[\<guillemotleft>s\<guillemotright> = $\<^bold>v \<and> P] C [Q]"
+lemma thl_prestate:
+  assumes "\<And> old. H[\<guillemotleft>old\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>] C [Q]"
   shows "H[P] C [Q]"
   using assms 
-  by (auto simp add: thoare_triple_def hoare_alt_def taut_def lens_defs)
+  using assms by (simp add: thoare_triple_def hoare_alt_def lens_defs, expr_auto)
 
+lemma thl_frame_rule:
+  assumes "C nmods I" "H[P] C [Q]"
+  shows "H[I \<and> P] C [I \<and> Q]"
+  using assms by (force simp add: thoare_triple_def hoare_alt_def not_modifies_def taut_def retvals_def)
 
-lemma thl_while_inv_var_ghost [hoare_safe]:
-  assumes "\<And> old z. H[@(I old) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I old) \<and> V < \<guillemotleft>z\<guillemotright>]" 
-          "\<And> old. `\<guillemotleft>old\<guillemotright> = $\<^bold>v \<and> P \<longrightarrow> @(I old)`" "\<And> old. `(\<not> B \<and> @(I old)) \<longrightarrow> Q`"
-  shows "H[P] while B inv @(I old) var V do S od [Q]"
-proof (rule thl_intro_ghost)
-  fix s
-  have 1:"H[@(I s)]while B do S od[\<not> B \<and> @(I s)]"
-    by (rule thl_while, rule assms(1))
-  from thl_conseq[OF 1 assms(2) assms(3)]
-  show "H[\<guillemotleft>s\<guillemotright> = $\<^bold>v \<and> P] while B invariant @(I old) variant V do S od [Q]"
-    by (simp add: while_inv_var_def)
-qed    
+lemma thl_frame_rule':
+  assumes "C nmods I" "H[I \<and> P] C [Q]"
+  shows "H[I \<and> P] C [I \<and> Q]"
+  using assms by (force simp add: thoare_triple_def hoare_alt_def not_modifies_def taut_def retvals_def)
+
+lemma hl_frame_rule':
+  assumes "C nmods I" "H{I \<and> P} C {Q}"
+  shows "H{I \<and> P} C {I \<and> Q}"
+  using assms by (force simp add: hoare_alt_def not_modifies_def retvals_def)
+
+lemma thl_while_inv_prestate [hoare_safe]:
+  assumes 
+    \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term old}. \<close>
+    "\<And> old z. H[P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I old) \<and> V < \<guillemotleft>z\<guillemotright>]" 
+    "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" 
+    "\<And> old. `(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I old)) \<longrightarrow> Q`"
+  shows "H[P]while B inv @(I old) var V do S od[Q]"
+proof (rule_tac thl_prestate)
+  fix old
+  show "H[\<guillemotleft>old\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>] while B inv @(I old) var V do S od [Q]"
+  proof -
+    have "\<And> z. H[(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)) \<and> V < \<guillemotleft>z\<guillemotright>]"
+    proof (simp, rule thl_frame_rule')
+      fix z
+      show "S nmods P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"
+        by (expr_simp add: not_modifies_def)
+      show "\<And> z. H[P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I old) \<and> V < \<guillemotleft>z\<guillemotright>]"
+        by (fact assms(1))
+    qed
+    hence w:"H[P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)] while B do S od [\<not> B \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)]"
+      by (rule thl_while)
+    from assms(2-3) show ?thesis
+      unfolding while_inv_var_def
+      by (rule_tac thl_conseq[OF w]; expr_auto)
+  qed
+qed
 
 lemma thl_while_inv_var [hoare_safe]:
   assumes "\<And> z. H[I \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [I \<and> V < \<guillemotleft>z\<guillemotright>]" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
