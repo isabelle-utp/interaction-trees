@@ -25,6 +25,14 @@ text \<open> The value carried over the channel \<close>
   
 end
 
+syntax 
+  "_unames" :: "type \<Rightarrow> logic" ("UNAMES'(_')")
+  "_uchantype" :: "type \<Rightarrow> logic \<Rightarrow> logic" ("UCHANTYPE'(_, _')")
+translations 
+  "UNAMES('a)" == "CONST unames TYPE('a)"
+  "UCHANTYPE('a, n)" == "CONST pfun_app (CONST uchans TYPE('a)) n"
+
+
 typedef (overloaded) 'c::pre_uchantyperep name = 
   "{n. n \<in> unames TYPE('c)}"
   by (simp add: nonempty_chans unames_def)
@@ -40,27 +48,62 @@ setup_lifting type_definition_event
 
 lift_definition ev_name :: "'c::pre_uchantyperep event \<Rightarrow> uname" is fst .
 definition ev_type :: "'c::pre_uchantyperep event \<Rightarrow> utyp"
-  where "ev_type e = (uchans TYPE('c))(ev_name e)\<^sub>p"
+  where "ev_type e = UCHANTYPE('c, ev_name e)"
 lift_definition ev_val :: "'c::pre_uchantyperep event \<Rightarrow> 'a::uvals" is "from_uval \<circ> snd" .
-lift_definition mk_event :: "uname \<Rightarrow> 'a::uvals \<Rightarrow> 'c::pre_uchantyperep event"
-  is "\<lambda> n v. if (n \<in> unames TYPE('c) \<and> (uchans TYPE('c))(n)\<^sub>p = UTYPE('a))
-             then (n, to_uval v) 
-             else (let sn = SOME n. n \<in> unames TYPE('c) in (sn, default_uval ((uchans TYPE('c))(sn)\<^sub>p)))"
+lift_definition mk_event :: "'c itself \<Rightarrow> uname \<Rightarrow> 'a::uvals \<Rightarrow> 'c::pre_uchantyperep event"
+  is "\<lambda> c n v. if n \<in> UNAMES('c)
+               then (n, if UCHANTYPE('c, n) = UTYPE('a) then to_uval v else default_uval ((uchans TYPE('c))(n)\<^sub>p))
+               else (let sn = SOME n. n \<in> unames TYPE('c) in (sn, default_uval ((uchans TYPE('c))(sn)\<^sub>p)))"
   apply auto
   apply (metis nonempty_chans old.prod.inject someI unames_def)
   apply (metis fst_conv snd_conv utyp_of_default_uval)
+  using utyp_of_default_uval apply blast
   apply (metis nonempty_chans prod.inject someI unames_def)
   apply (metis fst_conv snd_conv utyp_of_default_uval)
   done
 
-lemma 
+syntax "_mk_event" :: "type \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("mkevent[_]")
+
+translations "mkevent['a] n v" == "CONST mk_event TYPE('a) n v"
+
+lemma ev_name_UNAMES: "ev_name (e :: 'c event) \<in> UNAMES('c::pre_uchantyperep)"
+  by (transfer, auto)
+
+lemma ev_name_mkevent:
+  "n \<in> UNAMES('a) \<Longrightarrow> ev_name (mkevent['a::pre_uchantyperep] n (v :: 'b :: uvals)) = n"
+  by (transfer, auto)
+
+lemma ev_type_mkevent: "n \<in> UNAMES('c) \<Longrightarrow> ev_type (mkevent['c::pre_uchantyperep] n v) = UCHANTYPE('c, n)"
+  unfolding ev_type_def by (transfer, auto)
+
+lemma mkevent_surj:
   assumes "UTYPE('a) = ev_type x"
-  shows "mk_event (ev_name x) (ev_val x :: 'a::uvals) = x"
+  shows "mkevent['c::pre_uchantyperep] (ev_name x) (ev_val x :: 'a::uvals) = x"
   using assms
   apply (simp add: ev_val_def ev_type_def)
   apply (transfer)
-  apply auto
-  oops
+  apply (auto simp add: from_uval_inv)
+  done
+
+lemma mkevent_eq_iff:
+  fixes v\<^sub>1 v\<^sub>2 :: "'a::uvals"
+  assumes 
+    "n\<^sub>1 \<in> UNAMES('c)" 
+    "n\<^sub>2 \<in> UNAMES('c)" 
+    "UCHANTYPE('c, n\<^sub>1) = UTYPE('a)" "UCHANTYPE('c, n\<^sub>2) = UTYPE('a)" 
+  shows "mkevent['c::pre_uchantyperep] n\<^sub>1 v\<^sub>1 = mkevent['c::pre_uchantyperep] n\<^sub>2 v\<^sub>2 \<longleftrightarrow> n\<^sub>1 = n\<^sub>2 \<and> v\<^sub>1 = v\<^sub>2"
+  using assms by transfer (simp, metis to_uval_inv)
+
+lemma mkevent_eq_ev_iff:
+  fixes v :: "'a::uvals"
+  assumes "n \<in> UNAMES('c)" "UCHANTYPE('c, n) = UTYPE('a)"
+  shows "mkevent['c::pre_uchantyperep] n v = e \<longleftrightarrow> ev_name e = n \<and> ev_val e = v"
+  by (metis assms(1) assms(2) ev_name_mkevent ev_type_def mkevent_eq_iff mkevent_surj)
+
+lemma event_eq_iff:
+  assumes "ev_type e = UTYPE('a::uvals)"
+  shows "e = f \<longleftrightarrow> ev_name e = ev_name f \<and> (ev_val e :: 'a) = ev_val f"
+  by (metis assms ev_type_def mkevent_surj)
 
 (*
 type_synonym 'c chan = unit
@@ -92,7 +135,14 @@ instance
 
 end
 
-(*
+lemma UNAMES_chan [simp]: "UNAMES(chan) = {STR ''Input'', STR ''Output''}"
+  by (auto simp add: unames_def uchans_chan_def)
+
+lemma UTYPES_chan [simp]: 
+  "UCHANTYPE(chan, STR ''Input'') = UTYPE(unit)"
+  "UCHANTYPE(chan, STR ''Output'') = UTYPE(integer)"
+  by (simp_all add: uchans_chan_def utyp_unit_def utyp_integer_def)
+
 instantiation chan :: uchantyperep
 begin
 
@@ -101,16 +151,24 @@ definition uchan_mk_chan :: "chan event \<Rightarrow> chan"
                             else Output_C (ev_val e))"
 
 fun uchan_dest_chan :: "chan \<Rightarrow> chan event" where
-"uchan_dest (Input_C v) = mk_event (STR ''Input'', to_uval v)" |
-"uchan_dest (Output_C v) = mk_event (STR ''Output'', to_uval v)" 
+"uchan_dest (Input_C v) = mkevent[chan] (STR ''Input'') v" |
+"uchan_dest (Output_C v) = mkevent[chan] (STR ''Output'') v" 
 
 instance
   apply (intro_classes)
-  apply (auto simp add: uchan_mk_chan_def)
-*)
+  apply (auto simp add: uchan_mk_chan_def mkevent_eq_ev_iff)
+  using UNAMES_chan ev_name_UNAMES apply blast
+  done
+
+end
+
+record uevent =
+  uev_name :: uname
+  uev_outp :: uval
+  uev_inp  :: uval
 
 datatype ('e, 'b) chf =
-  ChanF (chf_chn: "(uname \<times> uval \<times> uval \<Longrightarrow>\<^sub>\<triangle> 'e)") \<comment> \<open> The channel, including a name, output value, and input value \<close>
+  ChanF (chf_chn: "(uevent \<Longrightarrow>\<^sub>\<triangle> 'e)") \<comment> \<open> The channel, including a name, output value, and input value \<close>
         (chf_out: "uname \<times> uval") \<comment> \<open> The value output by the process (displayed in the animator) \<close>
         (chf_typ: "utyp") \<comment> \<open> The type of data requested by the animator \<close>
         (chf_cont: "uval \<Rightarrow> 'b") \<comment> \<open> The continuation for each kind of value received \<close>
@@ -118,8 +176,9 @@ datatype ('e, 'b) chf =
 definition pfun_of_chfun :: 
   "('e, 'b) chf \<Rightarrow> 'e \<Zpfun> 'b" where
 "pfun_of_chfun chf = 
-    (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> (fst (chf_out chf), snd (chf_out chf), v) | v. v \<in> uvals (chf_typ chf)} 
-    \<bullet> (chf_cont chf) (snd (snd (the (match\<^bsub>chf_chn chf\<^esub> e)))))"
+    (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> \<lparr> uev_name = fst (chf_out chf), uev_outp = snd (chf_out chf), uev_inp = v \<rparr> 
+          | v. v \<in> uvals (chf_typ chf)} 
+    \<bullet> (chf_cont chf) (uev_inp (the (match\<^bsub>chf_chn chf\<^esub> e))))"
 
 definition
   "map_chfun f chf = ChanF (chf_chn chf) (chf_out chf) (chf_typ chf) (f \<circ> chf_cont chf)"
@@ -131,7 +190,7 @@ lemma map_pfun_pfun_of_chfun:
 lemma "pfun_app (pfun_of_chfun chf) e = undefined"
   apply (simp add: pfun_of_chfun_def)
   apply (subst pabs_apply)
-    apply simp
+    apply simp_all
   oops
 
 definition pfun_of_chfuns ::
@@ -141,5 +200,16 @@ definition pfun_of_chfuns ::
 lemma map_pfun_pfun_of_chfuns [code]:
   "map_pfun f (pfun_of_chfuns chfs) = pfun_of_chfuns (map (map_chfun f) chfs)"
   by (induct chfs, simp_all add: pfun_of_chfuns_def map_pfun_pfun_of_chfun)
+
+lemma pfun_of_chfuns_Nil [simp]: "pfun_of_chfuns [] = {}\<^sub>p"
+  by (simp add: pfun_of_chfuns_def)
+
+lemma pfun_of_chfuns_Cons [simp]: "pfun_of_chfuns (chf # chfs) = pfun_of_chfun chf \<oplus> pfun_of_chfuns chfs"
+  by (simp add: pfun_of_chfuns_def)
+
+lemma pfun_of_chfuns_override [code]: 
+  "pfun_of_chfuns chfs1 \<oplus> pfun_of_chfuns chfs2 = pfun_of_chfuns (chfs1 @ chfs2)"
+  by (induct chfs1 arbitrary: chfs2; simp add: override_assoc; metis override_assoc)
+
 
 end
