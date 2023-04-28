@@ -1,6 +1,6 @@
 subsection \<open> Simulation Harness \<close>
 
-theory ITree_Simulation
+theory ITree_Simulation                 
   imports Executable_Universe Channel_Type_Rep "Interaction_Trees.ITree_Extraction" 
   keywords "animate" :: "thy_defn"
 begin
@@ -13,6 +13,56 @@ definition pfun_of_ufun :: "(uval \<Longrightarrow>\<^sub>\<triangle> 'e) \<Righ
 
 lemma map_pfun_pfun_of_ufun [code]: "map_pfun f (pfun_of_ufun c t P) = pfun_of_ufun c t (f \<circ> P)"
   by (simp add: pfun_of_ufun_def pfun_eq_iff)
+
+
+record uevent =
+  uev_name :: uname
+  uev_outp :: uval
+  uev_inp  :: uval
+
+datatype ('e, 'b) chf =
+  ChanF (chf_chn: "(uevent \<Longrightarrow>\<^sub>\<triangle> 'e)") \<comment> \<open> The channel, including a name, output value, and input value \<close>
+        (chf_out: "uname \<times> uval") \<comment> \<open> The value output by the process (displayed in the animator) \<close>
+        (chf_typ: "utyp") \<comment> \<open> The type of data requested by the animator \<close>
+        (chf_cont: "uval \<Rightarrow> 'b") \<comment> \<open> The continuation for each kind of value received \<close>
+
+definition pfun_of_chfun :: 
+  "('e, 'b) chf \<Rightarrow> 'e \<Zpfun> 'b" where
+"pfun_of_chfun chf = 
+    (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> \<lparr> uev_name = fst (chf_out chf), uev_outp = snd (chf_out chf), uev_inp = v \<rparr> 
+          | v. v \<in> uvals (chf_typ chf)} 
+    \<bullet> (chf_cont chf) (uev_inp (the (match\<^bsub>chf_chn chf\<^esub> e))))"
+
+definition
+  "map_chfun f chf = ChanF (chf_chn chf) (chf_out chf) (chf_typ chf) (f \<circ> chf_cont chf)"
+
+lemma map_pfun_pfun_of_chfun: 
+  "map_pfun f (pfun_of_chfun chf) = pfun_of_chfun (map_chfun f chf)"
+  by (simp add: map_chfun_def pfun_of_chfun_def pfun_eq_iff)
+
+lemma "pfun_app (pfun_of_chfun chf) e = undefined"
+  apply (simp add: pfun_of_chfun_def)
+  apply (subst pabs_apply)
+    apply simp_all
+  oops
+
+definition pfun_of_chfuns ::
+  "('e, 'b) chf list \<Rightarrow> 'e \<Zpfun> 'b" where
+"pfun_of_chfuns chfs = foldr (\<lambda> c f. pfun_of_chfun c \<oplus> f) chfs {}\<^sub>p"
+
+lemma map_pfun_pfun_of_chfuns [code]:
+  "map_pfun f (pfun_of_chfuns chfs) = pfun_of_chfuns (map (map_chfun f) chfs)"
+  by (induct chfs, simp_all add: pfun_of_chfuns_def map_pfun_pfun_of_chfun)
+
+lemma pfun_of_chfuns_Nil [simp]: "pfun_of_chfuns [] = {}\<^sub>p"
+  by (simp add: pfun_of_chfuns_def)
+
+lemma pfun_of_chfuns_Cons [simp]: "pfun_of_chfuns (chf # chfs) = pfun_of_chfun chf \<oplus> pfun_of_chfuns chfs"
+  by (simp add: pfun_of_chfuns_def)
+
+lemma pfun_of_chfuns_override [code]: 
+  "pfun_of_chfuns chfs1 \<oplus> pfun_of_chfuns chfs2 = pfun_of_chfuns (chfs1 @ chfs2)"
+  by (induct chfs1 arbitrary: chfs2; simp add: override_assoc; metis override_assoc)
 
 definition itree_chf :: "uname \<Rightarrow> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, ('e, 's) itree) chf" where
 "itree_chf n c out P = ChanF undefined (n, to_uval out) UTYPE('inp) (P \<circ> from_uval)"
