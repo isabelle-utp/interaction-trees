@@ -207,8 +207,8 @@ code_printing code_module Rational \<rightharpoonup> (Haskell)
 code_printing
   type_constructor rational \<rightharpoonup> (Haskell) "Prelude.Rational"
   | class_instance rational :: "HOL.equal" \<rightharpoonup> (Haskell) -
-  | constant "0 :: rational" \<rightharpoonup> (Haskell) "(0::Rational)"
-  | constant "1 :: rational" \<rightharpoonup> (Haskell) "(1::Rational)"
+  | constant "0 :: rational" \<rightharpoonup> (Haskell) "(0::Prelude.Rational)"
+  | constant "1 :: rational" \<rightharpoonup> (Haskell) "(1::Prelude.Rational)"
   | constant "Frct_integer" \<rightharpoonup> (Haskell) "Rational.fract (_)"
   | constant "HOL.equal :: rational \<Rightarrow> rational \<Rightarrow> bool" \<rightharpoonup>
     (Haskell) "(_) == (_)"

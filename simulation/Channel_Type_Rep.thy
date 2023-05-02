@@ -45,16 +45,23 @@ lemma default_name [simp]: "default_name TYPE('c::pre_uchantyperep) \<in> UNAMES
   using hd_in_set nonempty_namelist by (auto simp add: default_name_def unames_def uchans_namelist)
 
 typedef (overloaded) 'c::pre_uchantyperep name = 
-  "{n. n \<in> unames TYPE('c)}"
-  morphisms label_of of_label
+  "{(n, t). n \<in> unames TYPE('c) \<and> t = UCHANTYPE('c, n)}"
+  morphisms of_name name_of
   by (simp add: nonempty_chans unames_def)
 
 setup_lifting type_definition_name
 
+lift_definition label_of :: "'c::pre_uchantyperep name \<Rightarrow> uname" is "fst" .
+lift_definition of_label :: "uname \<Rightarrow> 'c::pre_uchantyperep name"
+  is "\<lambda> n. if n \<in> UNAMES('c) 
+           then (n, (uchans TYPE('c))(n)\<^sub>p) 
+           else (default_name TYPE('c), (uchans TYPE('c))(default_name TYPE('c))\<^sub>p)"
+  by auto
+
 instance name :: (pre_uchantyperep) finite
 proof
   have "(UNIV :: 'a name set) = of_label ` {n. n \<in> unames TYPE('a)}"
-    by (auto, metis of_label_cases Collect_mem_eq image_iff)
+    by (auto, transfer, auto)
   thus "finite (UNIV :: 'a name set)"
     by (metis finite_imageI finite_names mem_Collect_eq subsetI subset_antisym)
 qed
@@ -66,16 +73,15 @@ definition equal_name :: "'a name \<Rightarrow> 'a name \<Rightarrow> bool" wher
 "equal_name x y = (label_of x = label_of y)"
   
 instance 
-  by (intro_classes, simp add: equal_name_def label_of_inject)
+  by (intro_classes, simp add: equal_name_def, transfer, auto)
 
 end
 
-lift_definition mk_name :: "'c itself \<Rightarrow> uname \<Rightarrow> 'c::pre_uchantyperep name"
-  is "\<lambda> c n. if n \<in> UNAMES('c) then n else default_name TYPE('c)"
-  using names_nonempty some_in_eq by auto
+definition mk_name :: "'c itself \<Rightarrow> uname \<Rightarrow> 'c::pre_uchantyperep name"
+  where "mk_name c n = of_label n"
 
 lift_definition name_type :: "'c::pre_uchantyperep name \<Rightarrow> utyp"
-  is "\<lambda> n. UCHANTYPE('c, n)" .
+  is snd .
 
 syntax  
   "_mk_name" :: "type \<Rightarrow> logic \<Rightarrow> logic" ("mkname[_]")
@@ -85,12 +91,12 @@ translations
 
 lemma name_type_make_name [simp]:
   "n \<in> UNAMES('c) \<Longrightarrow> name_type (mkname['c::pre_uchantyperep] n) = UCHANTYPE('c, n)"
-  by (transfer, simp)
+  unfolding mk_name_def by (transfer, simp)
 
 lemma mk_name_eq_iff [simp]:
   assumes "n\<^sub>1 \<in> UNAMES('c::pre_uchantyperep)" "n\<^sub>2 \<in> UNAMES('c)"
   shows "mkname['c] n\<^sub>1 = mkname['c] n\<^sub>2 \<longleftrightarrow> n\<^sub>1 = n\<^sub>2"
-  using assms by (transfer, simp)
+  using assms unfolding mk_name_def by (transfer, auto)
 
 (* The following type should be isomorphic to 'c, but conveys more structure *)
 
@@ -101,21 +107,22 @@ typedef (overloaded) 'c::pre_uchantyperep event =
 
 setup_lifting type_definition_event
 
-lift_definition ev_name :: "'c::pre_uchantyperep event \<Rightarrow> 'c name" is fst by auto
+lift_definition ev_name :: "'c::pre_uchantyperep event \<Rightarrow> 'c name" 
+  is "\<lambda> (n, v). (n, the (utyp_of v))" by auto
 definition ev_type :: "'c::pre_uchantyperep event \<Rightarrow> utyp"
   where "ev_type e = name_type (ev_name e)"
 lift_definition ev_uval :: "'c::pre_uchantyperep event \<Rightarrow> uval" is "snd" .
 lift_definition ev_val :: "'c::pre_uchantyperep event \<Rightarrow> 'a::uvals" is "from_uval \<circ> snd" .
 lift_definition mk_event :: "'c name \<Rightarrow> 'a::uvals \<Rightarrow> 'c::pre_uchantyperep event"
-  is "\<lambda> n v. (n, if UCHANTYPE('c, n) = UTYPE('a) then to_uval v else default_uval ((uchans TYPE('c))(n)\<^sub>p))"
+  is "\<lambda> (n, t) v. (n, if UCHANTYPE('c, n) = UTYPE('a) then to_uval v else default_uval ((uchans TYPE('c))(n)\<^sub>p))"
   using utyp_of_default_uval by force
 
 lemma ev_name_UNAMES: "ev_name (e :: 'c event) \<in> mkname['c] ` UNAMES('c::pre_uchantyperep)"
-  by (transfer, auto)
+  unfolding mk_name_def by (transfer, auto)
 
 lemma ev_name_mkevent [simp]:
   "ev_name (mk_event n (v :: 'a :: uvals)) = n"
-  by (transfer, auto)
+  by (transfer, auto simp add: utyp_of_default_uval)
 
 lemma ev_type_mkevent [simp]: 
   "ev_type (mk_event n v) = name_type n"
@@ -123,7 +130,7 @@ lemma ev_type_mkevent [simp]:
 
 lemma ev_val_mkevent [simp]:
   "\<lbrakk> name_type n = UTYPE('a) \<rbrakk> \<Longrightarrow> ev_val (mk_event n (v :: 'a :: uvals)) = v"
-  by (transfer, simp)
+  by (transfer, auto)
 
 lemma mkevent_surj:
   assumes "UTYPE('a) = ev_type x"
@@ -138,7 +145,7 @@ lemma mkevent_eq_iff:
   fixes v\<^sub>1 v\<^sub>2 :: "'a::uvals"
   assumes "name_type n\<^sub>1 = UTYPE('a)" "name_type n\<^sub>2 = UTYPE('a)" 
   shows "mk_event n\<^sub>1 v\<^sub>1 = mk_event n\<^sub>2 v\<^sub>2 \<longleftrightarrow> n\<^sub>1 = n\<^sub>2 \<and> v\<^sub>1 = v\<^sub>2"
-  using assms by transfer (simp, metis to_uval_inv)
+  using assms by transfer (auto, metis to_uval_inv)
 
 lemma mkevent_eq_ev_iff:
   fixes v :: "'a::uvals"
