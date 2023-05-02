@@ -20,6 +20,82 @@ record uevent =
   uev_outp :: uval
   uev_inp  :: uval
 
+term ev_val
+
+(*
+declare [[typedef_overloaded]]
+
+datatype ('e, 'b) chf =
+  ChanF (chf_chn: "'e name") \<comment> \<open> The channel name \<close>
+        (chf_mk_ev: "(uval \<times> uval) \<Rightarrow> uval") \<comment> \<open> Build an event from the input and output params \<close>
+        (chf_dest_ev: "uval \<Rightarrow> (uval \<times> uval)")
+        (chf_out: "uval") \<comment> \<open> The value output by the process (displayed in the animator) \<close>
+        (chf_typ: "utyp") \<comment> \<open> The type of data requested by the animator \<close>
+        (chf_cont: "uval \<Rightarrow> 'b") \<comment> \<open> The continuation for each kind of value received \<close>
+
+term event_of
+
+definition pfun_of_chfun :: "('e::uchantyperep, 'b) chf \<Rightarrow> 'e \<Zpfun> 'b" where 
+  "pfun_of_chfun chf 
+    = (\<lambda> e\<in>{e. \<exists> inp outp. uchan_dest e = event_of (label_of (chf_chn chf), (chf_mk_ev chf (inp, outp)))} 
+       \<bullet> (chf_cont chf) undefined)"
+
+code_datatype pfun_of_alist pfun_of_map pfun_of_ufun pfun_of_chfun pfun_entries
+*)
+
+declare [[typedef_overloaded]]
+
+text \<open> For animation, we support three kinds of basic event: an input, output, and "mixed" event, 
+  consisting of an output followed by an input. The types of the various data is supplied by the
+  @{class uchantyperep}. \<close>
+
+datatype ('e, 'proc) animev =
+  AnimInput "'e name" "(uval \<Rightarrow> 'proc)" |
+  AnimOutput "'e name" "uval" "'proc" |
+  AnimIO "'e name" "uval" "(uval \<Rightarrow> 'proc)"
+
+text \<open> The following function turns an animation event into a partial function, the domain of
+  which is the set of events corresponding to the animation event. \<close>
+
+fun pfun_of_animev :: "('e::uchantyperep, 'proc) animev \<Rightarrow> 'e \<Zpfun> 'proc" where
+"pfun_of_animev (AnimInput n P) = (\<lambda> e\<in>events_of n \<bullet> P (ev_uval (uchan_dest e)))" |
+"pfun_of_animev (AnimOutput n v P) = (\<lambda> e\<in>{uchan_mk (event_of (label_of n, v))} \<bullet> P)" |
+\<comment> \<open> I *think* the next line is correct, but it needs checking \<close>
+"pfun_of_animev (AnimIO n outp Q) 
+  = (\<lambda> e\<in>{uchan_mk (event_of (label_of n, PairV (outp, inp))) | inp. inp :\<^sub>u snd (ofPairT (name_type n))} 
+     \<bullet> Q (snd (ofPairV (ev_uval (uchan_dest e)))))"
+
+lemma map_pfun_pfun_of_animev: 
+  "map_pfun f (pfun_of_animev aev) = pfun_of_animev (map_animev f aev)"
+  by (cases aev, simp_all add: pfun_eq_iff)
+
+definition anim_inp :: 
+  "('a::uvals, 'e::uchantyperep) channel \<Rightarrow> ('a \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, ('e, 's) itree) animev" where
+"anim_inp c P = AnimInput (channel_name c) (P \<circ> from_uval)"
+
+definition anim_outp ::
+  "('a::uvals, 'e::uchantyperep) channel \<Rightarrow> 'a \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, ('e, 's) itree) animev" where
+"anim_outp c v P = AnimOutput (channel_name c) (to_uval v) P"
+
+definition pfun_of_animevs ::
+  "('e::uchantyperep, 'b) animev list \<Rightarrow> 'e \<Zpfun> 'b" where
+"pfun_of_animevs aevs = foldr (\<lambda> c f. pfun_of_animev c \<oplus> f) aevs {}\<^sub>p"
+
+lemma map_pfun_pfun_of_animevs [code]:
+  "map_pfun f (pfun_of_animevs aevs) = pfun_of_animevs (map (map_animev f) aevs)"
+  by (induct aevs, simp_all add: pfun_of_animevs_def map_pfun_pfun_of_animev)
+
+lemma pfun_of_aevs_Nil [simp]: "pfun_of_animevs [] = {}\<^sub>p"
+  by (simp add: pfun_of_animevs_def)
+
+lemma pfun_of_avs_Cons [simp]: "pfun_of_animevs (chf # chfs) = pfun_of_animev chf \<oplus> pfun_of_animevs chfs"
+  by (simp add: pfun_of_animevs_def)
+
+lemma pfun_of_aevs_override [code]: 
+  "pfun_of_animevs chfs1 \<oplus> pfun_of_animevs chfs2 = pfun_of_animevs (chfs1 @ chfs2)"
+  by (induct chfs1 arbitrary: chfs2; simp add: override_assoc; metis override_assoc)
+
+
 datatype ('e, 'b) chf =
   ChanF (chf_chn: "(uevent \<Longrightarrow>\<^sub>\<triangle> 'e)") \<comment> \<open> The channel, including a name, output value, and input value \<close>
         (chf_out: "uname \<times> uval") \<comment> \<open> The value output by the process (displayed in the animator) \<close>
@@ -29,7 +105,9 @@ datatype ('e, 'b) chf =
 definition pfun_of_chfun :: 
   "('e, 'b) chf \<Rightarrow> 'e \<Zpfun> 'b" where
 "pfun_of_chfun chf = 
-    (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> \<lparr> uev_name = fst (chf_out chf), uev_outp = snd (chf_out chf), uev_inp = v \<rparr> 
+    (\<lambda> e\<in>{build\<^bsub>chf_chn chf\<^esub> \<lparr> uev_name = fst (chf_out chf)
+                             , uev_outp = snd (chf_out chf)
+                             , uev_inp = v \<rparr> 
           | v. v \<in> uvals (chf_typ chf)} 
     \<bullet> (chf_cont chf) (uev_inp (the (match\<^bsub>chf_chn chf\<^esub> e))))"
 
@@ -64,6 +142,16 @@ lemma pfun_of_chfuns_override [code]:
   "pfun_of_chfuns chfs1 \<oplus> pfun_of_chfuns chfs2 = pfun_of_chfuns (chfs1 @ chfs2)"
   by (induct chfs1 arbitrary: chfs2; simp add: override_assoc; metis override_assoc)
 
+term lens_comp
+
+term prism_match
+
+typ "'a option"
+
+definition prism_comp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'b) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'c) \<Rightarrow> 'a \<Longrightarrow>\<^sub>\<triangle> 'c" where
+"prism_comp X Y = \<lparr> prism_match = (\<lambda> s. Option.bind (match\<^bsub>Y\<^esub> s) match\<^bsub>X\<^esub>)
+                  , prism_build = build\<^bsub>Y\<^esub> \<circ> build\<^bsub>X\<^esub> \<rparr>"
+
 definition itree_chf :: "uname \<Rightarrow> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<Rightarrow> ('e, ('e, 's) itree) chf" where
 "itree_chf n c out P = ChanF undefined (n, to_uval out) UTYPE('inp) (P \<circ> from_uval)"
 
@@ -71,7 +159,7 @@ definition itree_chf :: "uname \<Rightarrow> ('inp::uvals \<times> 'out::uvals \
 
 typ \<open> ('inp::uvals \<times> 'out::uvals \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'out \<Rightarrow> ('inp \<Rightarrow> ('e, 's) itree) \<close>
 
-code_datatype pfun_of_alist pfun_of_map pfun_of_ufun pfun_of_chfuns pfun_entries
+code_datatype pfun_of_alist pfun_of_map pfun_of_ufun pfun_of_chfuns pfun_of_animevs pfun_entries
 
 code_identifier
   code_module ITree_Simulation \<rightharpoonup> (Haskell) Interaction_Trees

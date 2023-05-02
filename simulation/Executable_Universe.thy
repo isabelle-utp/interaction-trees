@@ -12,7 +12,7 @@ type_synonym uname = String.literal
 text \<open> The following universe contains types that have direct equivalents in Haskell. \<close>
 
 datatype utyp =
-  UnitT | BoolT | IntT | RatT | StringT | EnumT "uname set" | PairT "utyp \<times> utyp" | ListT utyp
+  UnitT | BoolT | IntT | RatT | StringT | EnumT "uname set" | PairT (ofPairT: "utyp \<times> utyp") | ListT utyp
 
 datatype uval = 
   UnitV |
@@ -203,5 +203,13 @@ instance
   by (intro_classes, auto simp add: to_uval_list_def from_uval_list_def utyp_list_def utyp_of_comp_to_uval map_replicate_const from_uval_inv map_idI)
 
 end
+
+definition uval_prism :: "'a::uvals \<Longrightarrow>\<^sub>\<triangle> uval" where
+"uval_prism = \<lparr> prism_match = (\<lambda> v. if v :\<^sub>u UTYPE('a) then Some (from_uval v) else None)
+              , prism_build = to_uval \<rparr>"
+
+lemma wb_uval_prism [simp]: "wb_prism uval_prism"
+  unfolding uval_prism_def using from_uval_inv
+  by (unfold_locales; force)
 
 end

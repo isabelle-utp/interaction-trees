@@ -7,19 +7,28 @@ text \<open> There follows a class for representing channel types \<close>
 class pre_uchantyperep =
   \<comment> \<open> A mapping from channel names to types \<close>
   fixes uchans :: "'a itself \<Rightarrow> (uname \<Zpfun> utyp)"
-
-  assumes finite_chans: "finite (pdom (uchans a))"
-  and nonempty_chans: "\<exists> n. n \<in> pdom (uchans a)"
+  and   unamelist :: "'a itself \<Rightarrow> uname list"
+  assumes uchans_namelist: "pdom (uchans a) = set (unamelist a)"
+  and nonempty_namelist: "length (unamelist a) > 0"
 begin
 
 definition unames :: "'a itself \<Rightarrow> uname set" where
 "unames a = pdom (uchans a)"
 
+lemma finite_chans: "finite (pdom (uchans a))"
+  by (simp add: local.uchans_namelist)
+
 lemma finite_names: "finite (unames a)"
   by (simp add: local.finite_chans unames_def)
 
+lemma nonempty_chans: "\<exists> x. x \<in> pdom (uchans a)"
+  by (metis list.size(3) local.nonempty_namelist local.uchans_namelist order_less_irrefl set_empty some_in_eq)
+
 lemma names_nonempty: "unames a \<noteq> {}"
-  using local.nonempty_chans unames_def by auto
+  using local.nonempty_namelist local.uchans_namelist unames_def by fastforce
+
+definition default_name :: "'a itself \<Rightarrow> uname" where
+"default_name a = hd (unamelist a)"
 
 text \<open> The value carried over the channel \<close>
   
@@ -32,22 +41,37 @@ translations
   "UNAMES('a)" == "CONST unames TYPE('a)"
   "UCHANTYPE('a, n)" == "CONST pfun_app (CONST uchans TYPE('a)) n"
 
+lemma default_name [simp]: "default_name TYPE('c::pre_uchantyperep) \<in> UNAMES('c)"
+  using hd_in_set nonempty_namelist by (auto simp add: default_name_def unames_def uchans_namelist)
+
 typedef (overloaded) 'c::pre_uchantyperep name = 
   "{n. n \<in> unames TYPE('c)}"
+  morphisms label_of of_label
   by (simp add: nonempty_chans unames_def)
 
 setup_lifting type_definition_name
 
 instance name :: (pre_uchantyperep) finite
 proof
-  have "(UNIV :: 'a name set) = Abs_name ` {n. n \<in> unames TYPE('a)}"
-    by (auto, metis Abs_name_cases Collect_mem_eq image_iff)
+  have "(UNIV :: 'a name set) = of_label ` {n. n \<in> unames TYPE('a)}"
+    by (auto, metis of_label_cases Collect_mem_eq image_iff)
   thus "finite (UNIV :: 'a name set)"
     by (metis finite_imageI finite_names mem_Collect_eq subsetI subset_antisym)
 qed
 
+instantiation name :: (pre_uchantyperep) equal
+begin
+
+definition equal_name :: "'a name \<Rightarrow> 'a name \<Rightarrow> bool" where
+"equal_name x y = (label_of x = label_of y)"
+  
+instance 
+  by (intro_classes, simp add: equal_name_def label_of_inject)
+
+end
+
 lift_definition mk_name :: "'c itself \<Rightarrow> uname \<Rightarrow> 'c::pre_uchantyperep name"
-  is "\<lambda> c n. if n \<in> UNAMES('c) then n else SOME n. n \<in> UNAMES('c)"
+  is "\<lambda> c n. if n \<in> UNAMES('c) then n else default_name TYPE('c)"
   using names_nonempty some_in_eq by auto
 
 lift_definition name_type :: "'c::pre_uchantyperep name \<Rightarrow> utyp"
@@ -80,6 +104,7 @@ setup_lifting type_definition_event
 lift_definition ev_name :: "'c::pre_uchantyperep event \<Rightarrow> 'c name" is fst by auto
 definition ev_type :: "'c::pre_uchantyperep event \<Rightarrow> utyp"
   where "ev_type e = name_type (ev_name e)"
+lift_definition ev_uval :: "'c::pre_uchantyperep event \<Rightarrow> uval" is "snd" .
 lift_definition ev_val :: "'c::pre_uchantyperep event \<Rightarrow> 'a::uvals" is "from_uval \<circ> snd" .
 lift_definition mk_event :: "'c name \<Rightarrow> 'a::uvals \<Rightarrow> 'c::pre_uchantyperep event"
   is "\<lambda> n v. (n, if UCHANTYPE('c, n) = UTYPE('a) then to_uval v else default_uval ((uchans TYPE('c))(n)\<^sub>p))"
@@ -153,7 +178,12 @@ lemma bij_uchan_lens: "bij_lens uchan_lens"
 
 end
 
-typedef (overloaded) ('a, 'c) channel = "UNIV :: 'c name set" by auto
+definition events_of :: "'e::uchantyperep name \<Rightarrow> 'e set" where
+"events_of n = {e. \<exists> v. uchan_dest e = event_of (label_of n, v) \<and> utyp_of v = Some ((uchans TYPE('e))(label_of n)\<^sub>p)}"
+
+typedef (overloaded) ('a, 'c) channel = "UNIV :: 'c name set" 
+  morphisms channel_name mk_channel
+  by auto
 
 setup_lifting type_definition_channel
 
@@ -165,6 +195,9 @@ lift_definition channel_match :: "('a::uvals, 'c::uchantyperep) channel \<Righta
 
 lift_definition channel_build :: "('a::uvals, 'c::uchantyperep) channel \<Rightarrow> 'a \<Rightarrow> 'c"
   is "\<lambda> n v. if (name_type n = UTYPE('a)) then uchan_mk (mk_event n v) else undefined" .
+
+lemma channel_name [simp, code]: "channel_name (mk_channel n) = n"
+  by (simp add: mk_channel_inverse)
 
 definition channel_prism :: "('a::uvals, 'c::uchantyperep) channel \<Rightarrow> 'a \<Longrightarrow>\<^sub>\<triangle> 'c" where
 "channel_prism c = \<lparr> prism_match = channel_match c, prism_build = channel_build c \<rparr>"
