@@ -4,7 +4,7 @@ begin
 
 text \<open> There follows a class for representing channel types \<close>
 
-class pre_uchantyperep =
+class pre_uchantyperep = equal +
   \<comment> \<open> A mapping from channel names to types \<close>
   fixes uchans :: "'a itself \<Rightarrow> (uname \<Zpfun> utyp)"
   and   unamelist :: "'a itself \<Rightarrow> uname list"
@@ -80,6 +80,17 @@ end
 definition mk_name :: "'c itself \<Rightarrow> uname \<Rightarrow> 'c::pre_uchantyperep name"
   where "mk_name c n = of_label n"
 
+
+lemma label_of_in_names [simp]: "label_of (n::'c name) \<in> UNAMES('c::pre_uchantyperep)"
+  by (transfer, auto)
+
+lemma label_of_label [simp]:
+  "n \<in> UNAMES('c :: pre_uchantyperep) \<Longrightarrow> label_of (of_label n :: 'c name) = n"
+  by (transfer, simp)
+  
+lemma label_of_mk_name [simp]: "n \<in> UNAMES('c::pre_uchantyperep) \<Longrightarrow> label_of (mk_name c n :: 'c name) = n"
+  unfolding mk_name_def by simp
+
 lift_definition name_type :: "'c::pre_uchantyperep name \<Rightarrow> utyp"
   is snd .
 
@@ -89,9 +100,12 @@ syntax
 translations
   "mkname['a]" == "CONST mk_name TYPE('a)"
 
-lemma name_type_make_name [simp]:
+lemma name_type_chantype [simp]: "name_type (n :: 'c name) = UCHANTYPE('c::pre_uchantyperep, label_of n)"
+  by (transfer, transfer, auto simp add: prod.case_eq_if)
+
+lemma name_type_make_name:
   "n \<in> UNAMES('c) \<Longrightarrow> name_type (mkname['c::pre_uchantyperep] n) = UCHANTYPE('c, n)"
-  unfolding mk_name_def by (transfer, simp)
+  by simp
 
 lemma mk_name_eq_iff [simp]:
   assumes "n\<^sub>1 \<in> UNAMES('c::pre_uchantyperep)" "n\<^sub>2 \<in> UNAMES('c)"
@@ -158,6 +172,19 @@ lemma event_eq_iff:
   shows "e = f \<longleftrightarrow> ev_name e = ev_name f \<and> (ev_val e :: 'a) = ev_val f"
   by (metis assms ev_type_def mkevent_surj)
 
+lemma ev_name_labelled_event:
+  "v :\<^sub>u UCHANTYPE('c::pre_uchantyperep, label_of n) \<Longrightarrow> ev_name (event_of (label_of n, v) :: 'c event) = (n :: 'c::pre_uchantyperep name)"
+  by (simp add: ev_name_def prod.case_eq_if event_of_inverse[simplified])
+     (metis label_of.rep_eq name_type.rep_eq name_type_chantype of_name_inverse prod.collapse)
+
+lemma mk_event_event_of_def:
+  "mk_event (n :: 'c name) (v::'a) 
+    = event_of (label_of n, if UCHANTYPE('c::pre_uchantyperep, label_of n) = UTYPE('a::uvals) 
+                            then to_uval v 
+                            else default_uval ((uchans TYPE('c))(label_of n)\<^sub>p))"
+  by (auto simp add: mk_event_def fun_eq_iff prod.case_eq_if label_of.rep_eq)
+
+
 (*
 type_synonym 'c chan = unit
 
@@ -194,8 +221,8 @@ typedef (overloaded) ('a, 'c) channel = "UNIV :: 'c name set"
 
 setup_lifting type_definition_channel
 
-lift_definition wb_channel :: "('a::uvals, 'c::pre_uchantyperep) channel \<Rightarrow> bool"
-  is "\<lambda> n. name_type n = UTYPE('a)" .
+definition wf_channel :: "('a::uvals, 'c::pre_uchantyperep) channel \<Rightarrow> bool" where
+"wf_channel c \<longleftrightarrow> name_type (channel_name c) = UTYPE('a)"
 
 lift_definition channel_match :: "('a::uvals, 'c::uchantyperep) channel \<Rightarrow> 'c \<Rightarrow> 'a option"
   is "\<lambda> n e. if (name_type n = UTYPE('a) \<and> ev_name (uchan_dest e) = n) then Some (ev_val (uchan_dest e)) else None" .

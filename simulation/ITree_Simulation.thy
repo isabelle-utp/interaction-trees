@@ -151,7 +151,7 @@ instance Show Utyp where
   show (ListT s) = "[" ++ show s ++ "]"
 
 show_animev :: Animev a b -> String
-show_animev (AnimInput (Name_of (n, t)) _) = n ++ "?<"  ++ show t ++ ">"
+show_animev (AnimInput (Name_of (n, t)) _ _) = n ++ "?<"  ++ show t ++ ">"
 show_animev (AnimOutput (Name_of (n, t)) v _) = n ++ "!" ++ show v
 
 mk_readUval :: Read a => (a -> Uval) -> String -> IO Uval
@@ -198,8 +198,12 @@ simulate_cnt n t@(Vis (Pfun_of_animevs m)) =
          [(v, _)] -> if (v > Prelude.length m)
                        then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        else case (m!!(v - 1)) of
-                              (AnimInput (Name_of (n, t)) p) ->
-                                do { val <- readUtyp t; simulate_cnt 0 (p val) } -- Ask for any inputs needed
+                              (AnimInput (Name_of (nm, typ)) b p) ->
+                                do { val <- readUtyp typ -- Ask for any inputs needed
+                                   ; if b val 
+                                     then simulate_cnt 0 (p val) 
+                                     else do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                                   }
                               (AnimOutput (Name_of (n, t)) v p) -> simulate_cnt 0 p };
 
 

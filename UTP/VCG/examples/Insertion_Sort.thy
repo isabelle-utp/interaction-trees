@@ -24,7 +24,8 @@ lemma mem_set_take: "i < length a \<Longrightarrow> x \<in> set (take i a) \<lon
 lemma length_gr_implies_not_Nil [simp]: "k < length xs \<Longrightarrow> xs \<noteq> []"
   using gr_implies_not_zero by blast
 
-declare nths_atLeastLessThan_0_take [simp]
+(*
+declare nths_atLeastLessThan_0_take [simp] *)
 declare nths_single [simp]
 
 subsection \<open> State and Program \<close>
@@ -38,7 +39,7 @@ procedure insert_elem "xs :: int list" over state =
 "j := i;
  while (0 < j \<and> arr!j < arr ! (j-1)) 
   invariant j \<le> i \<and> i < length arr \<and> sorted(nths arr {0..<j}) \<and> sorted(nths arr {j..i}) \<and> 
-    (0<j \<and> j<i \<longrightarrow> arr ! (j-1) \<le> arr ! (j+1)) \<and> mset arr = mset xs
+    (0<j \<and> j<i \<longrightarrow> arr ! (j-1) \<le> arr ! (j+1)) \<and> mset arr = mset xs \<and> i = old:i
   variant j
   do
     (arr[j-1], arr[j]) := ($arr[j], $arr[j-1]);
@@ -50,12 +51,31 @@ procedure insertion_sort "xs :: int list" over state =
  i := 1 ;
  while (i < length arr) 
    invariant 0 < i \<and> sorted(nths arr {0..i-1}) \<and> mset arr = mset xs
+   variant length xs - i
  do 
     insert_elem xs; i := i + 1
  od"
 
 execute "insertion_sort [66, 3, 25, 8, 1]"
 execute "insertion_sort [100, 25, 66, 1, 2,50,89,5500,6,9,24,-7,3,13,5000,5050,70,54,24,99]"
+
+declare thl_while_inv_var [hoare_safe del]
+
+lemma insertion_sort_correct: "H[True] insertion_sort xs [sorted arr]"
+  apply vcg
+  
+  apply (auto simp add: sorted_iff_nth_Suc nths_atLeastAtMost_eq_drop_take take_update_swap drop_update_swap)
+             apply (metis Suc_lessD Suc_pred mset_swap)
+  apply (smt (verit, del_insts) Nat.add_diff_assoc Suc_diff_Suc Suc_leI Suc_lessD Suc_pred add_gr_0 diff_Suc_Suc less_Suc_eq_le not_less_iff_gr_or_eq)
+  apply (metis Suc_diff_Suc Suc_lessD diff_Suc_less)
+          apply (metis Suc_lessD Suc_pred mset_swap order_le_less_trans)
+  apply (metis diff_less_mono2 lessI size_mset)
+  apply (metis diff_less_mono2 lessI size_mset)
+  apply (metis diff_less_mono2 lessI size_mset)
+  apply (metis Suc_pred linorder_not_le not_less_eq not_less_iff_gr_or_eq zero_less_Suc)
+  apply (metis diff_less_mono2 lessI size_mset)
+  prefer 6
+*)
 
 subsection \<open> Verification \<close>
 
