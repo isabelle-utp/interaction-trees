@@ -236,4 +236,41 @@ lemma channel_name [simp, code]: "channel_name (mk_channel n) = n"
 definition channel_prism :: "('a::uvals, 'c::uchantyperep) channel \<Rightarrow> 'a \<Longrightarrow>\<^sub>\<triangle> 'c" where
 "channel_prism c = \<lparr> prism_match = channel_match c, prism_build = channel_build c \<rparr>"
 
+text \<open> Instantiation for the unit type \<close>
+
+instantiation unit :: pre_uchantyperep
+begin
+
+definition unamelist_unit :: "unit itself \<Rightarrow> uname list"
+  where "unamelist_unit a = [STR ''unit'']"
+
+definition uchans_unit :: "unit itself \<Rightarrow> String.literal \<Zpfun> utyp"
+  where "uchans_unit a = {STR ''unit'' \<mapsto> UnitT}"
+
+instance
+  by (intro_classes, simp_all add: unamelist_unit_def uchans_unit_def)
+
+end
+
+lemma UNAMES_unit [simp]: "UNAMES(unit) = {STR ''unit''}"
+  by (simp add: uchans_unit_def unames_def)
+
+lemma ev_name_unit [simp]: "ev_name (e :: unit event) = (mkname[unit] STR ''unit'')"
+  using ev_name_UNAMES[of e] by simp
+
+instantiation unit :: uchantyperep
+begin
+
+definition uchan_mk_unit :: "unit event \<Rightarrow> unit" where
+"uchan_mk_unit e = ()"
+
+definition uchan_dest_unit :: "unit \<Rightarrow> unit event" where
+"uchan_dest_unit x = mk_event (mkname[unit] STR ''unit'') ()"
+
+instance 
+  by (intro_classes)
+     (simp_all add: uchan_mk_unit_def uchan_dest_unit_def mkevent_eq_ev_iff uchans_unit_def utyp_unit_def)
+
+end
+
 end
