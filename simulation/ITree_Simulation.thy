@@ -5,7 +5,10 @@ theory ITree_Simulation
   keywords "animate" :: "thy_defn"
 begin
 
-code_datatype pfun_of_alist pfun_of_map pfun_of_animevs pfun_entries
+(* I've commented out pfun_of_animevs for now as a constructor, because it imposes sort contraints
+  that we cannot easily satisfy. *)
+
+code_datatype pfun_of_alist pfun_of_map (* pfun_of_animevs *) pfun_entries
 
 code_identifier
   code_module ITree_Simulation \<rightharpoonup> (Haskell) Interaction_Trees
@@ -53,10 +56,6 @@ instance Show Utyp where
   show (PairT (s, t)) = "(" ++ show s ++ ", " ++ show t ++ ")"
   show (ListT s) = "[" ++ show s ++ "]"
 
-show_animev :: Animev a b -> String
-show_animev (AnimInput (Name_of (n, t)) _ _) = n ++ "?<"  ++ show t ++ ">"
-show_animev (AnimOutput (Name_of (n, t)) v _) = n ++ "!" ++ show v
-
 mk_readUval :: Read a => (a -> Uval) -> String -> IO Uval
 mk_readUval f n = 
   do { putStr ("Input <" ++ n ++ "> value: ")
@@ -90,25 +89,6 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
                        then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        else simulate_cnt 0 (snd (m !! (v - 1)))
      };                                                            
-simulate_cnt n t@(Vis (Pfun_of_animevs m)) =
-  do { putStrLn ("Events:" ++ concat (map (\(i, e) -> " (" ++ show i ++ ") " ++ show_animev e ++ ";") (zip [1..] m)));
-       e <- Prelude.getLine;
-       if (e == "q" || e == "Q") then
-         Prelude.putStrLn "Simulation terminated"
-       else
-       case (Prelude.reads e) of
-         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
-         [(v, _)] -> if (v > Prelude.length m)
-                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
-                       else case (m!!(v - 1)) of
-                              (AnimInput (Name_of (nm, typ)) b p) ->
-                                do { val <- readUtyp typ -- Ask for any inputs needed
-                                   ; if b val 
-                                     then simulate_cnt 0 (p val) 
-                                     else do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
-                                   }
-                              (AnimOutput (Name_of (n, t)) v p) -> simulate_cnt 0 p };
-
 
 simulate :: (Eq e, Prelude.Show e, Prelude.Show s) => Itree e s -> Prelude.IO ();
 simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
@@ -132,6 +112,37 @@ simulate_cnt n t@(Vis (Pfun_of_map f)) =
                        Just t' -> simulate_cnt 0 t'
      };    
 *)
+
+(* The following code is for animation support by symbolic animation events. It works, but
+   the approach using them needs further development, and imposes sort constaints. *)
+
+(*
+
+show_animev :: Animev a b -> String
+show_animev (AnimInput (Name_of (n, t)) _ _) = n ++ "?<"  ++ show t ++ ">"
+show_animev (AnimOutput (Name_of (n, t)) v _) = n ++ "!" ++ show v
+
+simulate_cnt n t@(Vis (Pfun_of_animevs m)) =
+  do { putStrLn ("Events:" ++ concat (map (\(i, e) -> " (" ++ show i ++ ") " ++ show_animev e ++ ";") (zip [1..] m)));
+       e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
+       case (Prelude.reads e) of
+         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > Prelude.length m)
+                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       else case (m!!(v - 1)) of
+                              (AnimInput (Name_of (nm, typ)) b p) ->
+                                do { val <- readUtyp typ -- Ask for any inputs needed
+                                   ; if b val 
+                                     then simulate_cnt 0 (p val) 
+                                     else do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                                   }
+                              (AnimOutput (Name_of (n, t)) v p) -> simulate_cnt 0 p };
+*)
+
+(* The code below is for simulations containing uval functions *)
 
 (*
 simulate_cnt n t@(Vis (Pfun_of_ufun chan typ m)) = 
