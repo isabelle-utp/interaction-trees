@@ -370,8 +370,11 @@ syntax
 translations
   "_frame a P" == "CONST ITree_Circus.frame a P"
 
-definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>1) htree \<Rightarrow> ('e, 's\<^sub>2) htree" where
-"frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
+definition promote_itree :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>1) htree \<Rightarrow> ('e, 's\<^sub>2) htree" where
+"promote_itree a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
+
+syntax "_promote_itree" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
+translations "_promote_itree P a" == "CONST promote_itree a P"
 
 definition not_modifies :: "('e, 's) htree \<Rightarrow> ('a, 's) expr \<Rightarrow> bool" where
 "not_modifies P e = (\<forall> s s'. s' \<in> \<^bold>R(P s) \<longrightarrow> e s' = e s)"
@@ -438,12 +441,6 @@ text \<open> @{const not_modifies} is quite useful as a predicate to determine w
   invariant under a program by checking whether variables are updated. However, it may be better
   to have a ``weakest modification condition'' calculus, that allows us to determine the weakest
   precondition under which a program will not modify a particular expression. \<close>
-
-definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
-[code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! ;; frame_ext a P"
-
-syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
-translations "_promote P a" == "CONST promote P a"
 
 named_theorems prog_defs
 
