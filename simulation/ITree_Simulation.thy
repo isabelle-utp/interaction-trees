@@ -24,13 +24,7 @@ import Interaction_Trees;
 import Prelude;
 import System.IO;
 import Data.Ratio;
-
--- These library functions help us to trim the "_C" strings from pretty printed events
-
-isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
-isPrefixOf [] _         =  True;
-isPrefixOf _  []        =  False;
-isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
+import Data.List;
 
 removeSubstr :: String -> String -> String;
 removeSubstr w "" = "";
@@ -67,6 +61,12 @@ readUtyp BoolT = mk_readUval BoolV "bool"
 readUtyp IntT = mk_readUval IntV "int"
 readUtyp UnitT = return UnitV
 
+eventHierarchy :: [(String, p)] -> [(String, [(String, p)])]
+eventHierarchy m = map (\c -> (c, map (\(e, p) -> (tail (dropWhile (\x -> x /= ' ') e), p)) $ filter (isPrefixOf (c ++ " ") . fst) m)) chans
+  where
+--  m = map (\(e, p) -> (Prelude.show e, p)) m
+  chans = nub $ map (takeWhile (\x -> x /= ' ') . fst) m
+
 simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
 simulate_cnt n (Sil p) = 
@@ -76,20 +76,20 @@ simulate_cnt n (Sil p) =
                             }
                     else simulate_cnt (n + 1) p
      };
-simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n (Vis (Pfun_of_alist [])) = putStrLn "Deadlocked.";
 simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
-  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
-       e <- Prelude.getLine;
+  do { putStrLn ("Events:" ++ concat (map (\(n, e) -> " (" ++ show n ++ ") " ++ e ++ ";") (zip [1..] (map (show . fst) m))));
+       e <- getLine;
        if (e == "q" || e == "Q") then
-         Prelude.putStrLn "Simulation terminated"
+         putStrLn "Simulation terminated"
        else
-       case (Prelude.reads e) of
-         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
-         [(v, _)] -> if (v > Prelude.length m)
-                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+       case (reads e) of
+         []       -> do { putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > length m)
+                       then do { putStrLn "Rejected"; simulate_cnt n t }
                        else simulate_cnt 0 (snd (m !! (v - 1)))
-     };                                                            
-
+     }                                                            
+  where eh = eventHierarchy (map (\(e, p) -> (Prelude.show e, p)) m);
 simulate :: (Eq e, Prelude.Show e, Prelude.Show s) => Itree e s -> Prelude.IO ();
 simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
 
