@@ -1,7 +1,7 @@
 subsection \<open> Simulation Harness \<close>
 
 theory ITree_Simulation                 
-  imports Executable_Universe Channel_Type_Rep Animation_Event "Interaction_Trees.ITrees" 
+  imports Show_Channel Executable_Universe Channel_Type_Rep Animation_Event "Interaction_Trees.ITrees" 
   keywords "animate" :: "thy_defn"
 begin
 
@@ -234,11 +234,6 @@ fun simulate model thy =
 
 end;
 \<close>
-
-definition show_channel :: "String.literal \<Rightarrow> 'a::show \<Rightarrow> String.literal" where
-"show_channel c p = c + STR '' '' + show p"
-
-ML_file \<open>Show_Channel.ML\<close>
 
 ML \<open>
   Outer_Syntax.command @{command_keyword animate} "animate an ITree"
