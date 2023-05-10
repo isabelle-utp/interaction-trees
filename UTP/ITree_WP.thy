@@ -118,6 +118,11 @@ lemma wlp_input_in_where [wp]:
   "wb_prism c \<Longrightarrow> wlp_itree (input_in_where c A S) P = [\<lambda> s. \<forall> v\<in>A s. fst (S v) s \<longrightarrow> wlp_itree (snd (S v)) P s]\<^sub>e"
   by (auto simp add: wlp_itree_def itree_rel fun_eq_iff)
 
+lemma pre_itree_promote [wp, code_unfold]: 
+  "mwb_lens a \<Longrightarrow> pre (C \<Up>\<Up> a) = ((pre C) \<up> a \<and> \<^bold>D(a))\<^sub>e"
+  by (expr_auto add: wp_itree_def itree_rel_def itree_pred)
+     (metis mwb_lens_weak weak_lens_def)
+
 method wp uses add = (simp add: prog_defs wp usubst_eval add)
 
 end

@@ -371,7 +371,7 @@ translations
   "_frame a P" == "CONST ITree_Circus.frame a P"
 
 definition promote_itree :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>1) htree \<Rightarrow> ('e, 's\<^sub>2) htree" where
-"promote_itree a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
+"promote_itree a P = (\<lambda> s. if s \<in> \<S>\<^bsub>a\<^esub> then P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. \<checkmark> (put\<^bsub>a\<^esub> s v)) else diverge)"
 
 syntax "_promote_itree" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
 translations "_promote_itree P a" == "CONST promote_itree a P"

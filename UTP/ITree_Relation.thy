@@ -84,6 +84,11 @@ lemma input_rel [itree_rel]: "wb_prism c \<Longrightarrow> itree_rel (input c P)
 lemma input_in_lit_rel [itree_rel]: "wb_prism c \<Longrightarrow> itree_rel (input_in c (\<guillemotleft>A\<guillemotright>)\<^sub>e P) = (\<Union> v \<in> A. itree_rel (P v))"
   by (auto simp add: input_in_rel)
 
+lemma promote_rel [itree_pred]: 
+  "mwb_lens a \<Longrightarrow> \<lbrakk>P \<Up>\<Up> a\<rbrakk>\<^sub>p (s, s') = (s \<in> \<S>\<^bsub>a\<^esub> \<and> \<lbrakk>P\<rbrakk>\<^sub>p (get\<^bsub>a\<^esub> s, get\<^bsub>a\<^esub> s') \<and> s \<oplus>\<^sub>L s' on a = s')"
+  by (auto elim!: trace_to_bindE bind_RetE' simp add: itree_pred_def retvals_def promote_itree_def lens_override_def)
+     (metis bind_Ret trace_to_bind_left)
+
 ML_file \<open>Lens_Rel_Utils.ML\<close>
 
 method rename_rel_alpha_vars = tactic \<open> Lens_Rel_Utils.rename_rel_alpha_vars \<close>
