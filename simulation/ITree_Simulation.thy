@@ -1,7 +1,8 @@
 subsection \<open> Simulation Harness \<close>
 
 theory ITree_Simulation                 
-  imports Show_Channel Executable_Universe Channel_Type_Rep Animation_Event "Interaction_Trees.ITrees" 
+  imports Show_Channel Executable_Universe Channel_Type_Rep Animation_Event 
+    Code_Rational "Interaction_Trees.ITrees" 
   keywords "animate" :: "thy_defn"
 begin
 
