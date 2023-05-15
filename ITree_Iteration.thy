@@ -649,25 +649,25 @@ proof (cases "b s")
     by (simp add: terminates_def)
 qed
 
-text \<open> Generalised deadlock freedom check for loops. If @{term P} is sufficient establish deadlock
-  freedom of @{term C}, and @{term P} is an invariant of @{term C}, which holds also in the initial
-  state @{term s}, then @{term "loop C s"} is also deadlock free. \<close>
+text \<open> Generalised deadlock freedom check for loops. If @{term B} (the condition) @{term P} are 
+  sufficient to establish deadlock freedom of @{term C}, and @{term P} is an invariant of @{term C}, 
+  which holds also in the initial state @{term s}, then @{term "loop C s"} is also deadlock free. \<close>
 
-lemma deadlock_free_loop:
-  assumes cond_dlockf: "\<And> s. P s \<Longrightarrow> deadlock_free (C s)" 
+lemma deadlock_free_iterate:
+  assumes cond_dlockf: "\<And> s. \<lbrakk> B s; P s \<rbrakk> \<Longrightarrow> deadlock_free (C s)" 
   and invariant: "\<And> s s'. \<lbrakk> P s; s' \<in> \<^bold>R(C s) \<rbrakk> \<Longrightarrow> P s'"
   and initial: "P s"
-  shows "deadlock_free (loop C s)"
+  shows "deadlock_free (iterate B C s)"
 proof (simp add: deadlock_free_def deadlock_def, clarify)
   fix tr 
-  assume "loop C s \<midarrow>tr\<leadsto> Vis {\<mapsto>}"
+  assume "iterate B C s \<midarrow>tr\<leadsto> Vis {\<mapsto>}"
   thus False
   proof (cases rule: iterate_chain)
     case (iterates chn s\<^sub>0 tr\<^sub>0 P' n)
     with initial invariant have "\<forall> s\<in>chain_states chn. P s"
       by (rule_tac chain_invariant_simple[where s="s" and C="C" and s'="s\<^sub>0"], auto)
     hence dlckf_C_s\<^sub>0: "deadlock_free (C s\<^sub>0)"
-      by (metis cond_dlockf final_state_in_chain initial iterates(2) itree_chain.cases list.distinct(1))
+      by (metis cond_dlockf final_state_in_chain initial iterates(1) iterates(2) iterates(3) itree_chain.cases list.discI)
     with iterates(6) show False
     proof (cases rule: bind_VisE')
       case (initial F')
@@ -675,7 +675,7 @@ proof (simp add: deadlock_free_def deadlock_def, clarify)
         by (metis deadlock_def deadlock_free_def dlckf_C_s\<^sub>0 iterates(4) pdom_empty_iff_dom_empty pdom_map_pfun)
     next
       case (continue s')
-      have "loop C s' = Vis {\<mapsto>}"
+      have "iterate B C s' = Vis {\<mapsto>}"
         by (metis comp_apply continue(2) deadlock_def deadlock_trace_to trace_of_Sils)
       then show ?thesis
         by (metis (no_types, lifting) \<open>\<forall>s\<in>chain_states chn. P s\<close> cond_dlockf continue(1) deadlock_def deadlock_free_def deadlock_trace_to final_state_in_chain initial invariant iterate_VisE iterates(2) iterates(4) itree_chain.simps list.distinct(1) pdom_empty_iff_dom_empty pdom_map_pfun pdom_zero retvals_traceI)
@@ -686,6 +686,12 @@ proof (simp add: deadlock_free_def deadlock_def, clarify)
       by blast
   qed
 qed
-    
 
+lemma deadlock_free_loop:
+  assumes cond_dlockf: "\<And> s. P s \<Longrightarrow> deadlock_free (C s)" 
+  and invariant: "\<And> s s'. \<lbrakk> P s; s' \<in> \<^bold>R(C s) \<rbrakk> \<Longrightarrow> P s'"
+  and initial: "P s"
+  shows "deadlock_free (loop C s)"
+  using assms by (auto intro: deadlock_free_iterate)
+    
 end
