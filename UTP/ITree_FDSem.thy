@@ -142,7 +142,7 @@ lemma traces_bind:
   apply (auto elim!: in_tracesE trace_to_bindE bind_RetE')
   apply (auto simp add: traces_def)
   apply (metis (no_types, lifting) Nil_is_map_conv append_Nil2 image_subset_iff list.set_map map_of_Ev_append range_eqI)
-  apply (smt (z3) Ev_subset_image UNIV_I bind_RetE list.set_map list.simps(8) map_of_Ev_append self_append_conv2 subsetI trace_to_Nil)
+  apply (smt (verit, best) Ev_subset_image UNIV_I append_Nil id_apply list.map_comp list.set_map list.simps(8) map_eq_conv map_ident of_Ev_Ev subset_code(1) trace_to_Nil)
   apply (metis (no_types, opaque_lifting) List.map.id append.simps(1) id_apply image_subset_iff list.set_map list.simps(8) map_map of_Ev_Ev rangeI trace_to_Nil)
   apply (metis (mono_tags, lifting) Ev_subset_image append.right_neutral list.set_map list.simps(8) map_of_Ev_append top_greatest)
   apply (metis (no_types, lifting) append.right_neutral list.set_map list.simps(8) map_of_Ev_append subset_image_iff top_greatest)
@@ -269,7 +269,7 @@ proof -
   hence "\<not> (t\<^sub>1 \<ge> map Ev tr)"
     by (meson D1_prefix assms(2) in_divergence_tranI tr(2))
   hence "t\<^sub>1 < map Ev tr"
-    by (smt (z3) Prefix_Order.prefix_prefix append_eq_append_conv2 less_list_def map_append order_refl tr(1))
+    by (metis Prefix_Order.prefixI le_common_total less_list_def map_append tr(1))
   thus ?thesis
     by (metis Prefix_Order.strict_prefixE' T1b in_tracesI1 tr(2))
 qed

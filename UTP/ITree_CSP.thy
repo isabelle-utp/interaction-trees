@@ -356,12 +356,7 @@ lemma genchoice_RetE [elim]:
     "\<lbrakk> P = Ret x; is_Vis Q \<rbrakk> \<Longrightarrow> R"
     "\<lbrakk> Q = Ret x; is_Vis P \<rbrakk> \<Longrightarrow> R"
   shows R
-  using assms apply (cases P)
-  apply (auto simp add: genchoice.code)
-  apply (smt (z3) assms(1) genchoice.disc_iff(1) is_Sil_genchoice itree.case_eq_if itree.disc(4) itree.discI(1) itree.distinct(3) itree.expand itree.sel(1) snd_conv)
-  apply (metis (no_types, lifting) assms(1) is_Sil_genchoice itree.case_eq_if itree.collapse(1) itree.disc(4) itree.disc(7) itree.disc(9))
-  done
-
+  using assms by (cases P, auto simp add: genchoice.code itree.case_eq_if, meson itree.exhaust_disc)
 
 subsection \<open> External Choice \<close>
 
@@ -930,9 +925,9 @@ lemma hide_sync_loop_diverge: "hide (iter (sync a)) {build\<^bsub>a\<^esub> ()} 
   apply (coinduction rule:itree_coind, auto)
   apply (simp add: iterate.code, simp add: sync_def)
   apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) iterate.code)
-  apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) itree.distinct_disc(6) iterate.code)
-  apply (smt (z3) disjoint_iff empty_iff hide_sync insert_iff is_Vis_hide itree.disc(8) iterate.code)
-  apply (smt (z3) Sil_Sil_drop comp_apply hide_Sil hide_sync itree.inject(2) iterate.code)
+     apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) itree.distinct_disc(6) iterate.code)
+  apply (smt (verit) disjoint_iff empty_iff hide_sync insert_iff is_Vis_hide itree.disc(8) iterate.code)
+  apply (smt (verit) Sil_Sil_drop comp_apply hide_Sil hide_sync itree.inject(2) iterate.code)
   apply (metis diverge.code itree.inject(2))
   done
 
