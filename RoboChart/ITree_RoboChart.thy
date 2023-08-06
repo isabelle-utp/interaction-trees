@@ -8,7 +8,6 @@ begin
 unbundle Z_Relation_Syntax
 
 subsection \<open> CSP operators \<close>
-definition stop where "stop = deadlock"
 
 definition par_hide where
 "par_hide P s Q = (hide (P \<parallel>\<^bsub> s \<^esub> Q) s)"
