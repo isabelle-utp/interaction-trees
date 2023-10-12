@@ -2,7 +2,7 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Relation_Toolkit"
+  "Z_Toolkit.Relation_Toolkit" "Abstract_Prog_Syntax.Abstract_Prog_Syntax"
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -142,8 +142,10 @@ lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind
 
 definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 
-definition seq_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" (infixr ";;" 54) where 
+definition seq_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" where 
 "seq_itree P Q = kleisli_comp bind_itree P Q"
+
+adhoc_overloading useq seq_itree
 
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>

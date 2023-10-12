@@ -28,6 +28,9 @@ lemma assert_pre [dpre]: "itree_pre (assert b) = (True)\<^sub>e"
   by (auto simp add: itree_pre_def test_def fun_eq_iff)
      (metis deadlock_def deadlock_trace_to diverge_not_Vis)
 
+lemma Skip_pre [dpre]: "itree_pre Skip = (True)\<^sub>e"
+  by (auto simp add: itree_pre_def Skip_def)
+
 lemma assigns_pre [dpre]: "itree_pre \<langle>\<sigma>\<rangle>\<^sub>a = (True)\<^sub>e"
   by (auto simp add: itree_pre_def assigns_def)
 

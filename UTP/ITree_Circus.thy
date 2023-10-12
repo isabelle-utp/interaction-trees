@@ -12,6 +12,8 @@ type_synonym 'e process = "('e, unit) itree"
 definition Skip :: "('e, 'r) htree" where
 "Skip = (\<lambda> s. Ret s)"
 
+adhoc_overloading uskip Skip
+
 lemma Skip_unit [simp]: 
   "Skip ;; S = S" "S ;; Skip = S"
   by (simp_all add: seq_itree_def Skip_def kleisli_comp_def bind_itree_right_unit)
@@ -42,8 +44,7 @@ lemma Stop_left_zero [simp]: "Stop ;; S = Stop"
 definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
 
-syntax "_assume" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
-translations "_assume b" == "CONST assume (b)\<^sub>e"
+adhoc_overloading utest "assume"
 
 lemma assume_true: "\<questiondown>True? = Skip"
   by (simp add: assume_def Skip_def)
@@ -68,6 +69,8 @@ lemma test_false: "\<exclamdown>False! = Stop"
 definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "cond_itree P b Q = (\<lambda> s. if b s then P s else Q s)"
 
+adhoc_overloading ucond cond_itree
+
 text \<open> Similar to @{const Let} in HOL, but it evaluates the assigned expression on the initial state. \<close>
 
 definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
@@ -76,15 +79,7 @@ definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) 
 definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) I Skip) s)"
 
-nonterminal elsebranch
-
 syntax 
-  "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> elsebranch \<Rightarrow> logic" ("(2if _ /then /_/_ /fi)")
-(*  "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2if _ /then /_ /fi)") *)
-  "_cond_elseif" :: "logic \<Rightarrow> logic \<Rightarrow> elsebranch \<Rightarrow> elsebranch" ("( elseif _ /then /_/_)")
-  "_cond_else" :: "logic \<Rightarrow> elsebranch" (" else /_")
-  "_cond_no_else" :: "elsebranch" ("")
-  "_cond_itree_infix"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(3_ \<lhd> _ \<rhd>/ _)" [52,0,53] 52)
   "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
   "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
@@ -92,31 +87,16 @@ syntax
   "_for_downto_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ downto _ do _ od")
 
 translations
-  "_cond_itree b P Q" => "CONST cond_itree P (b)\<^sub>e Q"
-  "_cond_else P" => "P"
-  "_cond_no_else" => "CONST Skip"
-  "_cond_itree b P (_cond_else Q)" <= "CONST cond_itree P (b)\<^sub>e Q"
-  "_cond_elseif b P Q" => "CONST cond_itree P (b)\<^sub>e Q"
-  "_cond_elseif c Q (_cond_else R)" <= "_cond_else (CONST cond_itree Q (c)\<^sub>e R)"
-  "_cond_no_else" <= "_cond_else CONST Skip"
-  "_cond_itree_infix P b Q" => "_cond_itree b P (_cond_else Q)"
   "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
   "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
   "_for_itree i I P" == "CONST for_itree I (\<lambda> i. P)"
   "_for_to_itree i m n P" == "_for_itree i [m..<CONST Suc n] P"
   "_for_downto_itree i n m P" == "_for_itree i (CONST rev [m..<CONST Suc n]) P"
 
-definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
+definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
 
-syntax
-  "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 61)
-  "_swap" :: "svid \<Rightarrow> svid \<Rightarrow> logic" ("swap'(_, _')")
-
-translations
-  "_assignment x e" == "CONST assigns (CONST subst_upd (CONST subst_id) x (e)\<^sub>e)"
-  "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
-  "_swap x y" => "(x, y) := ($y, $x)"
+adhoc_overloading uassigns assigns
 
 named_theorems assigns_combine
 
@@ -222,7 +202,7 @@ next
 qed
 
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"
-  by (auto simp add: seq_itree_def fun_eq_iff iterate.code kleisli_comp_def cond_itree_def Step_def Skip_def comp_def)
+  by (auto simp add: seq_itree_def fun_eq_iff kleisli_comp_def iterate.code cond_itree_def Step_def Skip_def comp_def)
 
 lemma while_True_Skip: "while True do Skip od = Div"
   by (simp add: Skip_def SEXP_def loop_Ret)

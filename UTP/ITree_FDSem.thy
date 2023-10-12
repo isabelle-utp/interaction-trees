@@ -8,7 +8,6 @@ subsection \<open> Preliminaries \<close>
 
 datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's
 
-abbreviation "\<Sigma> \<equiv> range Ev"
 
 adhoc_overloading
   tick Term

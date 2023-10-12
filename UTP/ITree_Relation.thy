@@ -33,6 +33,9 @@ lemma test_rel [itree_rel]: "itree_rel (test P) = {(s, s'). s' = s \<and> P s}"
   using nonterminates_iff apply force
   done
 
+lemma Skip_pred [itree_rel]: "itree_pred Skip = (\<lambda> (s, s'). s = s')"
+  by (auto simp add: itree_rel_defs retvals_def Skip_def)
+
 lemma Skip_rel [itree_rel]: "itree_rel Skip = Id"
   by (auto simp add: itree_rel_defs retvals_def Skip_def)
 
@@ -94,5 +97,5 @@ ML_file \<open>Lens_Rel_Utils.ML\<close>
 method rename_rel_alpha_vars = tactic \<open> Lens_Rel_Utils.rename_rel_alpha_vars \<close>
 
 method itree_pred uses add = (expr_simp add: prog_defs itree_pred add; ((rule allI)+)?; rename_rel_alpha_vars)
-                
+
 end
