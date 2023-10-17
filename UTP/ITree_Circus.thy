@@ -79,15 +79,15 @@ definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) 
 definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) I Skip) s)"
 
+adhoc_overloading uwhile iterate
+
 syntax 
-  "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
   "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
   "_for_to_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ to _ do _ od")
   "_for_downto_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ downto _ do _ od")
 
 translations
-  "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
   "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
   "_for_itree i I P" == "CONST for_itree I (\<lambda> i. P)"
   "_for_to_itree i m n P" == "_for_itree i [m..<CONST Suc n] P"

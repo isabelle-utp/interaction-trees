@@ -60,8 +60,8 @@ lemma seq_pred [itree_pred]: "\<lbrakk>P ;; Q\<rbrakk>\<^sub>p (s, s') = (\<exis
 lemma seq_rel [itree_rel]: "itree_rel (P ;; Q) = itree_rel P O itree_rel Q"
   by (auto simp add: seq_itree_def kleisli_comp_def itree_rel_defs relcomp_unfold)
 
-lemma cond_pred [itree_pred]: 
-  "\<lbrakk>cond_itree C\<^sub>1 B C\<^sub>2\<rbrakk>\<^sub>p (s, s') = (if B s then \<lbrakk>C\<^sub>1\<rbrakk>\<^sub>p (s, s') else \<lbrakk>C\<^sub>2\<rbrakk>\<^sub>p (s, s'))"
+lemma cond_itree_pred [itree_pred]: 
+  "\<lbrakk>P \<lhd> b \<rhd> Q\<rbrakk>\<^sub>p = (\<lambda> (s, s'). if b s then \<lbrakk>P\<rbrakk>\<^sub>p (s, s') else \<lbrakk>Q\<rbrakk>\<^sub>p (s, s'))"
   by (auto simp add: cond_itree_def itree_rel_defs)
 
 lemma cond_rel [itree_rel]: 
