@@ -1,0 +1,180 @@
+diff -ur Isabelle2023/contrib/jedit-20211103/etc/settings Isabelle2023-CyPhyAssure/contrib/jedit-20211103/etc/settings
+--- Isabelle2023/contrib/jedit-20211103/etc/settings	2021-11-02 23:31:23.000000000 +0000
++++ Isabelle2023-CyPhyAssure/contrib/jedit-20211103/etc/settings	2024-01-15 14:34:57.725554714 +0000
+@@ -4,6 +4,8 @@
+ JEDIT_JARS="$JEDIT_HOME/jars/Code2HTML.jar:$JEDIT_HOME/jars/CommonControls.jar:$JEDIT_HOME/jars/Console.jar:$JEDIT_HOME/jars/ErrorList.jar:$JEDIT_HOME/jars/Highlight.jar:$JEDIT_HOME/jars/Navigator.jar:$JEDIT_HOME/jars/QuickNotepad.jar:$JEDIT_HOME/jars/SideKick.jar:$JEDIT_HOME/jars/jsr305-3.0.2.jar:$JEDIT_HOME/jars/kappalayout.jar"
+ JEDIT_JAR="$JEDIT_HOME/jedit.jar"
+ classpath "$JEDIT_JAR"
++classpath "$JEDIT_HOME/jars/Console.jar"
++classpath "$JEDIT_HOME/jars/ErrorList.jar"
+ 
+ JEDIT_SETTINGS="$ISABELLE_HOME_USER/jedit"
+ JEDIT_OPTIONS="-reuseview -nobackground -nosplash -log=9"
+diff -ur Isabelle2023/contrib/jedit-20211103/jedit5.6.0-patched/properties/jEdit.props Isabelle2023-CyPhyAssure/contrib/jedit-20211103/jedit5.6.0-patched/properties/jEdit.props
+--- Isabelle2023/contrib/jedit-20211103/jedit5.6.0-patched/properties/jEdit.props	2023-09-11 18:56:35.000000000 +0100
++++ Isabelle2023-CyPhyAssure/contrib/jedit-20211103/jedit5.6.0-patched/properties/jEdit.props	2024-01-15 14:34:57.729554738 +0000
+@@ -11,7 +11,7 @@
+ buffer.undoCount=1000
+ close-docking-area.shortcut2=C+e C+CIRCUMFLEX
+ complete-word.shortcut=
+-console.dock-position=floating
++console.dock-position=bottom
+ console.encoding=UTF-8
+ console.font=Isabelle DejaVu Sans Mono
+ console.fontsize=18
+diff -ur Isabelle2023/etc/build.props Isabelle2023-CyPhyAssure/etc/build.props
+--- Isabelle2023/etc/build.props	2023-09-11 18:30:48.000000000 +0100
++++ Isabelle2023-CyPhyAssure/etc/build.props	2024-01-15 14:34:57.729554738 +0000
+@@ -1,6 +1,8 @@
+ title = Isabelle/Scala
+ module = $ISABELLE_HOME/lib/classes/isabelle.jar
+ main = isabelle.jedit.JEdit_Main
++requirements = \
++  env:JEDIT_JARS
+ resources = \
+   lib/services/java.nio.charset.spi.CharsetProvider:META-INF/services/ \
+   lib/logo/isabelle_transparent-32.gif:isabelle/ \
+diff -ur Isabelle2023/etc/options Isabelle2023-CyPhyAssure/etc/options
+--- Isabelle2023/etc/options	2023-09-11 18:30:48.000000000 +0100
++++ Isabelle2023-CyPhyAssure/etc/options	2024-01-15 14:36:02.837962255 +0000
+@@ -159,7 +159,7 @@
+ option system_log : string = "" (standard "-") for build
+   -- "output for system messages (log file or \"-\" for console progress)"
+ 
+-option system_heaps : bool = false for build
++option system_heaps : bool = true for build
+   -- "store session heaps in $ISABELLE_HEAPS_SYSTEM, not $ISABELLE_HEAPS"
+ 
+ 
+Only in Isabelle2023-CyPhyAssure/etc: options~
+diff -ur Isabelle2023/src/Pure/PIDE/active.ML Isabelle2023-CyPhyAssure/src/Pure/PIDE/active.ML
+--- Isabelle2023/src/Pure/PIDE/active.ML	2023-09-11 18:30:48.000000000 +0100
++++ Isabelle2023-CyPhyAssure/src/Pure/PIDE/active.ML	2024-01-15 14:34:57.729554738 +0000
+@@ -14,6 +14,8 @@
+   val dialog: unit -> (string -> Markup.T) * string future
+   val dialog_text: unit -> (string -> string) * string future
+   val dialog_result: serial -> string -> unit
++  val run_shell_command: string -> string option -> string -> string -> string
++  val run_system_shell_command: string option -> string -> string -> string
+ end;
+ 
+ structure Active: ACTIVE =
+@@ -63,5 +65,15 @@
+     (fn tab => (Inttab.lookup tab i, Inttab.delete_safe i tab))
+   |> (fn NONE => () | SOME promise => Future.fulfill promise result);
+ 
++fun run_shell_command shell dir cmd = 
++  let val dirprop = (case dir of NONE => [] | SOME d => [(Markup.shell_directoryN, d)])
++  in Markup.markup 
++      (make_markup Markup.run_shell_commandN 
++        {implicit = false
++        ,properties = [(Markup.shell_typeN, shell), (Markup.shell_commandN, cmd)] @ dirprop})
++  end
++
++val run_system_shell_command = run_shell_command "System";
++
+ end;
+ 
+diff -ur Isabelle2023/src/Pure/PIDE/markup.ML Isabelle2023-CyPhyAssure/src/Pure/PIDE/markup.ML
+--- Isabelle2023/src/Pure/PIDE/markup.ML	2023-09-11 18:30:48.000000000 +0100
++++ Isabelle2023-CyPhyAssure/src/Pure/PIDE/markup.ML	2024-01-15 14:38:27.446871769 +0000
+@@ -243,6 +243,10 @@
+   val padding_command: Properties.entry
+   val dialogN: string val dialog: serial -> string -> T
+   val jedit_actionN: string
++  val run_shell_commandN: string
++  val shell_commandN: string
++  val shell_typeN: string
++  val shell_directoryN: string
+   val function: string -> Properties.entry
+   val ML_statistics: {pid: int, stats_dir: string} -> Properties.T
+   val commands_accepted: Properties.T
+@@ -763,6 +767,13 @@
+ 
+ val jedit_actionN = "jedit_action";
+ 
++val run_shell_commandN = "run_shell_command"
++
++val shell_commandN = "shell_command"
++
++val shell_typeN = "shell_type"
++
++val shell_directoryN = "shell_directory"
+ 
+ (* protocol message functions *)
+ 
+diff -ur Isabelle2023/src/Pure/PIDE/markup.scala Isabelle2023-CyPhyAssure/src/Pure/PIDE/markup.scala
+--- Isabelle2023/src/Pure/PIDE/markup.scala	2023-09-11 18:30:48.000000000 +0100
++++ Isabelle2023-CyPhyAssure/src/Pure/PIDE/markup.scala	2024-01-15 14:34:57.729554738 +0000
+@@ -638,6 +638,10 @@
+ 
+   val JEDIT_ACTION = "jedit_action"
+ 
++  val SHELL_COMMAND = "shell_command"
++  val SHELL_TYPE = "shell_type"
++  val SHELL_DIRECTORY = "shell_directory"
++  val RUN_SHELL_COMMAND = "run_shell_command"
+ 
+   /* protocol message functions */
+ 
+diff -ur Isabelle2023/src/Pure/PIDE/rendering.scala Isabelle2023-CyPhyAssure/src/Pure/PIDE/rendering.scala
+--- Isabelle2023/src/Pure/PIDE/rendering.scala	2023-09-11 18:30:48.000000000 +0100
++++ Isabelle2023-CyPhyAssure/src/Pure/PIDE/rendering.scala	2024-01-15 14:34:57.729554738 +0000
+@@ -208,7 +208,7 @@
+ 
+   val active_elements =
+     Markup.Elements(Markup.DIALOG, Markup.BROWSER, Markup.GRAPHVIEW, Markup.THEORY_EXPORTS,
+-      Markup.SENDBACK, Markup.JEDIT_ACTION, Markup.SIMP_TRACE_PANEL)
++      Markup.SENDBACK, Markup.JEDIT_ACTION, Markup.SIMP_TRACE_PANEL, Markup.RUN_SHELL_COMMAND)
+ 
+   val background_elements =
+     Document_Status.Command_Status.proper_elements + Markup.WRITELN_MESSAGE +
+diff -ur Isabelle2023/src/Tools/jEdit/src/active.scala Isabelle2023-CyPhyAssure/src/Tools/jEdit/src/active.scala
+--- Isabelle2023/src/Tools/jEdit/src/active.scala	2023-09-11 18:30:48.000000000 +0100
++++ Isabelle2023-CyPhyAssure/src/Tools/jEdit/src/active.scala	2024-01-15 14:34:57.729554738 +0000
+@@ -9,7 +9,7 @@
+ 
+ import isabelle._
+ import org.gjt.sp.jedit.{ServiceManager, View}
+-
++import console.{Console, Shell}
+ 
+ object Active {
+   abstract class Handler {
+@@ -99,6 +99,36 @@
+           model.session.dialog_result(id, serial, result)
+           true
+ 
++        case XML.Elem(Markup(Markup.RUN_SHELL_COMMAND, props), _) =>
++          val shell_name = Properties.get(props, Markup.SHELL_TYPE).getOrElse("System")
++          Properties.get (props, Markup.SHELL_COMMAND) match { 
++            case None => false
++            case Some(cmd) =>
++              view.getDockableWindowManager().addDockableWindow("console")
++
++              // Obtain the console instance
++              val console = view.getDockableWindowManager().getDockable("console").asInstanceOf[Console]
++
++              // Set the shell to use
++              val shell = Shell.getShell(shell_name)
++
++              shell.stop(console)
++              while (!shell.waitFor(console)) { }
++
++              // Change directory if requested
++              Properties.get(props, Markup.SHELL_DIRECTORY) match {
++                case Some(dir) => shell.chDir(console, dir);
++                case None => {}
++              }
++              while (!shell.waitFor(console)) { }
++
++              // Run the given command
++              console.run(shell, cmd)
++
++              true
++          }
++
++
+         case _ => false
+       }
+     }
