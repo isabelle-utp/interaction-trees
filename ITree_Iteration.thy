@@ -519,6 +519,116 @@ next
     by force 
 qed
 
+text \<open> These results also allow us to calculate the return values of @{const iterate}. \<close>
+
+lemma retvals_iterate: "\<^bold>R(iterate P C s) = {s'. (\<not> P s \<and> s = s') \<or> (\<exists> es. P s \<and> (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> P s')}"
+  by (auto simp add: retvals_def iterate_term_chain_iff)
+
+text \<open> A result linking relational while loops and ITree iteration: \<close>
+
+lemma rel_while_implies_chain:
+  assumes "\<exists>xs. \<not> xs = [] \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> (\<exists>es. C ((s # xs) ! i) \<midarrow>es\<leadsto> \<checkmark> (xs ! i))) \<and> s' = List.last xs" 
+          "\<not> P s'"
+  shows "P s" "\<exists>es. (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s'"
+proof -
+  obtain xs where xs: "xs \<noteq> []" "\<forall>i < length xs. P ((s # xs) ! i) \<and> (\<exists>es. C ((s # xs) ! i) \<midarrow>es\<leadsto> \<checkmark> (xs ! i))" "s' = List.last xs"
+    using assms(1) by blast
+  hence "\<forall>i < length xs. \<exists>es. C ((s # xs) ! i) \<midarrow>es\<leadsto> \<checkmark> (xs ! i)"
+    by presburger
+  then obtain ess where ess: "length ess = length xs" "\<And> i. i < length xs \<Longrightarrow> C ((s # xs) ! i) \<midarrow>ess ! i\<leadsto> \<checkmark> (xs ! i)"
+    by (auto simp add: Skolem_list_nth)
+  obtain chn where chn_def: "chn = butlast (zip ess xs)" by blast
+  have chn: "\<And> i. i < length chn \<Longrightarrow> C ((s # map snd chn) ! i) \<midarrow>fst (chn ! i)\<leadsto> \<checkmark> (snd (chn ! i))"
+            "\<And> i. i < Suc (length chn) \<Longrightarrow> P ((s # map snd chn) ! i)"
+    using chn_def ess xs 
+    by auto
+       (smt (verit) One_nat_def Suc_less_eq diff_less_Suc length_butlast length_map less_trans_Suc map_fst_zip map_snd_zip nth_Cons' nth_butlast nth_map
+       ,metis append_butlast_last_id butlast.simps(2) length_Cons length_append_singleton map_butlast map_snd_zip nth_butlast)
+  show P: "P s"
+    by (metis length_greater_0_conv nth_Cons_0 xs(1) xs(2))
+
+  have chn_st: "(\<forall>x\<in>chain_states chn. P x)"
+    by (simp add: chain_states_def all_set_conv_all_nth)
+       (metis chn(2) not_less_eq nth_Cons_Suc nth_map)
+
+  let ?s\<^sub>0 = "List.last (s # map snd chn)"
+
+  from chn have C_steps: "s \<turnstile> C \<midarrow>chn\<leadsto>\<^sup>* ?s\<^sub>0"
+  proof (induct chn arbitrary: s)
+    case Nil
+    then show ?case
+      by force
+  next
+    case (Cons a chn)
+    have C:"C s \<midarrow>fst a\<leadsto> \<checkmark> (snd a)"
+      using Cons.prems(1) by force
+    have 1:"\<And>i. i < length chn \<Longrightarrow> C ((snd a # map snd chn) ! i) \<midarrow>fst (chn ! i)\<leadsto> \<checkmark> (snd (chn ! i))"
+      by (metis (no_types, opaque_lifting) Cons.prems(1) Suc_less_eq2 length_Cons list.simps(9) nth_Cons_Suc)
+    have 2:"\<And>i. i < Suc (length chn) \<Longrightarrow> P ((snd a # map snd chn) ! i)"
+      by (metis Cons.prems(2) Suc_less_eq length_Cons list.simps(9) nth_Cons_Suc)
+    have R:"snd a \<turnstile> C \<midarrow>chn\<leadsto>\<^sup>* (List.last (snd a # map snd chn))"
+      using "1" "2" Cons.hyps by presburger
+    show ?case
+      using C R chain_step by fastforce
+  qed
+
+  let ?tr\<^sub>0 = "List.last ess"
+
+  have Cs': "C ?s\<^sub>0 \<midarrow>?tr\<^sub>0\<leadsto> \<checkmark> s'" 
+    apply (auto simp add: chn_def map_butlast map_fst_zip_take ess(1))
+    apply (metis ess(1) ess(2) last_conv_nth length_butlast length_greater_0_conv list.size(3) nth_Cons_0 xs(1) xs(3))
+    apply (metis (no_types, lifting) One_nat_def Suc_pred ess(1) ess(2) last_conv_nth length_butlast length_greater_0_conv lessI nth_Cons_Suc nth_butlast xs(1) xs(3))
+    done
+
+  have concat_ess: "concat ess = chain_trace chn @ ?tr\<^sub>0"
+    by (simp add: chn_def chain_trace_def map_butlast map_fst_zip_take ess(1))
+       (metis append.right_neutral append_butlast_last_id concat.simps(1) concat.simps(2) concat_append ess(1) length_0_conv xs(1))
+
+  have "(P, s) \<turnstile> C \<midarrow>concat ess\<leadsto>\<^sub>\<checkmark> s'"
+    by (metis Cs' P C_steps chn_st concat_ess itree_term_chain.simps)
+
+  thus "\<exists>es. (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s'" by blast
+qed
+
+text \<open> There is an ITree chain if-and-only-if there is a reflexive transitive closure (relational) chain \<close>
+
+lemma itree_chain_iff_rtc_chain:
+    "(\<not> P s \<and> s = s' \<or> P s \<and> (\<exists>es. ((P)\<^sub>e, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s') \<and> \<not> P s') =
+       ((s = s' \<or> (\<exists>xs. \<not> xs = [] 
+                      \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> (xs ! i) \<in> \<^bold>R(C ((s # xs) ! i))) 
+                      \<and> s' = last xs)) 
+                      \<and> \<not> P s')"
+  apply (rule iffI)
+  apply (erule disjE)
+    apply simp
+  apply force
+   apply (simp_all add: itree_term_chain.simps retvals_def)
+   apply (rule disjI2)
+  apply clarify
+   apply (rule_tac x="map snd chn @ [s']" in exI)
+  apply (auto)[1]
+  apply (metis cancel_ab_semigroup_add_class.add_diff_cancel_left' chain_states_def length_map less_Suc_eq_0_disj nth_Cons' nth_append nth_mem plus_1_eq_Suc)
+   apply (case_tac "chn = []")
+  apply simp
+    apply (metis itree_chain.cases list.discI)
+   apply (case_tac "i = 0")
+  apply simp
+  apply (metis (no_types, opaque_lifting) append.simps(2) chain_first_step list.map(2) list.sel(1) neq_Nil_conv nth_Cons_0)
+  apply simp
+   apply (case_tac "i = length chn")
+  apply (simp add: nth_append)
+    apply (metis One_nat_def chain_last last_conv_nth)
+  apply (auto simp add: nth_append)[1]
+    apply (rule_tac x="fst (chn ! i)" in exI)
+  apply (smt (verit, best) One_nat_def Suc_less_eq Suc_pred chain_steps less_Suc_eq less_trans_Suc) 
+  apply (erule conjE)
+  apply (erule disjE)
+   apply simp
+  apply (rule disjI2)
+  apply (metis itree_term_chain.simps rel_while_implies_chain(2))
+  done
+
+
 text \<open> If @{term P} is an invariant of a chain for process @{term C}, then the invariant holds
   for every element of the looped process @{term C}. \<close>
 

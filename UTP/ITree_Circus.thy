@@ -151,7 +151,7 @@ lemma cond1_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<
   by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
 
 lemma assign_cond: "if b then x := e else x := f fi = x := (if b then e else f)"
-  by (simp add: assigns_combine usubst, simp add: expr_if_def)
+  by (simp add: assigns_combine usubst, simp add: expr_if_def SEXP_def)
 
 lemma cond_simps:
   "S \<lhd> True \<rhd> T = S"

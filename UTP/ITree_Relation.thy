@@ -69,6 +69,15 @@ lemma cond_rel [itree_rel]:
     = {(s\<^sub>1, s\<^sub>2). if (B s\<^sub>1) then (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>1 else (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>2}"
   by (auto simp add: cond_itree_def itree_rel_defs)
 
+lemma iterate_pred [itree_pred]: 
+  "\<lbrakk>iterate P C\<rbrakk>\<^sub>p = (\<lambda> (s, s'). (\<not> P s \<and> s = s') \<or> (\<exists> es. P s \<and> (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> P s'))"
+  by (simp add: itree_pred_def retvals_iterate)
+
+lemma itree_while_pred: 
+  "\<lbrakk>while P do C od\<rbrakk>\<^sub>p (s, s') = 
+   ((s = s' \<or> (\<exists>xs. xs \<noteq> [] \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> \<lbrakk>C\<rbrakk>\<^sub>p ((s # xs) ! i, xs ! i)) \<and> s' = last xs)) \<and> \<not> P s')"
+  by (simp add: iterate_pred itree_chain_iff_rtc_chain, simp add: itree_pred_def)
+
 lemma input_in_where_rel [itree_rel]: 
   "wb_prism c \<Longrightarrow> itree_rel (input_in_where c A P) = {(s, s'). \<exists> v \<in> A s. fst (P v) s \<and> (s, s') \<in> itree_rel (snd (P v))}" 
   by (auto simp add: input_in_where_def itree_rel_defs retvals_inp_in_where)
