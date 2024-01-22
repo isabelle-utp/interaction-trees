@@ -229,7 +229,7 @@ fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
       val ctx' =
         (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), [])] ctx)
-        |> prep_simulation model (Context.theory_name thy)
+        |> prep_simulation model (Context.theory_name {long = false} thy)
   in run_simulation (Local_Theory.exit_global ctx'); (Local_Theory.exit_global ctx')
   end 
 
