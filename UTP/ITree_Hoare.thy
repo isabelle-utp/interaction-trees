@@ -410,6 +410,10 @@ lemma while_inv_nmods [nmods]:
 
 method hoare = ((simp add: prog_defs assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe hoare_lemmas; (simp add: usubst_eval)?))[1]
 
+text \<open> Verification condition generation \<close>
+
+method vcg_lens = (hoare; expr_lens_taut?; safe?; simp?) \<comment> \<open> Most useful when multiple states are present \<close>
+
 method vcg = (hoare; expr_taut?; safe?; simp?)
 
 method hoare_auto = (hoare; expr_auto)

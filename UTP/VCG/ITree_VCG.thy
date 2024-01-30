@@ -25,6 +25,13 @@ declare nth_list_update [simp]
 syntax
   "_lupdbind":: "['a, 'a] => lupdbind"    ("(2_ \<leftarrow>/ _)")
 
+(* Should lens gets appear in VCs, it's better they are concise and pretty *)
+
+syntax
+  "_lens_get_pretty" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_<_>" [999,0] 999)
+
+translations
+  "_lens_get_pretty x s" == "CONST lens_get x s"
 
 (* Set up the procedure command *)
 
