@@ -232,9 +232,41 @@ next
     by (simp add: for_Cons del: SEXP_apply) (metis "1" "2" SEXP_def hl_seq)
 qed
 
+text \<open> A more general version of the for-loop law where the invariant can depend on the initial
+       state, and the list to iterate over can be an expression (evaluated on the initial state). \<close>
+
+lemma hl_for_inv_prestate:
+  \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term s\<^sub>0}. \<close>
+  assumes 
+    "\<And> s\<^sub>0 i. i < length (xs s\<^sub>0) \<Longrightarrow> \<^bold>{@(R s\<^sub>0 i)\<^bold>} S (xs s\<^sub>0 ! i) \<^bold>{@(R s\<^sub>0 (i+1))\<^bold>}"
+    "\<And> s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 0)`"
+    "\<And> s\<^sub>0. `@(R s\<^sub>0 (length (xs s\<^sub>0))) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for i in xs do S i od \<^bold>{Q\<^bold>}"
+proof (rule_tac hl_prestate)
+  fix s\<^sub>0
+  show "\<^bold>{\<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>\<^bold>} for i in xs do S i od \<^bold>{Q\<^bold>}"
+  proof -
+    have "\<And> i. i < length (xs s\<^sub>0) \<Longrightarrow> \<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(R s\<^sub>0 i)\<^bold>} S (xs s\<^sub>0 ! i) \<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(R s\<^sub>0 (i + 1))\<^bold>}"
+    proof (simp, rule hl_frame_rule')
+      fix i
+      assume i: "i < length (xs s\<^sub>0)"
+      show "S (xs s\<^sub>0 ! i) nmods P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"
+        by (expr_simp add: not_modifies_def)
+      from assms(1) i show "\<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(R s\<^sub>0 i)\<^bold>} S (xs s\<^sub>0 ! i) \<^bold>{@(R s\<^sub>0 (Suc i))\<^bold>}"
+        by (force simp add: hoare_alt_def)
+    qed
+    hence w:"\<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(R s\<^sub>0 0)\<^bold>} for i in \<guillemotleft>xs s\<^sub>0\<guillemotright> do S i od \<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(R s\<^sub>0 (length (xs s\<^sub>0)))\<^bold>}"
+      by (rule hl_for, simp)
+    from assms(2-3) have "\<^bold>{\<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>\<^bold>} for i in \<guillemotleft>xs s\<^sub>0\<guillemotright> do S i od \<^bold>{Q\<^bold>}"
+      by (rule_tac hl_conseq[OF w]; expr_auto)
+    thus ?thesis
+      by (auto simp add: for_itree_def hoare_alt_def, expr_auto)
+  qed
+qed
+
 text \<open> For loops with invariant annotations \<close>
 
-definition for_inv :: "('s \<Rightarrow> 'i list) \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+definition for_inv :: "('s \<Rightarrow> 'i list) \<Rightarrow> (nat \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "for_inv I P S = for_itree I S"
 
 text \<open> For loops counting for m to n with invariant annotations. We use a new constant, as the form
