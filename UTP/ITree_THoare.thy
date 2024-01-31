@@ -84,23 +84,23 @@ text \<open> For loops do not require a variant, as termination is guaranteed by
 
 lemma thl_for:
   assumes "\<And> i. i < length xs \<Longrightarrow> H[@(R i)] S (xs ! i) [@(R (i+1))]"
-  shows "H[@(R 0)] for i in xs do S i od [@(R (length xs))]"
+  shows "H[@(R 0)] for i in \<guillemotleft>xs\<guillemotright> do S i od [@(R (length xs))]"
   using assms 
   by (simp add: thoare_triple_def hl_for pre_terminates)
-     (auto simp add: hoare_alt_def taut_def
-     , metis (no_types, lifting) Suc_eq_plus1 terminates_for_itree)
+     (force intro!: terminates_for_itree[of _ "R"] simp add: hoare_alt_def taut_def)
 
 lemma thl_for_inv [hoare_safe]:
   assumes "\<And> i. i < length xs \<Longrightarrow> H[@(R i)] S (xs ! i) [@(R (i+1))]"
     "`P \<longrightarrow> @(R 0)`" "`@(R (length xs)) \<longrightarrow> Q`"
-  shows "H[P] for x in xs inv i. @(R i) do S x od [Q]"
+  shows "H[P] for x in \<guillemotleft>xs\<guillemotright> inv i. @(R i) do S x od [Q]"
   unfolding for_inv_def
   by (rule thl_conseq[OF thl_for[of xs R S, OF assms(1)]], simp_all add: assms)
 
+(*
 lemma thl_for_to_inv [hoare_safe]:
   assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> H[@(R i)] S i [@(R (i + 1))]"
    "`P \<longrightarrow> @(R m)`" "`@(R (n+1 - m+m)) \<longrightarrow> Q`"
-  shows "H[P] for i = m to n inv @(R i) do S i od [Q]"
+  shows "H[P] for i = \<guillemotleft>m\<guillemotright> to \<guillemotleft>n\<guillemotright> inv @(R i) do S i od [Q]"
   unfolding for_to_inv_def fst_conv snd_conv
   using assms
   apply (rule_tac thl_for_inv, simp_all only: length_upt)
@@ -117,6 +117,7 @@ lemma thl_for_downto_inv [hoare_safe]:
     apply (simp_all add: rev_nth less_diff_conv assms del: upt_Suc)
   apply (metis Nat.le_diff_conv2 add.commute add_lessD1 assms(1) diff_diff_left diff_le_self less_Suc_eq_le plus_1_eq_Suc)
   done
+*)
 
 lemma thl_while [hoare_safe]:
   fixes V :: "'s \<Rightarrow> 'a::wellorder"

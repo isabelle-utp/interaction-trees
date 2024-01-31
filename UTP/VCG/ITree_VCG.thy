@@ -24,6 +24,7 @@ declare nth_list_update [simp]
 
 syntax
   "_lupdbind":: "['a, 'a] => lupdbind"    ("(2_ \<leftarrow>/ _)")
+  "_updbind" :: "'a \<Rightarrow> 'a \<Rightarrow> updbind"      ("(2_ \<leftarrow>// _)")
 
 (* Should lens gets appear in VCs, it's better they are concise and pretty *)
 

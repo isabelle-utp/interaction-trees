@@ -76,8 +76,8 @@ text \<open> Similar to @{const Let} in HOL, but it evaluates the assigned expre
 definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "let_itree e S = (\<lambda> s. S (e s) s)"
 
-definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) I Skip) s)"
+definition for_itree :: "('s \<Rightarrow> 'i list) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) (I s) Skip) s)"
 
 adhoc_overloading uwhile iterate
 
@@ -89,7 +89,7 @@ syntax
 
 translations
   "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
-  "_for_itree i I P" == "CONST for_itree I (\<lambda> i. P)"
+  "_for_itree i I P" == "CONST for_itree (I)\<^sub>e (\<lambda> i. P)"
   "_for_to_itree i m n P" == "_for_itree i [m..<CONST Suc n] P"
   "_for_downto_itree i n m P" == "_for_itree i (CONST rev [m..<CONST Suc n]) P"
 
@@ -162,10 +162,10 @@ lemma cond_simps:
   "x := e ;; (S \<lhd> b \<rhd> T) = (x := e ;; S) \<lhd> b\<lbrakk>e/x\<rbrakk> \<rhd> (x := e ;; T)"
    by (simp_all add: seq_itree_def cond_itree_def fun_eq_iff kleisli_comp_def assigns_def expr_defs)
 
-lemma for_empty: "for x in [] do P x od = Skip"
+lemma for_empty: "for_itree ([])\<^sub>e P = Skip"
   by (simp add: for_itree_def)
 
-lemma for_Cons: "for_itree (x # xs) P = P x ;; for_itree xs P"
+lemma for_Cons: "for_itree (\<guillemotleft>x\<guillemotright> # \<guillemotleft>xs\<guillemotright>)\<^sub>e P = P x ;; for_itree (\<lambda> s. xs) P"
   by (simp add: for_itree_def)
 
 text \<open> A for loop terminates provided that the body does so in each iteration. We use an invariant
@@ -175,15 +175,15 @@ lemma terminates_for_itree:
   assumes  
     "\<And> i s\<^sub>0 tr\<^sub>0 s\<^sub>1. \<lbrakk> i < length xs; R i s\<^sub>0; S (xs ! i) s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> Ret s\<^sub>1 \<rbrakk> \<Longrightarrow> R (i + 1) s\<^sub>1"
     "\<And> i s\<^sub>0. \<lbrakk> i < length xs; R i s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (S (xs ! i) s\<^sub>0)"
-  shows "R 0 s \<Longrightarrow> terminates (for_itree xs S s)"
+  shows "R 0 s \<Longrightarrow> terminates (for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S s)"
 using assms proof (induct xs arbitrary: R s)
   case Nil
-  then show ?case by (simp add: for_empty Skip_def terminates_Ret)
+  then show ?case by (simp add: for_empty Skip_def terminates_Ret del: SEXP_apply)
 next
   case (Cons a xs) 
   have 1: "terminates (S a s)"
     by (metis Cons.prems(1) Cons.prems(3) length_greater_0_conv list.distinct(1) nth_Cons_0)
-  have 2: "\<And> s\<^sub>0. s\<^sub>0 \<in> \<^bold>R (S a s) \<Longrightarrow> terminates (for_itree xs S s\<^sub>0)"
+  have 2: "\<And> s\<^sub>0. s\<^sub>0 \<in> \<^bold>R (S a s) \<Longrightarrow> terminates (for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S s\<^sub>0)"
   proof -
     fix s\<^sub>0
     assume "s\<^sub>0 \<in> \<^bold>R (S a s)"
@@ -191,14 +191,15 @@ next
       by (auto simp add: retvals_def)
     hence R_1: "R 1 s\<^sub>0"
       by (metis Cons.prems(1) Cons.prems(2) One_nat_def Suc_eq_plus1 length_Cons nth_Cons_0 zero_less_Suc)
-    with S_term show "terminates (for_itree xs S s\<^sub>0)"
-      by (auto intro!: Cons(1)[of "\<lambda> i s. R (i + 1) s"])
+    with S_term show "terminates (for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S s\<^sub>0)"
+      by (auto intro!: Cons(1)[of "\<lambda> i s. R (i + 1) s"] simp del: SEXP_apply)
          (metis Cons.prems(2) Suc_eq_plus1 Suc_less_eq length_Cons nth_Cons_Suc
          ,metis Cons.prems(3) Suc_less_eq length_Cons nth_Cons_Suc)
-  qed
+    qed
 
-  from 1 2 show ?case
-    by (auto intro!: terminates_bind simp add: for_Cons seq_itree_def kleisli_comp_def)
+    from 1 2 show ?case
+      by (simp add: for_Cons seq_itree_def kleisli_comp_def del: SEXP_apply)
+         (auto intro!: terminates_bind simp add: SEXP_def)
 qed
 
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"

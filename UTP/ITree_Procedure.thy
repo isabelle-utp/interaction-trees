@@ -49,6 +49,18 @@ translations
   "_return e" == "CONST proc_ret (e)\<^sub>e"
   "_call x P e" == "CONST proc_call x P (e)\<^sub>e"
 
+definition procedure_call :: "('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('a, 's) expr \<Rightarrow> ('e, 's) htree" where
+[code_unfold]: "procedure_call pr prm = (\<lambda> s. pr (prm s) s)"
+
+syntax "_procedure_call" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("call _'(_')")
+translations "call p(e)" == "CONST procedure_call p (e)\<^sub>e"
+
+lemma hl_procedure_call [hoare_safe]: 
+  assumes "\<And> v. H{P \<and> \<guillemotleft>v\<guillemotright> = e} C(v) {Q}"
+  shows "H{P} call C(e) {Q}"
+  using assms
+  by (auto simp add: hoare_alt_def procedure_call_def)
+
 ML_file \<open>ITree_Procedure.ML\<close>
 
 end

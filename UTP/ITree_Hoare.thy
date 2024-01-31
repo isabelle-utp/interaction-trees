@@ -4,14 +4,30 @@ theory ITree_Hoare
   imports ITree_WP
 begin
 
+syntax
+  "_ghost_old" :: "id" \<comment> \<open> A distinguished name for the ghost state ("old") \<close>
+
+parse_translation \<open> 
+  [(@{syntax_const "_ghost_old"}, fn ctx => fn term => Syntax.free "old")]\<close>
+
 text \<open> We introduce theorem attributed for safe Hoare rules and already proven triples \<close>
 
 named_theorems hoare_safe and hoare_lemmas
 
-definition hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
-"hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
+(* Should the following be separate definitions? If they are, we can have an introduction law
+  that removes the ghost state at particular points. *)
+
+definition hoare_rel_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
+"hoare_rel_triple P C Q = (\<forall> s s' es. P s \<and> C s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s s')"
+
+abbreviation hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
+"hoare_triple P C Q \<equiv> hoare_rel_triple P C (\<lambda> x. Q)"
+
+lemma hoare_triple_def: "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
+  by (auto simp add: hoare_rel_triple_def itree_rel_def spec_def itree_pred_def retvals_def)
 
 syntax 
+  "_hoare_rel"       :: "logic \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_./ _}")
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_}")
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2\<^bold>{_\<^bold>} /_) /\<^bold>{_\<^bold>}")
   "_preserves"       :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "preserves" 40)
@@ -19,7 +35,9 @@ syntax
   "_establishes"     :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "establishes" 40)
 
 translations
-  "_hoare P S Q" == "CONST hoare_triple (P)\<^sub>e S (Q)\<^sub>e"
+  "_hoare_rel P C x Q" == "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> x. (Q)\<^sub>e)"
+  "H{P} C {Q}" => "H{P} C {_ghost_old. Q}" 
+  "H{P} C {Q}" <= "CONST hoare_triple (P)\<^sub>e C (Q)\<^sub>e"
   "_preserves S P" => "H{P} S {P}"
   "_preserves_under S P Q" => "H{P \<and> Q} S {P}"
   "_establishes \<sigma> P" => "H{CONST True} \<langle>\<sigma>\<rangle>\<^sub>a {P}"
@@ -37,6 +55,14 @@ lemma hl_prestate:
   assumes "\<And> old. \<^bold>{\<guillemotleft>old\<guillemotright> = \<^bold>v \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>\<^bold>} C \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} C \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def lens_defs, expr_auto)
+
+text \<open> We can remove the ghost prestate by adding a ghost state variable to the precondition \<close>
+
+lemma hl_ghost_state_old:
+  assumes "\<And> s\<^sub>0. H{P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = \<^bold>v} C {Q(\<guillemotleft>s\<^sub>0\<guillemotright>)}" 
+  shows "H{P} C {Q(\<guillemotleft>old\<guillemotright>)}"
+  using assms
+  by (auto simp add: hoare_rel_triple_def lens_defs)
 
 lemma hl_conseq:
   assumes "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}" "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "`Q\<^sub>2 \<longrightarrow> Q\<^sub>1`"
@@ -186,51 +212,51 @@ lemma hl_frame_rule_simple:
 
 lemma hl_for:
   assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
-  shows "\<^bold>{@(R 0)\<^bold>} for i in xs do S i od \<^bold>{@(R (length xs))\<^bold>}"
+  shows "\<^bold>{@(R 0)\<^bold>} for i in \<guillemotleft>xs\<guillemotright> do S i od \<^bold>{@(R (length xs))\<^bold>}"
   using assms
 proof (induct xs arbitrary: R)
   case Nil
   show ?case
-    by (simp add: for_empty hl_skip del: SEXP_apply)
+    by (metis SEXP_def for_empty hl_skip list.size(3))
 next
   case (Cons x xs)
 
   from Cons(2)[of 0] have 1: "\<^bold>{@(R 0)\<^bold>} S x \<^bold>{@(R 1)\<^bold>}"
     by (simp del: SEXP_apply)
 
-  from Cons(1)[of "\<lambda> n. R (Suc n)"] have 2: "\<^bold>{@(R 1)\<^bold>} for_itree xs S \<^bold>{@(R (Suc (length xs)))\<^bold>}"
+  from Cons(1)[of "\<lambda> n. R (Suc n)"] have 2: "\<^bold>{@(R 1)\<^bold>} for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S \<^bold>{@(R (Suc (length xs)))\<^bold>}"
     by (simp del: SEXP_apply)
        (metis Cons.prems One_nat_def Suc_eq_plus1 Suc_less_eq list.size(4) nth_Cons_Suc)
 
   show ?case
-    by (simp add: for_Cons del: SEXP_apply, meson "1" "2" hl_seq)
+    by (simp add: for_Cons del: SEXP_apply) (metis "1" "2" SEXP_def hl_seq)
 qed
 
 text \<open> For loops with invariant annotations \<close>
 
-definition for_inv :: "'i list \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+definition for_inv :: "('s \<Rightarrow> 'i list) \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "for_inv I P S = for_itree I S"
 
 text \<open> For loops counting for m to n with invariant annotations. We use a new constant, as the form
   of invariant can be simplified in this case. \<close>
 
-definition for_to_inv :: "nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_to_inv m n IC \<equiv> for_inv [m..<n+1] (\<lambda> i. fst (IC (i + m))) (\<lambda> i. snd (IC i))"
+definition for_to_inv :: "('s \<Rightarrow> nat) \<Rightarrow> ('s \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_to_inv m n IC \<equiv> for_inv (SEXP (\<lambda> s. [(m s)..<(n s)+1])) (\<lambda> i s. fst (IC (i + m s)) s) (\<lambda> i. snd (IC i))"
 
 text \<open> The next code unfold law is important to ensure that invariants are not code generated, as
   they are not typically computable. \<close>
 
-lemma for_to_inv_code [code_unfold]: "for_to_inv m n (\<lambda> i. (I i, C i)) = for_itree [m..<n+1] C"
-  by (simp add: for_to_inv_def for_inv_def)
+lemma for_to_inv_code [code_unfold]: "for_to_inv m n (\<lambda> i. (I i, C i)) = for_itree (\<lambda> s. [m s..<n s+1]) C"
+  by (simp add: for_to_inv_def for_inv_def SEXP_def)
 
-definition for_downto_inv :: "nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_downto_inv n m IC \<equiv> for_inv (rev [m..<n+1]) (\<lambda> i. fst (IC (n - i))) (\<lambda> i. snd (IC i))"
+definition for_downto_inv :: "('s \<Rightarrow> nat) \<Rightarrow> ('s \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_downto_inv n m IC \<equiv> for_inv (SEXP (\<lambda> s. rev [m s..<n s+1])) (\<lambda> i s. fst (IC (n s - i)) s) (\<lambda> i. snd (IC i))"
 
-lemma for_downto_inv_code [code_unfold]: "for_downto_inv n m (\<lambda> i. (I i, C i)) = for_itree (rev [m..<n+1]) C"
-  by (simp add: for_downto_inv_def for_inv_def)
+lemma for_downto_inv_code [code_unfold]: "for_downto_inv n m (\<lambda> i. (I i, C i)) = for_itree (\<lambda> s. rev [m s..<n s+1]) C"
+  by (simp add: for_downto_inv_def for_inv_def SEXP_def)
 
-lemma for_to_inv_empty: "n < m \<Longrightarrow> for_to_inv m n IC = Skip"
-  by (simp add: for_to_inv_def for_inv_def for_empty)
+lemma for_to_inv_empty: "n < m \<Longrightarrow> for_to_inv (\<guillemotleft>m\<guillemotright>)\<^sub>e (\<guillemotleft>n\<guillemotright>)\<^sub>e IC = Skip"
+  by (simp add: for_to_inv_def for_inv_def, metis SEXP_def for_empty)
 
 syntax 
   "_for_inv_itree" :: "id \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ inv _. _ do _ od")
@@ -238,38 +264,64 @@ syntax
   "_for_downto_inv_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ downto _ inv _ do _ od")
 
 translations 
-  "_for_inv_itree x I i P S" == "CONST for_inv I (\<lambda> i. (P)\<^sub>e) (\<lambda> x. S)"
-  "for i = m to n inv I do C od" == "CONST for_to_inv m n (\<lambda> i. ((I)\<^sub>e, C))"
-  "for i = m downto n inv I do C od" == "CONST for_downto_inv m n (\<lambda> i. ((I)\<^sub>e, C))"
+  "_for_inv_itree x I i P S" == "CONST for_inv (I)\<^sub>e (\<lambda> i. (P)\<^sub>e) (\<lambda> x. S)"
+  "for i = m to n inv I do C od" == "CONST for_to_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. ((I)\<^sub>e, C))"
+  "for i = m downto n inv I do C od" == "CONST for_downto_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. ((I)\<^sub>e, C))"
 
-lemma hoare_for_inv [hoare_safe]:
+lemma hoare_for_inv_lit :
   assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
     "`P \<longrightarrow> @(R 0)`" "`@(R (length xs)) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for x in xs inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} for x in \<guillemotleft>xs\<guillemotright> inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
   unfolding for_inv_def
-  by (meson assms hl_conseq hl_for)
+  by (auto intro: hl_conseq hl_for assms)
+
+lemma hoare_for_intro_ghost:
+  assumes "\<And> xs. \<^bold>{P \<and> \<guillemotleft>xs\<guillemotright> = e\<^bold>} for x in \<guillemotleft>xs\<guillemotright> inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} for x in e inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
+  using assms
+  unfolding for_inv_def for_itree_def hoare_alt_def by auto
+
+lemma hoare_for_inv [hoare_safe]:
+  assumes 
+    "\<And> xs i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i + 1))\<^bold>}"
+    "\<And> xs. `P \<and> \<guillemotleft>xs\<guillemotright> = e \<longrightarrow> @(R 0)`"
+    "\<And> xs. `@(R (length xs)) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for x in e inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
+  using assms
+  by (rule_tac hoare_for_intro_ghost, auto intro!: hoare_for_inv_lit, metis Ex_list_of_length)
 
 lemma hl_for_to_inv [hoare_safe]:
   assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i + 1))\<^bold>}"
    "`P \<longrightarrow> @(R m)`" "`@(R (n+1 - m+m)) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for i = m to n inv @(R i) do S i od \<^bold>{Q\<^bold>}"
-  unfolding for_to_inv_def fst_conv snd_conv
-  using assms
-  apply (rule_tac hoare_for_inv, simp_all only: length_upt)
-  apply (metis ab_semigroup_add_class.add_ac(1) add.commute assms(1) le_add2 less_Suc_eq_le less_diff_conv nth_upt plus_1_eq_Suc)
-  apply (simp add: assms(2))
-  done 
+ shows "\<^bold>{P\<^bold>} for i = \<guillemotleft>m\<guillemotright> to \<guillemotleft>n\<guillemotright> inv @(R i) do S i od \<^bold>{Q\<^bold>}"
+proof -
+  have 1: "for i = \<guillemotleft>m\<guillemotright> to \<guillemotleft>n\<guillemotright> inv @(R i) do S i od = for i in \<guillemotleft>[m..<n+1]\<guillemotright> inv i. @(R (i + m)) do S i od"
+    by (simp add: SEXP_def for_inv_def for_to_inv_code)
+  from assms have "H{P} for i in \<guillemotleft>[m..<n+1]\<guillemotright> inv i. @(R (i + m)) do S i od {Q}"
+    apply (rule_tac hoare_for_inv_lit, simp_all only: length_upt)
+     apply (metis ab_semigroup_add_class.add_ac(1) add.commute assms(1) le_add2 less_Suc_eq_le less_diff_conv nth_upt plus_1_eq_Suc)
+    apply (simp add: assms(2))
+    done 
+  thus ?thesis
+    by (simp only: 1)
+qed
 
+(*
 lemma hl_for_downto_inv [hoare_safe]:
   assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i - 1))\<^bold>}"
     "`P \<longrightarrow> @(R n)`" "`@(R (n - (Suc n - m))) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for i = n downto m inv @(R i) do S i od \<^bold>{Q\<^bold>}"
-  unfolding for_downto_inv_def fst_conv snd_conv
-  apply (rule hoare_for_inv)
-    apply (simp_all add: rev_nth less_diff_conv assms del: upt_Suc)
+  shows "\<^bold>{P\<^bold>} for i = \<guillemotleft>n\<guillemotright> downto \<guillemotleft>m\<guillemotright> inv @(R i) do S i od \<^bold>{Q\<^bold>}"
+proof -
+  have 1: "for i = \<guillemotleft>n\<guillemotright> downto \<guillemotleft>m\<guillemotright> inv @(R i) do S i od = for i in \<guillemotleft>rev [m..<n+1]\<guillemotright> inv i. @(R (i - m)) do S i od"
+    by (simp add: SEXP_def for_inv_def for_downto_inv_code)
+  from assms have "H{P} for i in \<guillemotleft>rev [m..<n+1]\<guillemotright> inv i. @(R (i + (n + 1))) do S i od {Q}"
+  apply (rule_tac hoare_for_inv)
+      apply (simp_all add: rev_nth less_diff_conv del: upt_Suc)
+    defer
   apply (metis Nat.le_diff_conv2 add.commute add_lessD1 assms(1) diff_diff_left diff_le_self less_Suc_eq_le plus_1_eq_Suc)
   done
-  
+*)  
+
 lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
   shows "\<^bold>{P\<^bold>} while B do S od \<^bold>{\<not> B \<and> P\<^bold>}"
@@ -323,13 +375,9 @@ definition old_expr :: "'s \<Rightarrow> ('a, 's) expr \<Rightarrow> ('a, 's) ex
 expr_constructor old_expr
 
 syntax
-  "_ghost_old" :: "id" \<comment> \<open> A distinguished name for the ghost state ("old") \<close>
   "_old_expr" :: "logic \<Rightarrow> logic" ("old[_]")
   "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(while _ /(2inv/ _) //do/ _ //od)")
   "_while_inv_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(while _ /(2invariant/ _) //(2do //_) //od)")
-
-parse_translation \<open> 
-  [(@{syntax_const "_ghost_old"}, fn ctx => fn term => Syntax.free "old")]\<close>
 
 translations
   "_while_inv_itree B I P" => "CONST while_inv (B)\<^sub>e (\<lambda> _ghost_old. (I)\<^sub>e) P"
@@ -362,23 +410,23 @@ text \<open> The following law generalises the while law in several ways:
 
 lemma hl_while_inv_prestate [hoare_safe]:
   assumes 
-    \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term old}. \<close>
-    "\<And> old. \<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}" 
-    "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" 
-    "\<And> old. `(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I old)) \<longrightarrow> Q`"
+    \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term s\<^sub>0}. \<close>
+    "\<And> s\<^sub>0. \<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s\<^sub>0) \<and> B\<^bold>} S \<^bold>{@(I s\<^sub>0)\<^bold>}" 
+    "\<And> s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(I s\<^sub>0)`" 
+    "\<And> s\<^sub>0. `(P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I s\<^sub>0)) \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>}while B inv @(I old) do S od\<^bold>{Q\<^bold>}"
 proof (rule_tac hl_prestate)
-  fix old
-  show "\<^bold>{\<guillemotleft>old\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>\<^bold>} while B inv @(I old) do S od \<^bold>{Q\<^bold>}"
+  fix s\<^sub>0
+  show "\<^bold>{\<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>\<^bold>} while B inv @(I old) do S od \<^bold>{Q\<^bold>}"
   proof -
-    have "\<^bold>{(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)) \<and> B\<^bold>} S \<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)\<^bold>}"
+    have "\<^bold>{(P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s\<^sub>0)) \<and> B\<^bold>} S \<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s\<^sub>0)\<^bold>}"
     proof (simp, rule hl_frame_rule')
-      show "S nmods P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"
+      show "S nmods P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"
         by (expr_simp add: not_modifies_def)
-      show "\<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B\<^bold>} S \<^bold>{@(I old)\<^bold>}"
+      show "\<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s\<^sub>0) \<and> B\<^bold>} S \<^bold>{@(I s\<^sub>0)\<^bold>}"
         by (fact assms(1))
     qed
-    hence w:"\<^bold>{P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)\<^bold>} while B do S od \<^bold>{\<not> B \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)\<^bold>}"
+    hence w:"\<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s\<^sub>0)\<^bold>} while B do S od \<^bold>{\<not> B \<and> P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s\<^sub>0)\<^bold>}"
       by (simp add: hoare_while_partial)
     from assms(2-3) show ?thesis
       unfolding while_inv_def
@@ -408,7 +456,7 @@ lemma while_inv_nmods [nmods]:
   "P nmods e \<Longrightarrow> while b invariant I do P od nmods e"
   by (simp add: while_inv_def while_nmods)
 
-method hoare = ((simp add: prog_defs assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe hoare_lemmas; (simp add: usubst_eval)?))[1]
+method hoare = ((simp add: prog_defs z_defs z_locale_defs assigns_combine usubst usubst_eval)?, (auto intro!: hoare_safe hoare_lemmas; (simp add: usubst_eval)?))[1]
 
 text \<open> Verification condition generation \<close>
 
