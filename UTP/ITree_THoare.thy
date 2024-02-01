@@ -1,7 +1,7 @@
 section \<open> Total Correctness Hoare Logic \<close>
 
 theory ITree_THoare
-  imports ITree_Hoare "Explorer.Explorer"
+  imports ITree_Hoare
 begin
 
 text \<open> Total correctness = partial correctness + termination. Termination is expressed using 
