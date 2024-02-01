@@ -79,6 +79,9 @@ definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) 
 definition for_itree :: "('s \<Rightarrow> 'i list) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) (I s) Skip) s)"
 
+lemma for_itree_eval_bounds: "for_itree I P s = for_itree (\<guillemotleft>I s\<guillemotright>)\<^sub>e P s"
+  by (simp add: for_itree_def)
+
 adhoc_overloading uwhile iterate
 
 syntax 
@@ -200,6 +203,18 @@ next
     from 1 2 show ?case
       by (simp add: for_Cons seq_itree_def kleisli_comp_def del: SEXP_apply)
          (auto intro!: terminates_bind simp add: SEXP_def)
+qed
+
+lemma terminates_for_itree_prestate:
+  assumes  
+    "\<And> i s\<^sub>0 tr\<^sub>0 s\<^sub>1. \<lbrakk> i < length (xs s); R s i s\<^sub>0; S (xs s ! i) s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> Ret s\<^sub>1 \<rbrakk> \<Longrightarrow> R s (i + 1) s\<^sub>1"
+    "\<And> i s\<^sub>0. \<lbrakk> i < length (xs s); R s i s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (S ((xs s) ! i) s\<^sub>0)"
+  shows "R s 0 s \<Longrightarrow> terminates (for_itree xs S s)"
+proof -
+  from assms have "R s 0 s \<Longrightarrow> terminates (for_itree (\<guillemotleft>xs s\<guillemotright>)\<^sub>e S s)"
+    by (rule_tac terminates_for_itree[where xs="xs s" and R="R s"], auto)
+  thus "R s 0 s \<Longrightarrow> terminates (for_itree xs S s)"
+    by (simp add: for_itree_def)
 qed
 
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"

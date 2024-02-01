@@ -89,12 +89,37 @@ lemma thl_for:
   by (simp add: thoare_triple_def hl_for pre_terminates)
      (force intro!: terminates_for_itree[of _ "R"] simp add: hoare_alt_def taut_def)
 
-lemma thl_for_inv [hoare_safe]:
+lemma thl_for_prestate:
+  \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term s\<^sub>0}. \<close>
+  assumes 
+    "\<And> s\<^sub>0 i. i < length (xs s\<^sub>0) \<Longrightarrow> H[@(R s\<^sub>0 i)] S (xs s\<^sub>0 ! i) [@(R s\<^sub>0 (i+1))]"
+    "\<And> s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 0)`"
+    "\<And> s\<^sub>0. `@(R s\<^sub>0 (length (xs s\<^sub>0))) \<longrightarrow> Q`"
+  shows "H[P] for i in xs do S i od [Q]"
+  using assms
+  apply (auto simp add: thoare_triple_def hl_for pre_terminates intro: hl_for_prestate)
+   apply (rule hl_for_prestate[where R=R], auto)
+  apply (expr_auto)
+  apply (rule_tac terminates_for_itree_prestate[where R="R"], auto)
+  apply (meson hoare_rel_triple_def)
+  done
+
+lemma thl_for_inv:
   assumes "\<And> i. i < length xs \<Longrightarrow> H[@(R i)] S (xs ! i) [@(R (i+1))]"
     "`P \<longrightarrow> @(R 0)`" "`@(R (length xs)) \<longrightarrow> Q`"
   shows "H[P] for x in \<guillemotleft>xs\<guillemotright> inv i. @(R i) do S x od [Q]"
   unfolding for_inv_def
   by (rule thl_conseq[OF thl_for[of xs R S, OF assms(1)]], simp_all add: assms)
+
+lemma thl_for_inv_prestate [hoare_safe]:
+  assumes 
+    "\<And> s\<^sub>0 i. i < length (xs s\<^sub>0) \<Longrightarrow> H[@(R s\<^sub>0 i)] S (xs s\<^sub>0 ! i) [@(R s\<^sub>0 (i+1))]"
+    "\<And> s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 0)`"
+    "\<And> s\<^sub>0. `@(R s\<^sub>0 (length (xs s\<^sub>0))) \<longrightarrow> Q`"
+  shows "H[P] for i in xs inv i. @(R old i) do S i od [Q]"
+  unfolding for_inv_def   
+  using assms
+  by (rule thl_for_prestate[where R=R], simp)
 
 (*
 lemma thl_for_to_inv [hoare_safe]:

@@ -235,7 +235,7 @@ qed
 text \<open> A more general version of the for-loop law where the invariant can depend on the initial
        state, and the list to iterate over can be an expression (evaluated on the initial state). \<close>
 
-lemma hl_for_inv_prestate:
+lemma hl_for_prestate:
   \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term s\<^sub>0}. \<close>
   assumes 
     "\<And> s\<^sub>0 i. i < length (xs s\<^sub>0) \<Longrightarrow> \<^bold>{@(R s\<^sub>0 i)\<^bold>} S (xs s\<^sub>0 ! i) \<^bold>{@(R s\<^sub>0 (i+1))\<^bold>}"
@@ -266,14 +266,14 @@ qed
 
 text \<open> For loops with invariant annotations \<close>
 
-definition for_inv :: "('s \<Rightarrow> 'i list) \<Rightarrow> (nat \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+definition for_inv :: "('s \<Rightarrow> 'i list) \<Rightarrow> ('s \<Rightarrow> nat \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "for_inv I P S = for_itree I S"
 
 text \<open> For loops counting for m to n with invariant annotations. We use a new constant, as the form
   of invariant can be simplified in this case. \<close>
 
-definition for_to_inv :: "('s \<Rightarrow> nat) \<Rightarrow> ('s \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_to_inv m n IC \<equiv> for_inv (SEXP (\<lambda> s. [(m s)..<(n s)+1])) (\<lambda> i s. fst (IC (i + m s)) s) (\<lambda> i. snd (IC i))"
+definition for_to_inv :: "('s \<Rightarrow> nat) \<Rightarrow> ('s \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_to_inv m n IC \<equiv> for_itree (SEXP (\<lambda> s. [(m s)..<(n s)+1])) (\<lambda> i. snd (IC i))"
 
 text \<open> The next code unfold law is important to ensure that invariants are not code generated, as
   they are not typically computable. \<close>
@@ -281,14 +281,14 @@ text \<open> The next code unfold law is important to ensure that invariants are
 lemma for_to_inv_code [code_unfold]: "for_to_inv m n (\<lambda> i. (I i, C i)) = for_itree (\<lambda> s. [m s..<n s+1]) C"
   by (simp add: for_to_inv_def for_inv_def SEXP_def)
 
-definition for_downto_inv :: "('s \<Rightarrow> nat) \<Rightarrow> ('s \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> (bool, 's) expr \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_downto_inv n m IC \<equiv> for_inv (SEXP (\<lambda> s. rev [m s..<n s+1])) (\<lambda> i s. fst (IC (n s - i)) s) (\<lambda> i. snd (IC i))"
+definition for_downto_inv :: "('s \<Rightarrow> nat) \<Rightarrow> ('s \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_downto_inv n m IC \<equiv> for_itree (SEXP (\<lambda> s. rev [m s..<n s+1])) (\<lambda> i. snd (IC i))"
 
 lemma for_downto_inv_code [code_unfold]: "for_downto_inv n m (\<lambda> i. (I i, C i)) = for_itree (\<lambda> s. rev [m s..<n s+1]) C"
   by (simp add: for_downto_inv_def for_inv_def SEXP_def)
 
 lemma for_to_inv_empty: "n < m \<Longrightarrow> for_to_inv (\<guillemotleft>m\<guillemotright>)\<^sub>e (\<guillemotleft>n\<guillemotright>)\<^sub>e IC = Skip"
-  by (simp add: for_to_inv_def for_inv_def, metis SEXP_def for_empty)
+  by (simp add: for_to_inv_def for_inv_def, metis for_empty)
 
 syntax 
   "_for_inv_itree" :: "id \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ inv _. _ do _ od")
@@ -296,9 +296,12 @@ syntax
   "_for_downto_inv_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ downto _ inv _ do _ od")
 
 translations 
-  "_for_inv_itree x I i P S" == "CONST for_inv (I)\<^sub>e (\<lambda> i. (P)\<^sub>e) (\<lambda> x. S)"
-  "for i = m to n inv I do C od" == "CONST for_to_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. ((I)\<^sub>e, C))"
-  "for i = m downto n inv I do C od" == "CONST for_downto_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. ((I)\<^sub>e, C))"
+  "_for_inv_itree x I i P S" => "CONST for_inv (I)\<^sub>e (\<lambda> _ghost_old i. (P)\<^sub>e) (\<lambda> x. S)"
+  "_for_inv_itree x I i P S" <= "CONST for_inv (I)\<^sub>e (\<lambda> old i. (P)\<^sub>e) (\<lambda> x. S)"
+  "for i = m to n inv I do C od" => "CONST for_to_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. (\<lambda> _ghost_old. (I)\<^sub>e, C))"
+  "for i = m to n inv I do C od" <= "CONST for_to_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. (\<lambda> old. (I)\<^sub>e, C))"
+  "for i = m downto n inv I do C od" => "CONST for_downto_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. (\<lambda> _ghost_old. (I)\<^sub>e, C))"
+  "for i = m downto n inv I do C od" <= "CONST for_downto_inv (m)\<^sub>e (n)\<^sub>e (\<lambda> i. (\<lambda> old. (I)\<^sub>e, C))"
 
 lemma hoare_for_inv_lit :
   assumes "\<And> i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i+1))\<^bold>}"
@@ -314,45 +317,60 @@ lemma hoare_for_intro_ghost:
   unfolding for_inv_def for_itree_def hoare_alt_def by auto
 
 lemma hoare_for_inv [hoare_safe]:
+  \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term s\<^sub>0}. \<close>
   assumes 
-    "\<And> xs i. i < length xs \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S (xs ! i) \<^bold>{@(R (i + 1))\<^bold>}"
-    "\<And> xs. `P \<and> \<guillemotleft>xs\<guillemotright> = e \<longrightarrow> @(R 0)`"
-    "\<And> xs. `@(R (length xs)) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for x in e inv i. @(R i) do S x od \<^bold>{Q\<^bold>}"
-  using assms
-  by (rule_tac hoare_for_intro_ghost, auto intro!: hoare_for_inv_lit, metis Ex_list_of_length)
+    "\<And> s\<^sub>0 i. i < length (xs s\<^sub>0) \<Longrightarrow> \<^bold>{@(R s\<^sub>0 i)\<^bold>} S (xs s\<^sub>0 ! i) \<^bold>{@(R s\<^sub>0 (i+1))\<^bold>}"
+    "\<And> s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 0)`"
+    "\<And> s\<^sub>0. `@(R s\<^sub>0 (length (xs s\<^sub>0))) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for i in xs inv i. @(R old i) do S i od \<^bold>{Q\<^bold>}"
+  unfolding for_inv_def
+  by (rule hl_for_prestate[OF assms], simp)
 
 lemma hl_for_to_inv [hoare_safe]:
-  assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i + 1))\<^bold>}"
-   "`P \<longrightarrow> @(R m)`" "`@(R (n+1 - m+m)) \<longrightarrow> Q`"
- shows "\<^bold>{P\<^bold>} for i = \<guillemotleft>m\<guillemotright> to \<guillemotleft>n\<guillemotright> inv @(R i) do S i od \<^bold>{Q\<^bold>}"
-proof -
-  have 1: "for i = \<guillemotleft>m\<guillemotright> to \<guillemotleft>n\<guillemotright> inv @(R i) do S i od = for i in \<guillemotleft>[m..<n+1]\<guillemotright> inv i. @(R (i + m)) do S i od"
-    by (simp add: SEXP_def for_inv_def for_to_inv_code)
-  from assms have "H{P} for i in \<guillemotleft>[m..<n+1]\<guillemotright> inv i. @(R (i + m)) do S i od {Q}"
-    apply (rule_tac hoare_for_inv_lit, simp_all only: length_upt)
-     apply (metis ab_semigroup_add_class.add_ac(1) add.commute assms(1) le_add2 less_Suc_eq_le less_diff_conv nth_upt plus_1_eq_Suc)
-    apply (simp add: assms(2))
-    done 
-  thus ?thesis
-    by (simp only: 1)
+  assumes
+    "\<And>s\<^sub>0 i. \<lbrakk> m s\<^sub>0 \<le> i; i \<le> n s\<^sub>0 \<rbrakk> \<Longrightarrow> \<^bold>{@(R s\<^sub>0 i)\<^bold>} S i \<^bold>{@(R s\<^sub>0 (i + 1))\<^bold>}"
+    "\<And> s\<^sub>0. `P \<longrightarrow> @(R s\<^sub>0 (m s\<^sub>0))`" "\<And> s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0+1 - m s\<^sub>0 + m s\<^sub>0)) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for i = m to n inv @(R old i) do S i od \<^bold>{Q\<^bold>}"
+  unfolding for_to_inv_def
+proof (rule_tac hl_for_prestate[where R="\<lambda> s\<^sub>0 i. R s\<^sub>0 (i + m s\<^sub>0)"], simp_all only: length_upt snd_conv nth_upt SEXP_apply, simp)
+  fix s\<^sub>0 i
+  assume i: "i < Suc (n s\<^sub>0) - m s\<^sub>0"
+  with assms(1)[of "s\<^sub>0" "i + m s\<^sub>0"]
+  show "\<^bold>{@(R s\<^sub>0 (i + m s\<^sub>0))\<^bold>} S (m s\<^sub>0 + i) \<^bold>{@(R s\<^sub>0 (Suc (i + m s\<^sub>0)))\<^bold>}"
+    by (simp add: add.commute less_diff_conv)
+next
+  fix s\<^sub>0
+  from assms(2) show "`P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (0 + m s\<^sub>0))`"
+    by expr_simp
+  from assms(3) show "`@(R s\<^sub>0 (n s\<^sub>0 + 1 - m s\<^sub>0 + m s\<^sub>0)) \<longrightarrow> Q`"
+    by expr_simp
 qed
 
-(*
 lemma hl_for_downto_inv [hoare_safe]:
-  assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> \<^bold>{@(R i)\<^bold>} S i \<^bold>{@(R (i - 1))\<^bold>}"
-    "`P \<longrightarrow> @(R n)`" "`@(R (n - (Suc n - m))) \<longrightarrow> Q`"
-  shows "\<^bold>{P\<^bold>} for i = \<guillemotleft>n\<guillemotright> downto \<guillemotleft>m\<guillemotright> inv @(R i) do S i od \<^bold>{Q\<^bold>}"
-proof -
-  have 1: "for i = \<guillemotleft>n\<guillemotright> downto \<guillemotleft>m\<guillemotright> inv @(R i) do S i od = for i in \<guillemotleft>rev [m..<n+1]\<guillemotright> inv i. @(R (i - m)) do S i od"
-    by (simp add: SEXP_def for_inv_def for_downto_inv_code)
-  from assms have "H{P} for i in \<guillemotleft>rev [m..<n+1]\<guillemotright> inv i. @(R (i + (n + 1))) do S i od {Q}"
-  apply (rule_tac hoare_for_inv)
-      apply (simp_all add: rev_nth less_diff_conv del: upt_Suc)
-    defer
-  apply (metis Nat.le_diff_conv2 add.commute add_lessD1 assms(1) diff_diff_left diff_le_self less_Suc_eq_le plus_1_eq_Suc)
-  done
-*)  
+  assumes "\<And> s\<^sub>0 i. \<lbrakk> m s\<^sub>0 \<le> i; i \<le> n s\<^sub>0 \<rbrakk> \<Longrightarrow> \<^bold>{@(R s\<^sub>0 i)\<^bold>} S i \<^bold>{@(R s\<^sub>0 (i - 1))\<^bold>}"
+    "\<And> s\<^sub>0. `P \<longrightarrow> @(R s\<^sub>0 (n s\<^sub>0))`" "\<And> s\<^sub>0. `@(R s\<^sub>0 ((n s\<^sub>0) - (Suc (n s\<^sub>0) - (m s\<^sub>0)))) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>} for i = n downto m inv @(R old i) do S i od \<^bold>{Q\<^bold>}"
+  unfolding for_downto_inv_def
+proof (rule_tac hl_for_prestate[where R="\<lambda> s\<^sub>0 i. R s\<^sub>0 (n s\<^sub>0 - i)"], simp_all only: length_upt snd_conv nth_upt SEXP_apply)
+  fix s\<^sub>0 i
+  assume i: "i < length (rev [m s\<^sub>0..<n s\<^sub>0 + 1])"
+  show "\<^bold>{@(R s\<^sub>0 (n s\<^sub>0 - i))\<^bold>} S (rev [m s\<^sub>0..<n s\<^sub>0 + 1] ! i) \<^bold>{@(R s\<^sub>0 (n s\<^sub>0 - (i + 1)))\<^bold>}"
+  proof (cases "m s\<^sub>0 < n s\<^sub>0")
+    case True
+    with i assms(1)[of "s\<^sub>0" "n s\<^sub>0 - i", simplified] show ?thesis
+      by (case_tac "i = 0", simp_all add: rev_nth)
+  next
+    case False
+    with i assms(1)[of "s\<^sub>0" "n s\<^sub>0 - i", simplified] show ?thesis
+      by auto
+  qed
+next
+  fix s\<^sub>0
+  from assms(2) show "`P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (n s\<^sub>0 - 0))`" by expr_simp
+  from assms(3) show "`@(R s\<^sub>0 (n s\<^sub>0 - length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]))) \<longrightarrow> Q`"
+    by expr_auto ( metis One_nat_def Suc_diff_le add.commute diff_diff_cancel diff_diff_left plus_1_eq_Suc
+                  , metis diff_diff_cancel diff_is_0_eq' le_common_total not_less_eq_eq)
+qed
 
 lemma hoare_while_partial [hoare_safe]:
   assumes "\<^bold>{P \<and> B\<^bold>} S \<^bold>{P\<^bold>}"
