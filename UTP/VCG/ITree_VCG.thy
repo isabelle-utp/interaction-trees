@@ -41,6 +41,7 @@ Outer_Syntax.command @{command_keyword procedure} "define an ITree procedure"
   (ITree_Procedure.parse_procedure >> (Toplevel.local_theory NONE NONE o ITree_Procedure.mk_procedure @{typ pndet}));
 \<close>
 
+unbundle Expression_Syntax
 unbundle prog_ndet_syntax
 
 end
