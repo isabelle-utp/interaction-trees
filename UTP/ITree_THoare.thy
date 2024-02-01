@@ -1,7 +1,7 @@
 section \<open> Total Correctness Hoare Logic \<close>
 
 theory ITree_THoare
-  imports ITree_Hoare
+  imports ITree_Hoare "Explorer.Explorer"
 begin
 
 text \<open> Total correctness = partial correctness + termination. Termination is expressed using 
@@ -121,28 +121,53 @@ lemma thl_for_inv_prestate [hoare_safe]:
   using assms
   by (rule thl_for_prestate[where R=R], simp)
 
-(*
+lemma for_to_inv_as_for_inv:
+  "for i = m to n inv @(R old i) do S i od = for i in [m..<n + 1] inv i. @(R old i) do S i od"
+  by (simp add: SEXP_def for_inv_def for_to_inv_code)
+
 lemma thl_for_to_inv [hoare_safe]:
-  assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> H[@(R i)] S i [@(R (i + 1))]"
-   "`P \<longrightarrow> @(R m)`" "`@(R (n+1 - m+m)) \<longrightarrow> Q`"
-  shows "H[P] for i = \<guillemotleft>m\<guillemotright> to \<guillemotleft>n\<guillemotright> inv @(R i) do S i od [Q]"
-  unfolding for_to_inv_def fst_conv snd_conv
-  using assms
-  apply (rule_tac thl_for_inv, simp_all only: length_upt)
-  apply (metis ab_semigroup_add_class.add_ac(1) add.commute assms(1) le_add2 less_Suc_eq_le less_diff_conv nth_upt plus_1_eq_Suc)
-  apply (simp add: assms(2))
-  done 
+  assumes 
+    "\<And> s\<^sub>0 i. \<lbrakk> m s\<^sub>0 \<le> i; i \<le> n s\<^sub>0 \<rbrakk> \<Longrightarrow> H[@(R s\<^sub>0 i)] S i [@(R s\<^sub>0 (i + 1))]"
+    "\<And> s\<^sub>0. `P \<longrightarrow> @(R s\<^sub>0 (m s\<^sub>0))`" "\<And> s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0+1 - m s\<^sub>0 + m s\<^sub>0)) \<longrightarrow> Q`"
+  shows "H[P] for i = m to n inv @(R old i) do S i od [Q]"
+proof -
+  have 1:"\<And>s\<^sub>0 i. i < length [m s\<^sub>0..<n s\<^sub>0 + 1] \<Longrightarrow> H[@(R s\<^sub>0 (i + m s\<^sub>0))] S ([m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 (i + 1 + m s\<^sub>0))]"
+    by (smt (verit) Suc_eq_plus1 add.commute add_Suc_right assms(1) le_add2 length_upt less_Suc_eq_le less_diff_conv nth_upt)
+  from assms(2) have 2:"\<And>s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (0 + m s\<^sub>0))`"
+    by expr_auto
+  from assms(3) have 3:"\<And>s\<^sub>0. `@(R s\<^sub>0 (length [m s\<^sub>0..<n s\<^sub>0 + 1] + m s\<^sub>0)) \<longrightarrow> Q`"
+    by expr_simp
+      (smt (verit) Nat.add_diff_assoc2 add.commute cancel_comm_monoid_add_class.diff_cancel diff_Suc_1 le_Suc_eq le_add_diff_inverse2 not_le_minus)
+  have "H[P] for_inv ([m..<n + 1])\<^sub>e (\<lambda>old i. (@(R old (i + m old)))\<^sub>e) S [Q]"
+    by (rule thl_for_inv_prestate, fact 1, fact 2, fact 3)
+  thus ?thesis
+    by (metis SEXP_def for_inv_def for_to_inv_code)
+qed
 
 lemma thl_for_downto_inv [hoare_safe]:
-  assumes "\<And>i. \<lbrakk> m \<le> i; i \<le> n \<rbrakk> \<Longrightarrow> H[@(R i)] S i [@(R (i - 1))]"
-    "`P \<longrightarrow> @(R n)`" "`@(R (n - (Suc n - m))) \<longrightarrow> Q`"
-  shows "H[P] for i = n downto m inv @(R i) do S i od [Q]"
-  unfolding for_downto_inv_def fst_conv snd_conv
-  apply (rule thl_for_inv)
-    apply (simp_all add: rev_nth less_diff_conv assms del: upt_Suc)
-  apply (metis Nat.le_diff_conv2 add.commute add_lessD1 assms(1) diff_diff_left diff_le_self less_Suc_eq_le plus_1_eq_Suc)
-  done
-*)
+  assumes 
+    "\<And> s\<^sub>0 i. \<lbrakk> m s\<^sub>0 \<le> i; i \<le> n s\<^sub>0 \<rbrakk> \<Longrightarrow> H[@(R s\<^sub>0 i)] S i [@(R s\<^sub>0 (i - 1))]"
+    "\<And> s\<^sub>0. `P \<longrightarrow> @(R s\<^sub>0 (n s\<^sub>0))`" "\<And> s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0 - (Suc (n s\<^sub>0) - (m s\<^sub>0)))) \<longrightarrow> Q`"
+  shows "H[P] for i = n downto m inv @(R old i) do S i od [Q]"
+proof -
+  have 1:"\<And>s\<^sub>0 i. i < length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]) \<Longrightarrow> H[@(R s\<^sub>0 (n s\<^sub>0 - i))] S (rev [m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 (n s\<^sub>0 - (i + 1)))]"
+    apply (auto simp add: rev_nth nth_append)
+    apply (smt (verit) Nat.add_diff_assoc2 add.commute assms(1) diff_diff_left diff_le_self le_add2 le_add_diff_inverse2 less_Suc_eq_le plus_1_eq_Suc)
+    apply (smt (verit) One_nat_def assms(1) cancel_ab_semigroup_add_class.add_diff_cancel_left' cancel_comm_monoid_add_class.diff_cancel cancel_comm_monoid_add_class.diff_zero diff_diff_left diff_le_self less_diff_conv linordered_semidom_class.add_diff_inverse nat_less_le not_less_eq)
+    done
+  from assms(2) have 2:"\<And>s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (n s\<^sub>0 - 0))`"
+    by expr_auto
+  from assms(3) have 3:"\<And>s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0 - length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]))) \<longrightarrow> Q`"
+    apply expr_auto
+    apply (smt (verit) One_nat_def Suc_diff_le add.commute diff_diff_cancel diff_diff_left plus_1_eq_Suc)
+    apply (metis cancel_comm_monoid_add_class.diff_zero diff_is_0_eq le_Suc_eq not_le_minus)
+    done
+
+  have "H[P] for_inv (rev [m..<n + 1])\<^sub>e (\<lambda>old i. (@(R old (n old - i)))\<^sub>e) S [Q]"
+    by (rule thl_for_inv_prestate, fact 1, fact 2, fact 3)
+  thus ?thesis
+    by (metis SEXP_def for_downto_inv_code for_inv_def)
+qed
 
 lemma thl_while [hoare_safe]:
   fixes V :: "'s \<Rightarrow> 'a::wellorder"
