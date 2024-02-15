@@ -105,6 +105,6 @@ ML_file \<open>Lens_Rel_Utils.ML\<close>
 
 method rename_rel_alpha_vars = tactic \<open> Lens_Rel_Utils.rename_rel_alpha_vars \<close>
 
-method itree_pred uses add = (expr_simp add: prog_defs itree_pred add; ((rule allI)+)?; rename_rel_alpha_vars)
+method itree_pred uses add = (simp add: prog_defs itree_pred add; expr_simp add: prog_defs itree_pred add; ((rule allI)+)?; rename_rel_alpha_vars)
 
 end
