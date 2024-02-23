@@ -1,6 +1,10 @@
+section \<open> Local Variable Blocks \<close>
+
 theory ITree_Local_Var
   imports ITree_Hoare
 begin
+
+subsection \<open> Injection Universe \<close>
 
 datatype utype =
   UnitT | BoolT | NatT | IntT | RatT | RealT | StringT | ListT utype | PairT utype utype | SumT utype utype
@@ -68,30 +72,34 @@ definition uval_lens :: "'a::injval \<Longrightarrow> uval" where
 lemma mwb_uval_lens [simp]: "mwb_lens uval_lens"
   by (unfold_locales, simp_all add: uval_lens_def)
 
+subsection \<open> Local Variable Stack \<close>
+
 zstore lvar =
   lstack :: "uval list"
+
+text \<open> Extend the variable stack \<close>
 
 definition open_var :: "('e, 'a lvar_scheme) htree" where
 "open_var = (lstack := lstack @ [UnitV])"
 
+text \<open> Reduce the variable stack \<close>
+
 definition close_var :: "('e, 'a lvar_scheme) htree" where
 "close_var = (lstack := butlast lstack)"
 
-definition "lvar_lens l = (uval_lens ;\<^sub>L list_lens (length l - 1) ;\<^sub>L lstack)"
+text \<open> A lens pointing to one of the locations in the stack \<close>
+
+definition lvar_lens :: "'s lvar_scheme \<Rightarrow> ('v::injval \<Longrightarrow> 's lvar_scheme)" where 
+"lvar_lens s = (uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - 1) ;\<^sub>L lstack)"
 
 lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens s)"
   by (simp add: lvar_lens_def list_mwb_lens comp_mwb_lens)
 
-definition vblock :: "(('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
-  where "vblock B = open_var ;; let_itree (SEXP (\<lambda> s. (lvar_lens (get\<^bsub>lstack\<^esub> s)))) B ;; close_var"
+text \<open> The next predicate characterises the location of a local variable in the stack. \<close>
 
-syntax "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _ :: _./ _" [0, 0, 10] 10)
-
-translations 
-  "_vblock x t e" => "CONST vblock (_lvar_abs x t e)"
-
-definition "lv_at x n = (\<lambda> s. length (get\<^bsub>lstack\<^esub> s) > n 
-                        \<and> x = uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - Suc n) ;\<^sub>L lstack)"
+definition lv_at :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> nat \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
+  "lv_at x n = (\<lambda> s. length (get\<^bsub>lstack\<^esub> s) > n 
+               \<and> x = uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - Suc n) ;\<^sub>L lstack)"
 
 expr_constructor lv_at
 
@@ -111,10 +119,21 @@ lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<r
 lemma lv_at_grow_stack_2 [simp]: "lv_at x n ([lstack \<leadsto> butlast ($lstack)] s) = lv_at x (n + 1) s"
   by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff)
 
+subsection \<open> Variable Blocks \<close>
+
+definition vblock :: "'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
+  where "vblock t B = open_var ;; let_itree (SEXP lvar_lens) B ;; close_var"
+
+syntax "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _ :: _./ _" [0, 0, 10] 10)
+
+translations 
+  "_vblock x t e" => "CONST vblock (_TYPE t) (_lvar_abs x t e)"
+  "_vblock x t e" <= "CONST vblock (_TYPE t) (\<lambda> x. e)"
+
 lemma hl_vblock [hoare_safe]:
   assumes "\<And> x. mwb_lens x 
                   \<Longrightarrow> H{lv_at x 0 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
-  shows "H{P} vblock (\<lambda> x. B x) {Q}"
+  shows "H{P} var x :: 't::injval. B x {Q}"
   apply (simp add: vblock_def open_var_def close_var_def)
   apply (rule hoare_safe)
    apply simp
@@ -127,26 +146,5 @@ lemma hl_vblock [hoare_safe]:
    apply expr_simp
   apply expr_simp
   done
-
-zstore swap = lvar +
-  x :: int
-  y :: int
-
-lit_vars
-
-definition prog :: "(unit, swap) htree" where 
-"prog = (var temp2::nat list. var temp::int. temp := x ;; x := y ;; y := temp)"
-
-lemma "H{x = X \<and> y = Y} prog {x = Y \<and> y = X}"
-  unfolding prog_def
-  apply (rule hl_vblock)
-  apply (rule hl_vblock)
-  apply (subst_eval)
-  apply vcg_lens
-  done
-  
-def_consts MAX_SIL_STEPS = 100
-
-execute "x := 1 ;; y := 2 ;; prog"
 
 end
