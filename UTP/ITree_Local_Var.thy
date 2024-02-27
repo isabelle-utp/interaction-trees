@@ -29,6 +29,20 @@ fun uval_type :: "uval \<Rightarrow> utype option" where
 "uval_type (ProdV (x, y)) = (case (uval_type x, uval_type y) of (Some a, Some b) \<Rightarrow> Some (ProdT a b) | _ \<Rightarrow> None)" |
 "uval_type (SumV a b x) = (if (case x of Inl l \<Rightarrow> uval_type l = Some a | Inr r \<Rightarrow> uval_type r = Some b) then Some (SumT a b) else None)" 
 
+definition uvals :: "utype \<Rightarrow> uval set" where
+"uvals t = {v. uval_type v = Some t}" 
+
+lemma uvals: 
+  "uvals UnitT = {UnitV}" "uvals BoolT = range BoolV" "uvals NatT = range NatV"
+  "uvals IntT = range IntV" "uvals RatT = range RatV" "uvals RealT = range RealV"
+  "uvals StringT = range StringV" "uvals (ListT a) = {ListV a xs | xs. set xs \<subseteq> uvals a}"
+  "uvals (ProdT a b) = {ProdV (x, y) | x y. x \<in> uvals a \<and> y \<in> uvals b}"
+  by (auto simp add: uvals_def, (case_tac x, auto simp add: option.case_eq_if)+)
+
+lemma uvals_SumT: "uvals (SumT a b) = {SumV a b (Inl x) | x. x \<in> uvals a} \<union> {SumV a b (Inr y) | y. y \<in> uvals b}"
+  by (auto simp add: uvals_def, case_tac x, auto simp add: option.case_eq_if sum.case_eq_if)
+     (metis sum.collapse(1) sum.collapse(2))
+
 text \<open> Any type we wish to use in local variables need to instantiate the 
        following class. \<close>
 
@@ -37,14 +51,30 @@ class injval =
   and proj_val :: "uval \<Rightarrow> 'a option"
   and utyp :: "'a itself \<Rightarrow> utype"
   assumes inj_val_inv [simp]: "proj_val (inj_val x) = Some x"
-  and val_type [simp]: "uval_type (inj_val x) = Some (utyp TYPE('a))" 
+  and val_type [simp]: "uval_type (inj_val x) = Some (utyp TYPE('a))"
+  and proj_val_inv: "y \<in> uvals (utyp TYPE('a)) \<Longrightarrow> inj_val (the (proj_val y)) = y"
+begin
+
+lemma inj_val: "inj inj_val"
+  by (metis injI local.inj_val_inv option.sel)
+
+lemma ran_proj_val: "ran proj_val = UNIV"
+  by (metis UNIV_eq_I local.inj_val_inv ranI)
+
+lemma proj_val_nNone: "uval_type x = Some (utyp TYPE('a)) \<Longrightarrow> proj_val x \<noteq> None"
+  using local.proj_val_inv option.discI uvals_def by fastforce
+
+lemma inj_val_typed [simp]: "inj_val x \<in> uvals (utyp TYPE('a))"
+  by (simp add: uvals_def)
+
+end
 
 instantiation unit :: injval
 begin
 definition inj_val_unit :: "unit \<Rightarrow> uval" where "inj_val_unit _ = UnitV"
 fun proj_val_unit :: "uval \<Rightarrow> unit option" where "proj_val x = (case x of UnitV \<Rightarrow> Some () | _ \<Rightarrow> None)"
 definition utyp_unit :: "unit itself \<Rightarrow> utype" where "utyp_unit t = UnitT"
-instance by (intro_classes, auto simp add: inj_val_unit_def utyp_unit_def)
+instance by (intro_classes, auto simp add: inj_val_unit_def utyp_unit_def uvals)
 end
 
 instantiation bool :: injval
@@ -52,7 +82,7 @@ begin
 definition inj_val_bool :: "bool \<Rightarrow> uval" where "inj_val_bool = BoolV"
 fun proj_val_bool :: "uval \<Rightarrow> bool option" where "proj_val x = (case x of BoolV n \<Rightarrow> Some n | _ \<Rightarrow> None)"
 definition utyp_bool :: "bool itself \<Rightarrow> utype" where "utyp_bool t = BoolT"
-instance by (intro_classes, auto simp add: inj_val_bool_def utyp_bool_def)
+instance by (intro_classes, auto simp add: inj_val_bool_def utyp_bool_def uvals)
 end
 
 instantiation nat :: injval
@@ -60,7 +90,7 @@ begin
 definition inj_val_nat :: "nat \<Rightarrow> uval" where "inj_val_nat = NatV"
 fun proj_val_nat :: "uval \<Rightarrow> nat option" where "proj_val x = (case x of NatV n \<Rightarrow> Some n | _ \<Rightarrow> None)"
 definition utyp_nat :: "nat itself \<Rightarrow> utype" where "utyp_nat t = NatT"
-instance by (intro_classes, auto simp add: inj_val_nat_def utyp_nat_def)
+instance by (intro_classes, auto simp add: inj_val_nat_def utyp_nat_def uvals)
 end
 
 instantiation int :: injval
@@ -68,7 +98,7 @@ begin
 definition inj_val_int :: "int \<Rightarrow> uval" where "inj_val_int = IntV"
 fun proj_val_int :: "uval \<Rightarrow> int option" where "proj_val x = (case x of IntV n \<Rightarrow> Some n | _ \<Rightarrow> None)"
 definition utyp_int :: "int itself \<Rightarrow> utype" where "utyp_int t = IntT"
-instance by (intro_classes, auto simp add: inj_val_int_def utyp_int_def)
+instance by (intro_classes, auto simp add: inj_val_int_def utyp_int_def uvals)
 end
 
 instantiation rat :: injval
@@ -76,7 +106,7 @@ begin
 definition inj_val_rat :: "rat \<Rightarrow> uval" where "inj_val_rat = RatV"
 fun proj_val_rat :: "uval \<Rightarrow> rat option" where "proj_val x = (case x of RatV n \<Rightarrow> Some n | _ \<Rightarrow> None)"
 definition utyp_rat :: "rat itself \<Rightarrow> utype" where "utyp_rat t = RatT"
-instance by (intro_classes, auto simp add: inj_val_rat_def utyp_rat_def)
+instance by (intro_classes, auto simp add: inj_val_rat_def utyp_rat_def uvals)
 end
 
 instantiation real :: injval
@@ -84,7 +114,7 @@ begin
 definition inj_val_real :: "real \<Rightarrow> uval" where "inj_val_real = RealV"
 fun proj_val_real :: "uval \<Rightarrow> real option" where "proj_val x = (case x of RealV n \<Rightarrow> Some n | _ \<Rightarrow> None)"
 definition utyp_real :: "real itself \<Rightarrow> utype" where "utyp_real t = RealT"
-instance by (intro_classes, auto simp add: inj_val_real_def utyp_real_def)
+instance by (intro_classes, auto simp add: inj_val_real_def utyp_real_def uvals)
 end
 
 instantiation String.literal :: injval
@@ -92,7 +122,7 @@ begin
 definition inj_val_literal :: "String.literal \<Rightarrow> uval" where "inj_val_literal = StringV"
 fun proj_val_literal :: "uval \<Rightarrow> String.literal option" where "proj_val x = (case x of StringV n \<Rightarrow> Some n | _ \<Rightarrow> None)"
 definition utyp_literal :: "String.literal itself \<Rightarrow> utype" where "utyp_literal t = StringT"
-instance by (intro_classes, auto simp add: inj_val_literal_def utyp_literal_def)
+instance by (intro_classes, auto simp add: inj_val_literal_def utyp_literal_def uvals)
 end
 
 instantiation list :: (injval) injval
@@ -102,7 +132,9 @@ definition proj_val_list :: "uval \<Rightarrow> 'a list option"
   where "proj_val x = (case x of ListV a xs \<Rightarrow> let ys = map proj_val xs in (if None \<in> set ys then None else Some (map the ys)) |
                                  _ \<Rightarrow> None)"
 definition utyp_list :: "'a list itself \<Rightarrow> utype" where "utyp_list t = ListT (utyp TYPE('a))"
-instance by (intro_classes, auto simp add: inj_val_list_def proj_val_list_def utyp_list_def list.map_ident_strong)
+instance 
+  by (intro_classes, auto simp add: inj_val_list_def proj_val_list_def utyp_list_def uvals list.map_ident_strong proj_val_inv subsetD)
+     (metis inj_val_inv option.distinct(1) proj_val_inv subsetD)
 end
 
 instantiation prod :: (injval, injval) injval
@@ -117,8 +149,9 @@ definition proj_val_prod :: "uval \<Rightarrow> ('a \<times> 'b) option" where
 
 definition utyp_prod :: "('a \<times> 'b) itself \<Rightarrow> utype" where "utyp_prod _ = ProdT (utyp TYPE('a)) (utyp TYPE('b))"
 
-instance by (intro_classes, auto simp add: inj_val_prod_def proj_val_prod_def utyp_prod_def)
-
+instance 
+  by (intro_classes, auto simp add: inj_val_prod_def proj_val_prod_def utyp_prod_def uvals)
+     (metis (no_types, lifting) case_prod_conv inj_val_inv option.sel option.simps(5) proj_val_inv)
 end
 
 instantiation sum :: (injval, injval) injval
@@ -134,8 +167,9 @@ definition proj_val_sum :: "uval \<Rightarrow> ('a + 'b) option" where
 
 definition utyp_sum :: "('a + 'b) itself \<Rightarrow> utype" where "utyp_sum _ = SumT (utyp TYPE('a)) (utyp TYPE('b))"
 
-instance by (intro_classes, auto simp add: sum.case_eq_if inj_val_sum_def proj_val_sum_def utyp_sum_def isl_map_sum map_sum_sel)
-
+instance 
+  by (intro_classes, auto simp add: sum.case_eq_if inj_val_sum_def proj_val_sum_def utyp_sum_def isl_map_sum map_sum_sel uvals_SumT)
+     (metis inj_val_inv map_sum.simps option.distinct(1) option.map_sel proj_val_inv)+
 end
 
 subsection \<open> Value projection lens \<close>
@@ -145,6 +179,9 @@ definition uval_lens :: "'a::injval \<Longrightarrow> uval" where
 
 lemma mwb_uval_lens [simp]: "mwb_lens uval_lens"
   by (unfold_locales, simp_all add: uval_lens_def)
+
+lemma source_uval_lens: "\<S>\<^bsub>uval_lens :: 'a::injval \<Longrightarrow> uval\<^esub> = uvals (utyp TYPE('a))"
+  by (auto simp add: lens_source_def uval_lens_def, metis proj_val_inv) 
 
 subsection \<open> Local Variable Stack \<close>
 
@@ -192,6 +229,26 @@ lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<r
 
 lemma lv_at_grow_stack_2 [simp]: "lv_at x n ([lstack \<leadsto> butlast ($lstack)] s) = lv_at x (n + 1) s"
   by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff)
+
+lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> mwb_lens x"
+  by (metis comp_mwb_lens list_mwb_lens lstack_vwb_lens lv_at_def mwb_uval_lens vwb_lens_mwb)
+
+lemma [simp]: "vwb_lens X \<Longrightarrow> \<S>\<^bsub>X\<^esub> = UNIV"
+  by (meson vwb_lens_iff_mwb_UNIV_src)
+
+(*
+lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> s \<in> \<S>\<^bsub>x\<^esub>"
+  apply (auto simp add: lv_at_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens)
+*)
+
+(*
+
+find_theorems lens_source vwb_lens
+
+
+lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> s \<in> \<S>\<^bsub>x\<^esub>"
+  apply (auto simp add: lv_at_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens)
+*)
 
 subsection \<open> Variable Blocks \<close>
 
