@@ -43,6 +43,21 @@ lemma uvals_SumT: "uvals (SumT a b) = {SumV a b (Inl x) | x. x \<in> uvals a} \<
   by (auto simp add: uvals_def, case_tac x, auto simp add: option.case_eq_if sum.case_eq_if)
      (metis sum.collapse(1) sum.collapse(2))
 
+fun uval_default :: "utype \<Rightarrow> uval" where
+"uval_default UnitT = UnitV" |
+"uval_default BoolT = BoolV True" |
+"uval_default NatT = NatV 0" |
+"uval_default IntT = IntV 0" |
+"uval_default RatT = RatV 0" |
+"uval_default RealT = RealV 0" |
+"uval_default StringT = StringV STR ''''" |
+"uval_default (ListT a) = ListV a []" |
+"uval_default (ProdT a b) = ProdV (uval_default a, uval_default b)" |
+"uval_default (SumT a b) = SumV a b (Inl (uval_default a))"
+
+lemma uval_default_type [simp]: "uval_type (uval_default a) = Some a"
+  by (induct a; simp)
+
 text \<open> Any type we wish to use in local variables need to instantiate the 
        following class. \<close>
 
@@ -190,8 +205,8 @@ zstore lvar =
 
 text \<open> Extend the variable stack \<close>
 
-definition open_var :: "('e, 'a lvar_scheme) htree" where
-"open_var = (lstack := lstack @ [UnitV])"
+definition open_var :: "utype \<Rightarrow> ('e, 'a lvar_scheme) htree" where
+"open_var a = (lstack := lstack @ [uval_default \<guillemotleft>a\<guillemotright>])"
 
 text \<open> Reduce the variable stack \<close>
 
@@ -209,7 +224,8 @@ lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens s)"
 text \<open> The next predicate characterises the location of a local variable in the stack. \<close>
 
 definition lv_at :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> nat \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
-  "lv_at x n = (\<lambda> s. length (get\<^bsub>lstack\<^esub> s) > n 
+  "lv_at x n = (\<lambda> s. length (get\<^bsub>lstack\<^esub> s) > n
+               \<and> uval_type (get\<^bsub>lstack\<^esub> s ! (length (get\<^bsub>lstack\<^esub> s) - Suc n)) = Some (utyp TYPE('v))
                \<and> x = uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - Suc n) ;\<^sub>L lstack)"
 
 expr_constructor lv_at
@@ -223,37 +239,29 @@ lemma lv_at_indep_out_stack2 [simp]: "\<lbrakk> lv_at x n s; lstack \<bowtie> y 
 lemma lv_at_indep_in_stack [simp]: "\<lbrakk> lv_at x m s; lv_at y n s; m \<noteq> n \<rbrakk> \<Longrightarrow> x \<bowtie> y"
   by (simp add: lv_at_def lens_comp_indep_cong)
      (metis Suc_diff_Suc diff_less_mono2 lens_indep_left_ext lens_indep_right_ext list_lens_indep nat_neq_iff)
-     
-lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<rbrakk> = lv_at x (n + 1)"
-  by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff)
 
+lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<rbrakk> = lv_at x (n + 1)"
+  by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
+  
 lemma lv_at_grow_stack_2 [simp]: "lv_at x n ([lstack \<leadsto> butlast ($lstack)] s) = lv_at x (n + 1) s"
-  by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff)
+  by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
 
 lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> mwb_lens x"
   by (metis comp_mwb_lens list_mwb_lens lstack_vwb_lens lv_at_def mwb_uval_lens vwb_lens_mwb)
 
-lemma [simp]: "vwb_lens X \<Longrightarrow> \<S>\<^bsub>X\<^esub> = UNIV"
+lemma vwb_src_UNIV [simp]: "vwb_lens X \<Longrightarrow> \<S>\<^bsub>X\<^esub> = UNIV"
   by (meson vwb_lens_iff_mwb_UNIV_src)
 
-(*
-lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> s \<in> \<S>\<^bsub>x\<^esub>"
-  apply (auto simp add: lv_at_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens)
-*)
 
-(*
-
-find_theorems lens_source vwb_lens
-
-
-lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> s \<in> \<S>\<^bsub>x\<^esub>"
-  apply (auto simp add: lv_at_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens)
-*)
+lemma lv_at_then_defined [simp]: "lv_at x n s \<Longrightarrow> \<^bold>D(x) s"
+  apply (auto simp add: lv_at_def lens_defined_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens univ_var_def id_lens_def)
+  apply (auto simp add: list_lens_def nth'_def uvals_def)
+  done
 
 subsection \<open> Variable Blocks \<close>
 
 definition vblock :: "'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
-  where "vblock t B = open_var ;; let_itree (SEXP lvar_lens) B ;; close_var"
+  where "vblock t B = open_var (utyp TYPE('v)) ;; let_itree (SEXP lvar_lens) B ;; close_var"
 
 syntax "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _ :: _./ _" [0, 0, 10] 10)
 
@@ -275,7 +283,8 @@ lemma hl_vblock [hoare_safe]:
     apply (simp add: lv_at_def)
    apply (simp add: lv_at_def lvar_lens_def)
    apply expr_simp
-  apply expr_simp
+   apply expr_simp
+  apply simp
   done
 
 end
