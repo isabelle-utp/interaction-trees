@@ -198,6 +198,31 @@ lemma mwb_uval_lens [simp]: "mwb_lens uval_lens"
 lemma source_uval_lens: "\<S>\<^bsub>uval_lens :: 'a::injval \<Longrightarrow> uval\<^esub> = uvals (utyp TYPE('a))"
   by (auto simp add: lens_source_def uval_lens_def, metis proj_val_inv) 
 
+instantiation uval :: default
+begin
+definition default_uval :: "uval" where
+"default_uval = UnitV"
+instance ..
+end
+
+instance uval :: two
+proof
+  have "infinite (UNIV :: uval set)"
+  proof 
+    assume "finite (UNIV :: uval set)"
+    hence f: "finite (NatV ` UNIV)"
+      by (meson finite_subset subset_UNIV)
+    have inj: "inj NatV"
+      by (metis inj_val inj_val_nat_def)
+    have "finite (UNIV :: nat set)"
+      using f finite_imageD inj by blast
+    thus False
+      by simp
+  qed
+  thus "infinite (UNIV :: uval set) \<or> 2 \<le> card UNIV"
+    by auto
+qed
+
 subsection \<open> Local Variable Stack \<close>
 
 zstore lvar =
@@ -215,53 +240,67 @@ definition close_var :: "('e, 'a lvar_scheme) htree" where
 
 text \<open> A lens pointing to one of the locations in the stack \<close>
 
-definition lvar_lens :: "'s lvar_scheme \<Rightarrow> ('v::injval \<Longrightarrow> 's lvar_scheme)" where 
-"lvar_lens s = (uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - 1) ;\<^sub>L lstack)"
+definition lvar_lens :: "nat \<Rightarrow> 's lvar_scheme \<Rightarrow> ('v::injval \<Longrightarrow> 's lvar_scheme)" where 
+"lvar_lens n s = (uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - Suc n) ;\<^sub>L lstack)"
 
-lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens s)"
+lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens n s)"
   by (simp add: lvar_lens_def list_mwb_lens comp_mwb_lens)
+
+definition lv_lens :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> bool" where
+"lv_lens x = (\<exists> i. x = uval_lens ;\<^sub>L list_lens i ;\<^sub>L lstack)"
+
+lemma lv_lens_then_mwb: "lv_lens x \<Longrightarrow> mwb_lens x"
+  by (auto simp add: lv_lens_def comp_mwb_lens list_mwb_lens)
 
 text \<open> The next predicate characterises the location of a local variable in the stack. \<close>
 
 definition lv_at :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> nat \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
   "lv_at x n = (\<lambda> s. length (get\<^bsub>lstack\<^esub> s) > n
                \<and> uval_type (get\<^bsub>lstack\<^esub> s ! (length (get\<^bsub>lstack\<^esub> s) - Suc n)) = Some (utyp TYPE('v))
-               \<and> x = uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - Suc n) ;\<^sub>L lstack)"
+               \<and> x = lvar_lens n s)"
 
 expr_constructor lv_at
 
 lemma lv_at_indep_out_stack1 [simp]: "\<lbrakk> lv_at x n s; lstack \<bowtie> y \<rbrakk> \<Longrightarrow> x \<bowtie> y"
-  by (simp add: lens_indep_left_ext lv_at_def) 
+  by (simp add: lens_indep_left_ext lv_at_def lvar_lens_def) 
 
 lemma lv_at_indep_out_stack2 [simp]: "\<lbrakk> lv_at x n s; lstack \<bowtie> y \<rbrakk> \<Longrightarrow> y \<bowtie> x"
-  by (metis lens_indep_right_ext lens_indep_sym lv_at_def)
+  by (metis lens_indep_right_ext lens_indep_sym lv_at_def lvar_lens_def)
 
 lemma lv_at_indep_in_stack [simp]: "\<lbrakk> lv_at x m s; lv_at y n s; m \<noteq> n \<rbrakk> \<Longrightarrow> x \<bowtie> y"
-  by (simp add: lv_at_def lens_comp_indep_cong)
+  by (simp add: lv_at_def lvar_lens_def lens_comp_indep_cong)
      (metis Suc_diff_Suc diff_less_mono2 lens_indep_left_ext lens_indep_right_ext list_lens_indep nat_neq_iff)
 
 lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<rbrakk> = lv_at x (n + 1)"
-  by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
+  by (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
   
 lemma lv_at_grow_stack_2 [simp]: "lv_at x n ([lstack \<leadsto> butlast ($lstack)] s) = lv_at x (n + 1) s"
-  by (auto simp add: lv_at_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
+  by (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
 
 lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> mwb_lens x"
-  by (metis comp_mwb_lens list_mwb_lens lstack_vwb_lens lv_at_def mwb_uval_lens vwb_lens_mwb)
+  by (metis comp_mwb_lens list_mwb_lens lstack_vwb_lens lv_at_def lvar_lens_def mwb_uval_lens vwb_lens_mwb)
 
 lemma vwb_src_UNIV [simp]: "vwb_lens X \<Longrightarrow> \<S>\<^bsub>X\<^esub> = UNIV"
   by (meson vwb_lens_iff_mwb_UNIV_src)
 
-
 lemma lv_at_then_defined [simp]: "lv_at x n s \<Longrightarrow> \<^bold>D(x) s"
-  apply (auto simp add: lv_at_def lens_defined_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens univ_var_def id_lens_def)
+  apply (auto simp add: lv_at_def lvar_lens_def lens_defined_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens univ_var_def id_lens_def)
   apply (auto simp add: list_lens_def nth'_def uvals_def)
   done
+
+(*
+lemma "lv_lens x \<Longrightarrow> lv_at x n (put\<^bsub>x\<^esub> s v) = lv_at x n s"
+  apply (simp add: lv_at_def)
+  apply auto
+       apply (rotate_tac 2)
+  apply auto
+  apply (simp add: lens_defs)
+*)
 
 subsection \<open> Variable Blocks \<close>
 
 definition vblock :: "'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
-  where "vblock t B = open_var (utyp TYPE('v)) ;; let_itree (SEXP lvar_lens) B ;; close_var"
+  where "vblock t B = open_var (utyp TYPE('v)) ;; let_itree (SEXP (lvar_lens 0)) B ;; close_var"
 
 syntax "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _ :: _./ _" [0, 0, 10] 10)
 
