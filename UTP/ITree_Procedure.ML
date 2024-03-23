@@ -1,7 +1,7 @@
 structure ITree_Procedure =
 struct
 
-fun mk_procedure evT (((n, p), st), body) ctx =
+fun mk_procedure evT ((((n, p), ot), st), body) ctx =
   let val ty = (Syntax.check_typ ctx (Type (@{type_abbrev htree}, [evT, Syntax.read_typ ctx st])))
       val pat = Syntax.read_term ctx p
       val vs = map (fst o dest_Free) (HOLogic.strip_tuple pat)
@@ -19,6 +19,7 @@ fun mk_procedure evT (((n, p), st), body) ctx =
 val parse_procedure =
   let open Scan; open Parse in
   ((name -- (Scan.optional term "()")) -- 
+   (Scan.optional (@{keyword "::"} |-- typ) "()") -- 
    (Scan.optional (@{keyword "over"} |-- typ) "_") --
    (@{keyword "="} |-- term))
    end;  
