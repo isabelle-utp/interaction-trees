@@ -141,12 +141,17 @@ lemma hl_assign':
   shows "\<^bold>{P\<^bold>} x := e \<^bold>{Q\<^bold>}"
   using assms by (fact hoare_assigns_impl)
 
-lemma hl_fwd_assign [hoare_safe]:
-  assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
+lemma hl_fwd_assign_mwb [hoare_safe]:
+  assumes "mwb_lens x" "\<And> x\<^sub>0. \<^bold>{\<^bold>D(x) \<and> $x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}" "`P \<longrightarrow> \<^bold>D(x)`"
   shows "\<^bold>{P\<^bold>} x := e ;; S \<^bold>{Q\<^bold>}"
   using assms
   by (auto simp add: seq_itree_def hoare_alt_def assigns_def kleisli_comp_def, expr_simp)
-     (metis (no_types, lifting) mwb_lens_def vwb_lens.put_eq vwb_lens_mwb weak_lens.put_get)
+     (metis (no_types, opaque_lifting) mwb_lens.put_put mwb_lens.weak_get_put mwb_lens_weak weak_lens.put_closure weak_lens.put_get)
+
+lemma hl_fwd_assign:
+  assumes "vwb_lens x" "\<And> x\<^sub>0. \<^bold>{$x = e\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk> \<and> P\<lbrakk>\<guillemotleft>x\<^sub>0\<guillemotright>/x\<rbrakk>\<^bold>} S \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P\<^bold>} x := e ;; S \<^bold>{Q\<^bold>}"
+  by (simp add: hl_fwd_assign_mwb assms)
 
 lemma hl_assigns_bwd [hoare_safe]:
   assumes "H{P} S {\<sigma> \<dagger> Q}"

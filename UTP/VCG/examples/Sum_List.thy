@@ -9,7 +9,7 @@ zstore state =
   x :: int
   a :: int
 
-procedure sum_up "(xs :: int list)"
+program sum_up "(xs :: int list)"
   = "i := 0; x := 0;
      while i < length xs 
        invariant x = sum_list (take i xs) 

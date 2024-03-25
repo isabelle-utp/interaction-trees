@@ -8,7 +8,7 @@ zstore gnome_st =
   a :: "int list"
   pos :: nat
 
-procedure gnome_sort "xs :: int list" over gnome_st
+program gnome_sort "xs :: int list" over gnome_st
   = "a := xs; pos := 0; 
      while pos < length a 
      inv 0 \<le> pos \<and> pos \<le> length a 

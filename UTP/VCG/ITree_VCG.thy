@@ -2,7 +2,7 @@ section \<open> ITree VCG meta-theory \<close>
 
 theory ITree_VCG
   imports "Explorer.Explorer" "ITree_UTP.ITree_Countable_Nondeterminism"
-  keywords "procedure" :: "thy_decl_block"
+  keywords "program" "procedure" :: "thy_decl_block"
 begin
 
 notation seq_itree (infixr ";" 54)
@@ -37,6 +37,9 @@ translations
 (* Set up the procedure command *)
 
 ML \<open>
+Outer_Syntax.command @{command_keyword program} "define an ITree program"
+  (ITree_Procedure.parse_program >> (Toplevel.local_theory NONE NONE o ITree_Procedure.mk_program @{typ pndet}));
+
 Outer_Syntax.command @{command_keyword procedure} "define an ITree procedure"
   (ITree_Procedure.parse_procedure >> (Toplevel.local_theory NONE NONE o ITree_Procedure.mk_procedure @{typ pndet}));
 \<close>

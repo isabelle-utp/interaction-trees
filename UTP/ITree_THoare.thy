@@ -12,7 +12,7 @@ definition thoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htre
 "thoare_triple P S Q = (hoare_triple P S Q \<and> `P \<longrightarrow> pre S`)"
 
 syntax
-  "_thoare"          :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H[_] /_) /[_]")
+  "_thoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H[_] /_) /[_]")
 
 translations
   "_thoare P S Q" == "CONST thoare_triple (P)\<^sub>e S (Q)\<^sub>e"

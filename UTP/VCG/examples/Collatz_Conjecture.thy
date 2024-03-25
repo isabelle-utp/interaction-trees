@@ -8,7 +8,7 @@ zstore state =
   n :: nat
   hist :: "nat list"
 
-procedure collatz "N :: nat" over state = 
+program collatz "N :: nat" over state = 
   "n := N ;
    hist := [n] ;
    while n \<noteq> 1 inv True do
