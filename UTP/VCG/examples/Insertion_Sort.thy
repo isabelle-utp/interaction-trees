@@ -35,7 +35,7 @@ zstore state =
   i :: nat
   j :: nat
 
-procedure insert_elem "xs :: int list" over state =
+program insert_elem "xs :: int list" over state =
 "j := i;
  while (0 < j \<and> arr!j < arr ! (j-1)) 
   invariant j \<le> i \<and> i < length arr \<and> sorted(nths arr {0..<j}) \<and> sorted(nths arr {j..i}) \<and> 
@@ -46,7 +46,7 @@ procedure insert_elem "xs :: int list" over state =
     j := j - 1
   od"
 
-procedure insertion_sort "xs :: int list" over state =
+program insertion_sort "xs :: int list" over state =
 "arr := xs ; 
  i := 1 ;
  while (i < length arr) 
