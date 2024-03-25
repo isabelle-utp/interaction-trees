@@ -4,18 +4,50 @@ theory List_Reversal
   imports "ITree_VCG.ITree_VCG"
 begin 
 
-zstore state =
+zstore state = lvar +
   xs :: "int list"
   ys :: "int list"
-  i :: nat
 
 procedure reverse0 "XS :: int list" over state =
-"ys := []; i := 0; 
- while i < length XS inv ys = rev (take i XS) var length XS - i
+"ys := []; 
+ (var i::nat.
+ i := 0;
+ while i < length XS inv ys = rev (take i XS) \<and> length(lstack) = length(old:lstack)
  do 
     ys := XS!i # ys; 
     i := i + 1 
- od"
+ od)"
+
+find_theorems list_lens lens_source
+
+find_theorems lvar_lens
+
+lemma "\<S>\<^bsub>lvar_lens n (put\<^bsub>x\<^esub> s v)\<^esub> = undefined"
+  apply (simp add: lvar_lens_def source_lens_comp list_mwb_lens comp_mwb_lens source_list_lens source_uval_lens)
+  apply (subst source_lens_comp)
+
+lemma "mwb_lens x \<Longrightarrow>
+       s \<in> \<S>\<^bsub>x\<^esub> \<Longrightarrow>
+       lv_at x n (put\<^bsub>x\<^esub> s v) = lv_at x n s"
+  apply (simp add: lv_at_def)
+  apply auto
+
+lemma reverse0_correct: "H{True} reverse0 XS {ys = rev XS}"
+  apply vcg_lens
+    apply (metis hd_drop_conv_nth rev_eq_Cons_iff rev_rev_ident take_hd_drop)
+   apply (simp add: lv_at_def)
+  apply auto
+  apply (simp add: reverse0_def)
+  apply (rule hoare_safe)
+    apply simp
+   apply (rule hoare_safe)
+   apply (rule hoare_safe)
+     apply simp
+    apply (subst_eval)
+    apply (rule hl_while_inv_prestate)
+      apply (subst_eval)
+  apply vcg_lens
+  using take_Suc_conv_app_nth apply force
 
 procedure reverse1 "XS :: int list" over state =
 "ys := [];
@@ -54,7 +86,8 @@ execute "reverse0 [1,2,3,4]"
 execute "reverse1 [1,2,3,4]"
 execute "reverse2 [1,2,3,4]"
 
-lemma reverse0_correct: "H[True] reverse0 XS [ys = rev XS]"
+
+lemma reverse0_correct: "H{True} reverse0 XS {ys = rev XS}"
   by (vcg, simp add: take_Suc_conv_app_nth)
 
 lemma reverse1_correct: "H[True] reverse1 XS [ys = rev XS]"

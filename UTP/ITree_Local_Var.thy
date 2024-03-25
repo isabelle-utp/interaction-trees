@@ -246,6 +246,16 @@ definition lvar_lens :: "nat \<Rightarrow> 's lvar_scheme \<Rightarrow> ('v::inj
 lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens n s)"
   by (simp add: lvar_lens_def list_mwb_lens comp_mwb_lens)
 
+lemma source_lvar_lens: 
+  "\<S>\<^bsub>lvar_lens n s :: 'b \<Longrightarrow> _\<^esub> 
+   = {s'. length (get\<^bsub>lstack\<^esub> s) - Suc n < length (get\<^bsub>lstack\<^esub> s')
+        \<and> get\<^bsub>lstack\<^esub> s' ! (length (get\<^bsub>lstack\<^esub> s) - Suc n) \<in> uvals (utyp TYPE('b::injval))}"
+  apply (simp add: lvar_lens_def lens_defined_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens univ_var_def id_lens_def)
+  apply (simp add: list_lens_def nth'_def)
+  apply auto
+  apply (metis UNIV_I lstack_vwb_lens vwb_lens_iff_mwb_UNIV_src)
+  done
+
 definition lv_lens :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> bool" where
 "lv_lens x = (\<exists> i. x = uval_lens ;\<^sub>L list_lens i ;\<^sub>L lstack)"
 
@@ -255,8 +265,12 @@ lemma lv_lens_then_mwb: "lv_lens x \<Longrightarrow> mwb_lens x"
 text \<open> The next predicate characterises the location of a local variable in the stack. \<close>
 
 definition lv_at :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> nat \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
-  "lv_at x n = (\<lambda> s. length (get\<^bsub>lstack\<^esub> s) > n
+  "lv_at x n = (\<lambda> s. 
+                 \<comment> \<open> The stack is big enough \<close>
+                 length (get\<^bsub>lstack\<^esub> s) > n 
+                 \<comment> \<open> The value at the location has the correct type \<close>
                \<and> uval_type (get\<^bsub>lstack\<^esub> s ! (length (get\<^bsub>lstack\<^esub> s) - Suc n)) = Some (utyp TYPE('v))
+                 \<comment> \<open> The lens is defined as a local variable lens \<close> 
                \<and> x = lvar_lens n s)"
 
 expr_constructor lv_at
