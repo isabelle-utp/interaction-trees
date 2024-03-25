@@ -1,7 +1,7 @@
 section \<open> ITree VCG meta-theory \<close>
 
 theory ITree_VCG
-  imports "Explorer.Explorer" "ITree_UTP.ITree_Countable_Nondeterminism"
+  imports "Explorer.Explorer" "ITree_UTP.ITree_Countable_Nondeterminism" "ITree_UTP.ITree_Random"
   keywords "program" "procedure" :: "thy_decl_block"
 begin
 
@@ -34,7 +34,7 @@ syntax
 translations
   "_lens_get_pretty x s" == "CONST lens_get x s"
 
-(* Set up the procedure command *)
+(* Set up the program and procedure command *)
 
 ML \<open>
 Outer_Syntax.command @{command_keyword program} "define an ITree program"

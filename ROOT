@@ -17,6 +17,7 @@ session "ITree_UTP" in "UTP" = "Interaction_Trees" +
   theories
     ITree_UTP
     ITree_Countable_Nondeterminism
+    ITree_Random
 
 session "ITree_VCG" in "UTP/VCG" = "ITree_UTP" +
   options [timeout = 600, document = false]
