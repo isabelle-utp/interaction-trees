@@ -238,12 +238,14 @@ text \<open> Reduce the variable stack \<close>
 definition close_var :: "('e, 'a lvar_scheme) htree" where
 "close_var = (lstack := butlast lstack)"
 
-text \<open> A lens pointing to one of the locations in the stack \<close>
+text \<open> A lens pointing to one of the locations in the stack. The first parameter denotes the
+  number of variables blocks that were opened within the block for this particular variable
+  (like a de-Bruijn index) \<close>
 
-definition lvar_lens :: "nat \<Rightarrow> 's lvar_scheme \<Rightarrow> ('v::injval \<Longrightarrow> 's lvar_scheme)" where 
-"lvar_lens n s = (uval_lens ;\<^sub>L list_lens (length (get\<^bsub>lstack\<^esub> s) - Suc n) ;\<^sub>L lstack)"
+definition lvar_lens :: "nat \<Rightarrow> ('v::injval \<Longrightarrow> 's lvar_scheme)" where 
+"lvar_lens n = (uval_lens ;\<^sub>L list_lens n ;\<^sub>L lstack)"
 
-lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens n s)"
+lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens n)"
   by (simp add: lvar_lens_def list_mwb_lens comp_mwb_lens)
 
 lemma source_lvar_lens: 
@@ -256,11 +258,14 @@ lemma source_lvar_lens:
   apply (metis UNIV_I lstack_vwb_lens vwb_lens_iff_mwb_UNIV_src)
   done
 
-definition lv_lens :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> bool" where
-"lv_lens x = (\<exists> i. x = uval_lens ;\<^sub>L list_lens i ;\<^sub>L lstack)"
+definition lv_lens :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> nat \<Rightarrow> bool" where
+"lv_lens x i = (x = uval_lens ;\<^sub>L list_lens i ;\<^sub>L lstack)"
 
-lemma lv_lens_then_mwb: "lv_lens x \<Longrightarrow> mwb_lens x"
+lemma lv_lens_then_mwb: "lv_lens x i \<Longrightarrow> mwb_lens x"
   by (auto simp add: lv_lens_def comp_mwb_lens list_mwb_lens)
+
+lemma lv_lens_indep [simp]: "\<lbrakk> i \<noteq> j; lv_lens x i; lv_lens y j \<rbrakk> \<Longrightarrow> x \<bowtie> y"
+  by (simp add: lv_lens_def lens_indep_left_ext lens_indep_right_ext list_lens_indep)
 
 text \<open> The next predicate characterises the location of a local variable in the stack. \<close>
 
@@ -269,11 +274,9 @@ definition lv_at :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow>
                  \<comment> \<open> The stack is big enough \<close>
                  length (get\<^bsub>lstack\<^esub> s) > n 
                  \<comment> \<open> The value at the location has the correct type \<close>
-               \<and> uval_type (get\<^bsub>lstack\<^esub> s ! (length (get\<^bsub>lstack\<^esub> s) - Suc n)) = Some (utyp TYPE('v))
+               \<and> uval_type (get\<^bsub>lstack\<^esub> s ! n) = Some (utyp TYPE('v))
                  \<comment> \<open> The lens is defined as a local variable lens \<close> 
-               \<and> x = lvar_lens n s)"
-
-expr_constructor lv_at
+               \<and> x = lvar_lens n)"
 
 lemma lv_at_indep_out_stack1 [simp]: "\<lbrakk> lv_at x n s; lstack \<bowtie> y \<rbrakk> \<Longrightarrow> x \<bowtie> y"
   by (simp add: lens_indep_left_ext lv_at_def lvar_lens_def) 
@@ -285,11 +288,13 @@ lemma lv_at_indep_in_stack [simp]: "\<lbrakk> lv_at x m s; lv_at y n s; m \<note
   by (simp add: lv_at_def lvar_lens_def lens_comp_indep_cong)
      (metis Suc_diff_Suc diff_less_mono2 lens_indep_left_ext lens_indep_right_ext list_lens_indep nat_neq_iff)
 
-lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<rbrakk> = lv_at x (n + 1)"
-  by (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
+lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<rbrakk> = lv_at x n"
+  apply (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
+  oops
   
 lemma lv_at_grow_stack_2 [simp]: "lv_at x n ([lstack \<leadsto> butlast ($lstack)] s) = lv_at x (n + 1) s"
-  by (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
+  apply (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
+  oops
 
 lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> mwb_lens x"
   by (metis comp_mwb_lens list_mwb_lens lstack_vwb_lens lv_at_def lvar_lens_def mwb_uval_lens vwb_lens_mwb)
@@ -314,7 +319,7 @@ lemma "lv_lens x \<Longrightarrow> lv_at x n (put\<^bsub>x\<^esub> s v) = lv_at 
 subsection \<open> Variable Blocks \<close>
 
 definition vblock :: "'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
-  where "vblock t B = open_var (utyp TYPE('v)) ;; let_itree (SEXP (lvar_lens 0)) B ;; close_var"
+  where "vblock t B = open_var (utyp TYPE('v)) ;; let_itree (SEXP (\<lambda> s. lvar_lens (length (get\<^bsub>lstack\<^esub> s) - 1))) B ;; close_var"
 
 syntax "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _ :: _./ _" [0, 0, 10] 10)
 
@@ -322,22 +327,69 @@ translations
   "_vblock x t e" => "CONST vblock (_TYPE t) (_lvar_abs x t e)"
   "_vblock x t e" <= "CONST vblock (_TYPE t) (\<lambda> x. e)"
 
+expr_constructor lv_at 
+
 lemma hl_vblock [hoare_safe]:
-  assumes "\<And> x. mwb_lens x 
-                  \<Longrightarrow> H{lv_at x 0 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
+  assumes
+    "\<And> x n. lv_lens x n \<Longrightarrow> H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
   shows "H{P} var x :: 't::injval. B x {Q}"
-  apply (simp add: vblock_def open_var_def close_var_def)
-  apply (rule hoare_safe)
-   apply simp
-  apply (rule hoare_safe)
-  apply (rule hoare_safe)
-  apply (rule hl_conseq)
-    apply (rule assms(1))
+proof -
+  have a: "\<And> x n. H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk> \<and> \<guillemotleft>lv_lens x n\<guillemotright>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
+    using assms hoare_rel_triple_def by force 
+
+  thus ?thesis
+    apply (simp add: vblock_def open_var_def close_var_def)
+    apply (rule hoare_safe)
+      apply simp
+     apply (rule hoare_safe)
+     apply (rule hoare_safe)
+     apply (rule hl_conseq)
+    apply (rule a)
     apply (simp add: lv_at_def)
-   apply (simp add: lv_at_def lvar_lens_def)
+  using assms(1)
+   apply (simp add: lv_at_def lvar_lens_def lv_lens_def expr_defs univ_var_def id_lens_def)
+    apply expr_auto
+  using assms(1)
    apply expr_simp
-   apply expr_simp
-  apply simp
+  apply auto[1]
   done
+qed
+
+(*
+lemma hl_vblock [hoare_safe]:
+  assumes
+    "`P \<longrightarrow> \<guillemotleft>n\<guillemotright> = length lstack`"
+    "\<And> x. lv_lens x n \<Longrightarrow> H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
+  shows "H{P} var x :: 't::injval. B x {Q}"
+proof -
+  have a: "\<And> x. H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk> \<and> \<guillemotleft>lv_lens x n\<guillemotright>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
+    using assms(2) hoare_rel_triple_def by force 
+
+  thus ?thesis
+    apply (simp add: vblock_def open_var_def close_var_def)
+    apply (rule hoare_safe)
+      apply simp
+     apply (rule hoare_safe)
+     apply (rule hoare_safe)
+     apply (rule hl_conseq)
+    apply (rule a)
+    apply (simp add: lv_at_def)
+  using assms(1)
+   apply (simp add: lv_at_def lvar_lens_def lv_lens_def expr_defs univ_var_def id_lens_def)
+    apply expr_auto
+  using assms(1)
+   apply expr_simp
+  apply auto[1]
+  done
+qed
+*)
+
+lemma "H{length lstack = \<guillemotleft>k\<guillemotright>} var x :: nat. var y :: int. Skip {True}"
+  apply (rule hl_vblock)
+  apply (subst_eval)
+  apply (rule hl_vblock)
+  apply (subst_eval)
+  oops
+  
 
 end
