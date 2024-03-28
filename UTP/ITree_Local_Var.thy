@@ -225,171 +225,161 @@ qed
 
 subsection \<open> Local Variable Stack \<close>
 
+type_synonym uname = "String.literal"
+
+text \<open> We model the store as a finite partial function from names (strings) to values in the 
+  universe defined above. \<close>
+
 zstore lvar =
-  lstack :: "uval list"
+  lstore :: "uname \<Zffun> uval"
 
-text \<open> Extend the variable stack \<close>
+subsection \<open> Identifiers as Strings \<close>
 
-definition open_var :: "utype \<Rightarrow> ('e, 'a lvar_scheme) htree" where
-"open_var a = (lstack := lstack @ [uval_default \<guillemotleft>a\<guillemotright>])"
+text \<open> Each local variable is assigned the same name as the Isabelle identifier used to introduce
+  the name in the binder. For this reason, we need to convert identifiers into strings. \<close>
 
-text \<open> Reduce the variable stack \<close>
+syntax
+  "_id_string"     :: "id \<Rightarrow> string" ("IDSTR'(_')")
+  "_id_literal"    :: "id \<Rightarrow> String.literal" ("IDLIT'(_')")
 
-definition close_var :: "('e, 'a lvar_scheme) htree" where
-"close_var = (lstack := butlast lstack)"
+parse_translation \<open>
+let
+  fun id_string_tr [Free (full_name, _)] = HOLogic.mk_string full_name
+    | id_string_tr [Const (full_name, _)] = HOLogic.mk_string full_name
+    | id_string_tr _ = raise Match;
+  fun id_literal_tr [Free (full_name, _)] = HOLogic.mk_literal full_name
+    | id_literal_tr [Const (full_name, _)] = HOLogic.mk_literal full_name
+    | id_literal_tr _ = raise Match;
 
-text \<open> A lens pointing to one of the locations in the stack. The first parameter denotes the
-  number of variables blocks that were opened within the block for this particular variable
-  (like a de-Bruijn index) \<close>
+in
+  [(@{syntax_const "_id_string"}, K id_string_tr)
+  ,(@{syntax_const "_id_literal"}, K id_literal_tr)]
+end
+\<close>
 
-definition lvar_lens :: "nat \<Rightarrow> ('v::injval \<Longrightarrow> 's lvar_scheme)" where 
-"lvar_lens n = (uval_lens ;\<^sub>L list_lens n ;\<^sub>L lstack)"
+subsection \<open> Local Variable Lenses \<close>
+
+text \<open> The local variable lens projects the store, followed by the value (@{typ uval}) at the given 
+  name, followed by projecting out a value of the correct type. \<close>
+
+definition lvar_lens :: "uname \<Rightarrow> ('a::injval \<Longrightarrow> 's lvar_scheme)" where 
+"lvar_lens n = (uval_lens ;\<^sub>L ffun_lens n ;\<^sub>L lstore)" 
 
 lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens n)"
-  by (simp add: lvar_lens_def list_mwb_lens comp_mwb_lens)
+  by (simp add: comp_mwb_lens lvar_lens_def)
 
-lemma source_lvar_lens: 
-  "\<S>\<^bsub>lvar_lens n s :: 'b \<Longrightarrow> _\<^esub> 
-   = {s'. length (get\<^bsub>lstack\<^esub> s) - Suc n < length (get\<^bsub>lstack\<^esub> s')
-        \<and> get\<^bsub>lstack\<^esub> s' ! (length (get\<^bsub>lstack\<^esub> s) - Suc n) \<in> uvals (utyp TYPE('b::injval))}"
-  apply (simp add: lvar_lens_def lens_defined_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens univ_var_def id_lens_def)
-  apply (simp add: list_lens_def nth'_def)
-  apply auto
-  apply (metis UNIV_I lstack_vwb_lens vwb_lens_iff_mwb_UNIV_src)
-  done
+lemma pfun_lens_indep: "x \<noteq> y \<Longrightarrow> ffun_lens x \<bowtie> ffun_lens y"
+  by (unfold_locales, simp_all add: ffun_lens_def ffun_upd_comm)
 
-definition lv_lens :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> nat \<Rightarrow> bool" where
-"lv_lens x i = (x = uval_lens ;\<^sub>L list_lens i ;\<^sub>L lstack)"
+lemma lvar_lens_indep [simp]: "m \<noteq> n \<Longrightarrow> lvar_lens m \<bowtie> lvar_lens n"
+  by (simp add: lvar_lens_def pfun_lens_indep lens_indep_left_ext lens_indep_right_ext)
 
-lemma lv_lens_then_mwb: "lv_lens x i \<Longrightarrow> mwb_lens x"
-  by (auto simp add: lv_lens_def comp_mwb_lens list_mwb_lens)
-
-lemma lv_lens_indep [simp]: "\<lbrakk> i \<noteq> j; lv_lens x i; lv_lens y j \<rbrakk> \<Longrightarrow> x \<bowtie> y"
-  by (simp add: lv_lens_def lens_indep_left_ext lens_indep_right_ext list_lens_indep)
-
-text \<open> The next predicate characterises the location of a local variable in the stack. \<close>
-
-definition lv_at :: "('v::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> nat \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
-  "lv_at x n = (\<lambda> s. 
-                 \<comment> \<open> The stack is big enough \<close>
-                 length (get\<^bsub>lstack\<^esub> s) > n 
-                 \<comment> \<open> The value at the location has the correct type \<close>
-               \<and> uval_type (get\<^bsub>lstack\<^esub> s ! n) = Some (utyp TYPE('v))
-                 \<comment> \<open> The lens is defined as a local variable lens \<close> 
-               \<and> x = lvar_lens n)"
-
-lemma lv_at_indep_out_stack1 [simp]: "\<lbrakk> lv_at x n s; lstack \<bowtie> y \<rbrakk> \<Longrightarrow> x \<bowtie> y"
-  by (simp add: lens_indep_left_ext lv_at_def lvar_lens_def) 
-
-lemma lv_at_indep_out_stack2 [simp]: "\<lbrakk> lv_at x n s; lstack \<bowtie> y \<rbrakk> \<Longrightarrow> y \<bowtie> x"
-  by (metis lens_indep_right_ext lens_indep_sym lv_at_def lvar_lens_def)
-
-lemma lv_at_indep_in_stack [simp]: "\<lbrakk> lv_at x m s; lv_at y n s; m \<noteq> n \<rbrakk> \<Longrightarrow> x \<bowtie> y"
-  by (simp add: lv_at_def lvar_lens_def lens_comp_indep_cong)
-     (metis Suc_diff_Suc diff_less_mono2 lens_indep_left_ext lens_indep_right_ext list_lens_indep nat_neq_iff)
-
-lemma lv_at_grow_stack_1 [usubst]: "(lv_at x n)\<lbrakk>butlast lstack/lstack\<rbrakk> = lv_at x n"
-  apply (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
-  oops
-  
-lemma lv_at_grow_stack_2 [simp]: "lv_at x n ([lstack \<leadsto> butlast ($lstack)] s) = lv_at x (n + 1) s"
-  apply (auto simp add: lv_at_def lvar_lens_def subst_app_def subst_upd_def fun_eq_iff nth_butlast)
-  oops
-
-lemma lv_at_mwb: "lv_at x n s \<Longrightarrow> mwb_lens x"
-  by (metis comp_mwb_lens list_mwb_lens lstack_vwb_lens lv_at_def lvar_lens_def mwb_uval_lens vwb_lens_mwb)
+lemma get_ffun_lens: "get\<^bsub>ffun_lens i\<^esub> s = s(i)\<^sub>f"
+  by (simp add: ffun_lens_def)
 
 lemma vwb_src_UNIV [simp]: "vwb_lens X \<Longrightarrow> \<S>\<^bsub>X\<^esub> = UNIV"
   by (meson vwb_lens_iff_mwb_UNIV_src)
 
-lemma lv_at_then_defined [simp]: "lv_at x n s \<Longrightarrow> \<^bold>D(x) s"
-  apply (auto simp add: lv_at_def lvar_lens_def lens_defined_def comp_mwb_lens list_mwb_lens source_lens_comp source_list_lens source_uval_lens univ_var_def id_lens_def)
-  apply (auto simp add: list_lens_def nth'_def uvals_def)
-  done
+text \<open> A local variable lens is defined when its name is in the domain of the store, and the value
+  at that name has the correct type. \<close>
 
-(*
-lemma "lv_lens x \<Longrightarrow> lv_at x n (put\<^bsub>x\<^esub> s v) = lv_at x n s"
-  apply (simp add: lv_at_def)
-  apply auto
-       apply (rotate_tac 2)
-  apply auto
-  apply (simp add: lens_defs)
-*)
+lemma source_lvar_lens: 
+  "\<S>\<^bsub>lvar_lens n :: 'a::injval \<Longrightarrow> _\<^esub> 
+   = {s. n \<in> fdom (get\<^bsub>lstore\<^esub> s) \<and> ffun_app (get\<^bsub>lstore\<^esub> s) n \<in> uvals (utyp TYPE('a::injval))}"
+  by (simp add: lvar_lens_def lens_defined_def comp_mwb_lens source_lens_comp ffun_lens_src source_uval_lens univ_var_def id_lens_def get_ffun_lens)
+
+definition lv_lens :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> bool" where
+"lv_lens x n = (x = lvar_lens n)"
+
+syntax "_lv_lens" :: "id \<Rightarrow> logic" ("lvlens'(_')")
+translations 
+  "lvlens(x)" => "CONST lv_lens x IDLIT(x)"
+  "lvlens(x)" <= "CONST lv_lens x y"
+
+text \<open> For convenience, we allow the notation @{term "lvlens(x)"} to state that the lens bound
+  to identifier @{term x} is a local variable lens with the name @{term "STR ''x''"}. \<close>
+
+lemma mwb_lv_lens [simp]: "lv_lens x n \<Longrightarrow> mwb_lens x"
+  by (simp add: lv_lens_def)
+
+lemma lv_lens_indep_1 [simp]: "\<lbrakk> lv_lens x n; y \<bowtie> lstore \<rbrakk> \<Longrightarrow> x \<bowtie> y"
+  by (metis lens_indep_right_ext lens_indep_sym lv_lens_def lvar_lens_def)
+
+lemma lv_lens_indep_2 [simp]: "\<lbrakk> lv_lens x n; y \<bowtie> lstore \<rbrakk> \<Longrightarrow> y \<bowtie> x"
+  by (meson lens_indep_sym lv_lens_indep_1)
+
+lemma lv_lens_indep_3 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n \<rbrakk> \<Longrightarrow> x \<bowtie> y"
+  by (metis lv_lens_def lvar_lens_indep)
+
+text \<open> The next predicate characterises that a given lens is defined in a particular state. \<close>
+
+definition lvname :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
+[expr_defs]: "lvname x n = (\<guillemotleft>n\<guillemotright> \<in> fdom lstore \<and> lstore(\<guillemotleft>n\<guillemotright>)\<^sub>f \<in> uvals (utyp TYPE('a)))\<^sub>e"
+
+expr_constructor lvname
+
+lemma lv_lens_defined [simp]: "lv_lens x n \<Longrightarrow> \<^bold>D(x) = lvname x n"
+  by (expr_simp add: lv_lens_def source_lvar_lens)
+
+lemma lvname_subst_1 [simp]: "y \<bowtie> lstore \<Longrightarrow> lvname x n ([y \<leadsto> e] s) = lvname x n s"
+  by (simp add: lens_indep.lens_put_irr2 lvname_def subst_id_def subst_upd_def)
+
+lemma lvname_subst_2 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m ([y \<leadsto> e] s) = lvname x m s"
+  by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def ffun_lens_def)
+
+lemma lvname_subst_3 [simp]: "\<lbrakk> lv_lens x m; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m ([lstore \<leadsto> {\<guillemotleft>n\<guillemotright>} \<Zndres> lstore] s) = lvname x m s"
+  by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def)
+
+syntax "_lvname" :: "id \<Rightarrow> logic" ("LV'(_')")
+translations "LV(x)" => "CONST lvname x IDLIT(x)"
+translations "LV(x)" <= "CONST lvname x y"
+
+text \<open> For convenience, we can use the notation @{term "LV(n)"} to mean that the lens bound to
+  identifier @{term n} is defined in a given state. The syntax translation engine inserts the 
+  string corresponding to the identifier (e.g. @{term "STR ''x''"})
+  \<close>
 
 subsection \<open> Variable Blocks \<close>
 
-definition vblock :: "'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
-  where "vblock t B = open_var (utyp TYPE('v)) ;; let_itree (SEXP (\<lambda> s. lvar_lens (length (get\<^bsub>lstack\<^esub> s) - 1))) B ;; close_var"
+text \<open> Extend the variable stack \<close>
+
+definition open_var :: "uname \<Rightarrow> utype \<Rightarrow> ('e, 'a lvar_scheme) htree" where
+"open_var n a = (\<exclamdown>\<guillemotleft>n\<guillemotright> \<notin> fdom lstore! ;; lstore := lstore \<oplus> {\<guillemotleft>n\<guillemotright> \<mapsto> uval_default \<guillemotleft>a\<guillemotright>}\<^sub>f)"
+
+text \<open> Reduce the variable stack \<close>
+
+definition close_var :: "uname \<Rightarrow> ('e, 'a lvar_scheme) htree" where
+"close_var n = (lstore := {\<guillemotleft>n\<guillemotright>} \<Zndres> lstore)"
+
+text \<open> Create a local variable block \<close>
+
+definition vblock :: "uname \<Rightarrow> 'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
+  where "vblock n t B = open_var n (utyp TYPE('v))  ;; let_itree (SEXP (\<lambda> s. lvar_lens n)) B ;; close_var n"
 
 syntax "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _ :: _./ _" [0, 0, 10] 10)
 
 translations 
-  "_vblock x t e" => "CONST vblock (_TYPE t) (_lvar_abs x t e)"
-  "_vblock x t e" <= "CONST vblock (_TYPE t) (\<lambda> x. e)"
-
-expr_constructor lv_at 
+  "_vblock x t e" => "CONST vblock IDLIT(x) (_TYPE t) (_lvar_abs x t e)"
+  "_vblock x t e" <= "CONST vblock n (_TYPE t) (\<lambda> x. e)"
 
 lemma hl_vblock [hoare_safe]:
   assumes
-    "\<And> x n. lv_lens x n \<Longrightarrow> H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
-  shows "H{P} var x :: 't::injval. B x {Q}"
-proof -
-  have a: "\<And> x n. H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk> \<and> \<guillemotleft>lv_lens x n\<guillemotright>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
-    using assms hoare_rel_triple_def by force 
-
-  thus ?thesis
-    apply (simp add: vblock_def open_var_def close_var_def)
-    apply (rule hoare_safe)
-      apply simp
-     apply (rule hoare_safe)
-     apply (rule hoare_safe)
-     apply (rule hl_conseq)
-    apply (rule a)
-    apply (simp add: lv_at_def)
-  using assms(1)
-   apply (simp add: lv_at_def lvar_lens_def lv_lens_def expr_defs univ_var_def id_lens_def)
+    "\<And> x. lv_lens x n \<Longrightarrow> H{lvname x n \<and> P\<lbrakk>{\<guillemotleft>n\<guillemotright>} \<Zndres> lstore/lstore\<rbrakk>} B x {Q\<lbrakk>{\<guillemotleft>n\<guillemotright>} \<Zndres> lstore/lstore\<rbrakk>}"
+  shows "H{P} vblock n TYPE('t::injval) (\<lambda> x. B x) {Q}"
+  apply (simp add: vblock_def open_var_def close_var_def kcomp_assoc)
+  apply (rule hoare_safe)
+  apply (rule hoare_safe)
+    apply simp
+   apply (rule hoare_safe)
+   apply (rule hoare_safe)
+   apply (rule hl_conseq)
+     apply (rule assms(1))
+     apply (simp add: lv_lens_def)
+    apply (simp add: lv_lens_def lvname_def uvals_def)
     apply expr_auto
-  using assms(1)
+    apply (metis (no_types, lifting) Diff_disjoint Diff_insert_absorb fdom_fdom_res fdom_plus fdom_res_fdom fdom_res_twice ffun_split_domain sup_bot_left)
    apply expr_simp
   apply auto[1]
   done
-qed
-
-(*
-lemma hl_vblock [hoare_safe]:
-  assumes
-    "`P \<longrightarrow> \<guillemotleft>n\<guillemotright> = length lstack`"
-    "\<And> x. lv_lens x n \<Longrightarrow> H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
-  shows "H{P} var x :: 't::injval. B x {Q}"
-proof -
-  have a: "\<And> x. H{length lstack = \<guillemotleft>n\<guillemotright> + 1 \<and> P\<lbrakk>butlast lstack/lstack\<rbrakk> \<and> \<guillemotleft>lv_lens x n\<guillemotright>} B x {Q\<lbrakk>butlast lstack/lstack\<rbrakk>}"
-    using assms(2) hoare_rel_triple_def by force 
-
-  thus ?thesis
-    apply (simp add: vblock_def open_var_def close_var_def)
-    apply (rule hoare_safe)
-      apply simp
-     apply (rule hoare_safe)
-     apply (rule hoare_safe)
-     apply (rule hl_conseq)
-    apply (rule a)
-    apply (simp add: lv_at_def)
-  using assms(1)
-   apply (simp add: lv_at_def lvar_lens_def lv_lens_def expr_defs univ_var_def id_lens_def)
-    apply expr_auto
-  using assms(1)
-   apply expr_simp
-  apply auto[1]
-  done
-qed
-*)
-
-lemma "H{length lstack = \<guillemotleft>k\<guillemotright>} var x :: nat. var y :: int. Skip {True}"
-  apply (rule hl_vblock)
-  apply (subst_eval)
-  apply (rule hl_vblock)
-  apply (subst_eval)
-  oops
-  
 
 end

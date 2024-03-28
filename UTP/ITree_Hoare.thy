@@ -172,6 +172,13 @@ lemma hl_cond [hoare_safe]:
   shows "\<^bold>{P\<^bold>} if B then S else T fi \<^bold>{Q\<^bold>}"
   using assms by (simp add: hoare_alt_def cond_itree_def)
 
+lemma hl_guard [hoare_safe]:
+  assumes "\<^bold>{P \<and> Q\<^bold>} C \<^bold>{R\<^bold>}"
+  shows "\<^bold>{P\<^bold>} \<exclamdown>Q! ;; C \<^bold>{R\<^bold>}"
+  using assms
+  by (auto simp add: hoare_alt_def test_def seq_itree_def kleisli_comp_def)
+     (meson nonterminates_iff retvals_deadlock)
+
 lemma hl_match [hoare_safe]:
   assumes "\<And> v. \<^bold>{\<guillemotleft>v\<guillemotright> = e \<and> P\<^bold>} C(v) \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} match_itree (e)\<^sub>e C \<^bold>{Q\<^bold>}"
