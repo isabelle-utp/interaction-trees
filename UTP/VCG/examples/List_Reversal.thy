@@ -8,52 +8,21 @@ zstore state = lvar +
   xs :: "int list"
   ys :: "int list"
 
-procedure reverse0 "XS :: int list" over state =
+program reverse0 "XS :: int list" over state =
 "ys := []; 
  (var i::nat.
  i := 0;
- while i < length XS inv ys = rev (take i XS) \<and> length(lstack) = length(old:lstack)
+ while i < length XS inv ys = rev (take i XS)
  do 
     ys := XS!i # ys; 
     i := i + 1 
  od)"
 
-find_theorems list_lens lens_source
-
-find_theorems lvar_lens
-
-lemma "\<S>\<^bsub>lvar_lens n (put\<^bsub>x\<^esub> s v)\<^esub> = undefined"
-  apply (simp add: lvar_lens_def source_lens_comp list_mwb_lens comp_mwb_lens source_list_lens source_uval_lens)
-  apply (subst source_lens_comp)
-
-lemma "mwb_lens x \<Longrightarrow>
-       s \<in> \<S>\<^bsub>x\<^esub> \<Longrightarrow>
-       lv_at x n (put\<^bsub>x\<^esub> s v) = lv_at x n s"
-  apply (simp add: lv_at_def)
-  apply auto
-
-lemma reverse0_correct: "H{True} reverse0 XS {ys = rev XS}"
-  apply vcg_lens
-    apply (metis hd_drop_conv_nth rev_eq_Cons_iff rev_rev_ident take_hd_drop)
-   apply (simp add: lv_at_def)
-  apply auto
-  apply (simp add: reverse0_def)
-  apply (rule hoare_safe)
-    apply simp
-   apply (rule hoare_safe)
-   apply (rule hoare_safe)
-     apply simp
-    apply (subst_eval)
-    apply (rule hl_while_inv_prestate)
-      apply (subst_eval)
-  apply vcg_lens
-  using take_Suc_conv_app_nth apply force
-
-procedure reverse1 "XS :: int list" over state =
+program reverse1 "XS :: int list" over state =
 "ys := [];
  for x in XS inv j. ys = rev (take j XS) do ys := x # ys od"
 
-procedure reverse2 "XS :: int list" over state =
+program reverse2 "XS :: int list" over state =
 "xs := XS; ys := [];
  while xs \<noteq> [] 
  inv ys = rev (take (length XS - length xs) XS) \<and> xs = drop (length XS - length xs) XS
@@ -63,7 +32,7 @@ procedure reverse2 "XS :: int list" over state =
     xs := tl xs 
  od"
 
-procedure reverse2a "XS :: int list" over state =
+program reverse2a "XS :: int list" over state =
 "xs := XS; ys := [];
  while xs \<noteq> [] 
  inv XS = rev ys @ xs var length xs
@@ -72,7 +41,7 @@ procedure reverse2a "XS :: int list" over state =
     xs := tl xs 
  od"
 
-procedure reverse2b "XS :: int list" over state =
+program reverse2b "XS :: int list" over state =
 "xs := XS; ys := [];
  while xs \<noteq> [] 
  inv length XS = length xs + length ys \<and> (\<forall> i < length ys. XS!i = ys ! (length ys - Suc i)) \<and> (\<forall> i\<in>{length ys..<length XS}. XS!i = xs ! (i - length ys))
@@ -85,7 +54,6 @@ procedure reverse2b "XS :: int list" over state =
 execute "reverse0 [1,2,3,4]"
 execute "reverse1 [1,2,3,4]"
 execute "reverse2 [1,2,3,4]"
-
 
 lemma reverse0_correct: "H{True} reverse0 XS {ys = rev XS}"
   by (vcg, simp add: take_Suc_conv_app_nth)

@@ -227,11 +227,11 @@ subsection \<open> Local Variable Stack \<close>
 
 type_synonym uname = "String.literal"
 
-text \<open> We model the store as a finite partial function from names (strings) to values in the 
+text \<open> We model the store as a partial function from names (strings) to values in the 
   universe defined above. \<close>
 
 zstore lvar =
-  lstore :: "uname \<Zffun> uval"
+  lstore :: "uname \<Zpfun> uval"
 
 subsection \<open> Identifiers as Strings \<close>
 
@@ -263,19 +263,19 @@ text \<open> The local variable lens projects the store, followed by the value (
   name, followed by projecting out a value of the correct type. \<close>
 
 definition lvar_lens :: "uname \<Rightarrow> ('a::injval \<Longrightarrow> 's lvar_scheme)" where 
-"lvar_lens n = (uval_lens ;\<^sub>L ffun_lens n ;\<^sub>L lstore)" 
+"lvar_lens n = (uval_lens ;\<^sub>L pfun_lens n ;\<^sub>L lstore)" 
 
 lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens n)"
   by (simp add: comp_mwb_lens lvar_lens_def)
 
-lemma pfun_lens_indep: "x \<noteq> y \<Longrightarrow> ffun_lens x \<bowtie> ffun_lens y"
-  by (unfold_locales, simp_all add: ffun_lens_def ffun_upd_comm)
+lemma pfun_lens_indep: "x \<noteq> y \<Longrightarrow> pfun_lens x \<bowtie> pfun_lens y"
+  by (unfold_locales, simp_all add: pfun_lens_def pfun_upd_comm)
 
 lemma lvar_lens_indep [simp]: "m \<noteq> n \<Longrightarrow> lvar_lens m \<bowtie> lvar_lens n"
   by (simp add: lvar_lens_def pfun_lens_indep lens_indep_left_ext lens_indep_right_ext)
 
-lemma get_ffun_lens: "get\<^bsub>ffun_lens i\<^esub> s = s(i)\<^sub>f"
-  by (simp add: ffun_lens_def)
+lemma get_pfun_lens: "get\<^bsub>pfun_lens i\<^esub> s = s(i)\<^sub>p"
+  by (simp add: pfun_lens_def)
 
 lemma vwb_src_UNIV [simp]: "vwb_lens X \<Longrightarrow> \<S>\<^bsub>X\<^esub> = UNIV"
   by (meson vwb_lens_iff_mwb_UNIV_src)
@@ -285,8 +285,8 @@ text \<open> A local variable lens is defined when its name is in the domain of 
 
 lemma source_lvar_lens: 
   "\<S>\<^bsub>lvar_lens n :: 'a::injval \<Longrightarrow> _\<^esub> 
-   = {s. n \<in> fdom (get\<^bsub>lstore\<^esub> s) \<and> ffun_app (get\<^bsub>lstore\<^esub> s) n \<in> uvals (utyp TYPE('a::injval))}"
-  by (simp add: lvar_lens_def lens_defined_def comp_mwb_lens source_lens_comp ffun_lens_src source_uval_lens univ_var_def id_lens_def get_ffun_lens)
+   = {s. n \<in> pdom (get\<^bsub>lstore\<^esub> s) \<and> pfun_app (get\<^bsub>lstore\<^esub> s) n \<in> uvals (utyp TYPE('a::injval))}"
+  by (simp add: lvar_lens_def lens_defined_def comp_mwb_lens source_lens_comp pfun_lens_src source_uval_lens univ_var_def id_lens_def get_pfun_lens)
 
 definition lv_lens :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> bool" where
 "lv_lens x n = (x = lvar_lens n)"
@@ -314,7 +314,7 @@ lemma lv_lens_indep_3 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n 
 text \<open> The next predicate characterises that a given lens is defined in a particular state. \<close>
 
 definition lvname :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
-[expr_defs]: "lvname x n = (\<guillemotleft>n\<guillemotright> \<in> fdom lstore \<and> lstore(\<guillemotleft>n\<guillemotright>)\<^sub>f \<in> uvals (utyp TYPE('a)))\<^sub>e"
+[expr_defs]: "lvname x n = (\<guillemotleft>n\<guillemotright> \<in> pdom lstore \<and> lstore(\<guillemotleft>n\<guillemotright>)\<^sub>p \<in> uvals (utyp TYPE('a)))\<^sub>e"
 
 expr_constructor lvname
 
@@ -325,7 +325,7 @@ lemma lvname_subst_1 [simp]: "y \<bowtie> lstore \<Longrightarrow> lvname x n ([
   by (simp add: lens_indep.lens_put_irr2 lvname_def subst_id_def subst_upd_def)
 
 lemma lvname_subst_2 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m ([y \<leadsto> e] s) = lvname x m s"
-  by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def ffun_lens_def)
+  by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def)
 
 lemma lvname_subst_3 [simp]: "\<lbrakk> lv_lens x m; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m ([lstore \<leadsto> {\<guillemotleft>n\<guillemotright>} \<Zndres> lstore] s) = lvname x m s"
   by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def)
@@ -344,7 +344,7 @@ subsection \<open> Variable Blocks \<close>
 text \<open> Extend the variable stack \<close>
 
 definition open_var :: "uname \<Rightarrow> utype \<Rightarrow> ('e, 'a lvar_scheme) htree" where
-"open_var n a = (\<exclamdown>\<guillemotleft>n\<guillemotright> \<notin> fdom lstore! ;; lstore := lstore \<oplus> {\<guillemotleft>n\<guillemotright> \<mapsto> uval_default \<guillemotleft>a\<guillemotright>}\<^sub>f)"
+"open_var n a = (\<exclamdown>\<guillemotleft>n\<guillemotright> \<notin> pdom lstore! ;; lstore := lstore \<oplus> {\<guillemotleft>n\<guillemotright> \<mapsto> uval_default \<guillemotleft>a\<guillemotright>}\<^sub>p)"
 
 text \<open> Reduce the variable stack \<close>
 
@@ -377,7 +377,6 @@ lemma hl_vblock [hoare_safe]:
      apply (simp add: lv_lens_def)
     apply (simp add: lv_lens_def lvname_def uvals_def)
     apply expr_auto
-    apply (metis (no_types, lifting) Diff_disjoint Diff_insert_absorb fdom_fdom_res fdom_plus fdom_res_fdom fdom_res_twice ffun_split_domain sup_bot_left)
    apply expr_simp
   apply auto[1]
   done
