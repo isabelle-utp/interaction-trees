@@ -330,6 +330,15 @@ lemma lvname_subst_2 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n \
 lemma lvname_subst_3 [simp]: "\<lbrakk> lv_lens x m; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m ([lstore \<leadsto> {\<guillemotleft>n\<guillemotright>} \<Zndres> lstore] s) = lvname x m s"
   by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def)
 
+lemma lvname_subst_4 [simp]: "\<lbrakk> lv_lens x m \<rbrakk> \<Longrightarrow> lvname x m ([x \<leadsto> e] s) = True"
+  by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def uval_lens_def)
+
+lemma lvname_subst_5 [simp]: "\<lbrakk> lv_lens x m \<rbrakk> \<Longrightarrow> lvname x m ([lstore \<leadsto> {\<guillemotleft>m\<guillemotright>} \<Zndres> lstore] s) = False"
+  by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def uval_lens_def)
+
+lemma lvget_subst [simp]: "\<lbrakk> lv_lens x m; m \<noteq> n \<rbrakk> \<Longrightarrow> get\<^bsub>x\<^esub> ([lstore \<leadsto> {\<guillemotleft>n\<guillemotright>} \<Zndres> $lstore] s) = get\<^bsub>x\<^esub> s"
+  by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def uval_lens_def)
+
 syntax "_lvname" :: "id \<Rightarrow> logic" ("LV'(_')")
 translations "LV(x)" => "CONST lvname x IDLIT(x)"
 translations "LV(x)" <= "CONST lvname x y"
