@@ -1,0 +1,16 @@
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build Theory
+    steps:
+      - uses: actions/checkout@v3
+      - uses: lexbailey/isabelle-theory-build-github-action@v9
+        with:
+          isabelle-url: 'https://github.com/lexbailey/itrees_isabelle_fork/archive/refs/tags/CyPhyAssure2023.tar.gz'
+          depends: 'https://github.com/lexbailey/Shallow-Expressions.git@main https://github.com/lexbailey/explore-subgoal.git@main https://github.com/lexbailey/Abstract_Prog_Syntax.git@main'
+          session-name: 'Interaction_Trees ITree_Simulation ITree_UTP ITree_VCG ITree_RoboChart'
+          report_url: 'https://isabelle-utp-ci-dashboard.link/submit_job_log'
+          report_secret: ${{ secrets.DashboardReportKey }}
+     
+
