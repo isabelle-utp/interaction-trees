@@ -313,37 +313,37 @@ lemma lv_lens_indep_3 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n 
 
 text \<open> The next predicate characterises that a given lens is defined in a particular state. \<close>
 
-definition lvname :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
-[expr_defs]: "lvname x n = (\<guillemotleft>n\<guillemotright> \<in> pdom lstore \<and> lstore(\<guillemotleft>n\<guillemotright>)\<^sub>p \<in> uvals (utyp TYPE('a)))\<^sub>e"
+definition lvname :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> 'a itself \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
+[expr_defs]: "lvname x n t = (\<guillemotleft>n\<guillemotright> \<in> pdom lstore \<and> lstore(\<guillemotleft>n\<guillemotright>)\<^sub>p \<in> uvals (utyp TYPE('a)))\<^sub>e"
 
 expr_constructor lvname
 
-lemma lv_lens_defined [simp]: "lv_lens x n \<Longrightarrow> \<^bold>D(x) = lvname x n"
+lemma lv_lens_defined [simp]: "lv_lens x n \<Longrightarrow> \<^bold>D(x) = lvname x n TYPE('t::injval)"
   by (expr_simp add: lv_lens_def source_lvar_lens)
 
-lemma lvname_subst_1 [simp]: "y \<bowtie> lstore \<Longrightarrow> lvname x n ([y \<leadsto> e] s) = lvname x n s"
+lemma lvname_subst_1 [simp]: "y \<bowtie> lstore \<Longrightarrow> lvname x n t ([y \<leadsto> e] s) = lvname x n t s"
   by (simp add: lens_indep.lens_put_irr2 lvname_def subst_id_def subst_upd_def)
 
-lemma lvname_subst_2 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m ([y \<leadsto> e] s) = lvname x m s"
+lemma lvname_subst_2 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m t ([y \<leadsto> e] s) = lvname x m t s"
   by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def)
 
-lemma lvname_subst_3 [simp]: "\<lbrakk> lv_lens x m; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m ([lstore \<leadsto> {\<guillemotleft>n\<guillemotright>} \<Zndres> lstore] s) = lvname x m s"
+lemma lvname_subst_3 [simp]: "\<lbrakk> lv_lens x m; m \<noteq> n \<rbrakk> \<Longrightarrow> lvname x m t ([lstore \<leadsto> {\<guillemotleft>n\<guillemotright>} \<Zndres> lstore] s) = lvname x m t s"
   by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def)
 
-lemma lvname_subst_4 [simp]: "\<lbrakk> lv_lens x m \<rbrakk> \<Longrightarrow> lvname x m ([x \<leadsto> e] s) = True"
+lemma lvname_subst_4 [simp]: "\<lbrakk> lv_lens x m \<rbrakk> \<Longrightarrow> lvname x m t ([x \<leadsto> e] s) = True"
   by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def uval_lens_def)
 
-lemma lvname_subst_5 [simp]: "\<lbrakk> lv_lens x m \<rbrakk> \<Longrightarrow> lvname x m ([lstore \<leadsto> {\<guillemotleft>m\<guillemotright>} \<Zndres> lstore] s) = False"
+lemma lvname_subst_5 [simp]: "\<lbrakk> lv_lens x m \<rbrakk> \<Longrightarrow> lvname x m t ([lstore \<leadsto> {\<guillemotleft>m\<guillemotright>} \<Zndres> lstore] s) = False"
   by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def uval_lens_def)
 
 lemma lvget_subst [simp]: "\<lbrakk> lv_lens x m; m \<noteq> n \<rbrakk> \<Longrightarrow> get\<^bsub>x\<^esub> ([lstore \<leadsto> {\<guillemotleft>n\<guillemotright>} \<Zndres> $lstore] s) = get\<^bsub>x\<^esub> s"
   by (auto simp add: lvname_def subst_upd_def subst_id_def lens_comp_def lv_lens_def lvar_lens_def pfun_lens_def uval_lens_def)
 
-syntax "_lvname" :: "id \<Rightarrow> logic" ("LV'(_')")
-translations "LV(x)" => "CONST lvname x IDLIT(x)"
-translations "LV(x)" <= "CONST lvname x y"
+syntax "_lvname" :: "id \<Rightarrow> type \<Rightarrow> logic" ("LV'(_::_')")
+translations "LV(x :: 'a)" => "CONST lvname x IDLIT(x) TYPE('a)"
+translations "LV(x :: 'a)" <= "CONST lvname x y TYPE('a)"
 
-text \<open> For convenience, we can use the notation @{term "LV(n)"} to mean that the lens bound to
+text \<open> For convenience, we can use the notation @{term "LV(n::'a::injval)"} to mean that the lens bound to
   identifier @{term n} is defined in a given state. The syntax translation engine inserts the 
   string corresponding to the identifier (e.g. @{term "STR ''x''"})
   \<close>
@@ -373,7 +373,7 @@ translations
 
 lemma hl_vblock [hoare_safe]:
   assumes
-    "\<And> x. lv_lens x n \<Longrightarrow> H{lvname x n \<and> P\<lbrakk>{\<guillemotleft>n\<guillemotright>} \<Zndres> lstore/lstore\<rbrakk>} B x {Q\<lbrakk>{\<guillemotleft>n\<guillemotright>} \<Zndres> lstore/lstore\<rbrakk>}"
+    "\<And> x. lv_lens x n \<Longrightarrow> H{lvname x n TYPE('t) \<and> P\<lbrakk>{\<guillemotleft>n\<guillemotright>} \<Zndres> lstore/lstore\<rbrakk>} B x {Q\<lbrakk>{\<guillemotleft>n\<guillemotright>} \<Zndres> lstore/lstore\<rbrakk>}"
   shows "H{P} vblock n TYPE('t::injval) (\<lambda> x. B x) {Q}"
   apply (simp add: vblock_def open_var_def close_var_def kcomp_assoc)
   apply (rule hoare_safe)
