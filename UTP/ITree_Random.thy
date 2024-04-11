@@ -54,4 +54,22 @@ text \<open> We define the procedure @{text uniform} to generate a random value,
 definition uniform :: "natural \<Rightarrow> 's::seed_state \<Rightarrow> ('e, 'a::random \<times> 's) itree" where
 "uniform n = (\<lambda> s. let (n, sd') = gen n (get\<^bsub>rseed\<^esub> s) in Ret (n, put\<^bsub>rseed\<^esub> s sd'))"
 
+subsection \<open> Store with Random Seed \<close>
+
+zstore rangen =
+  ranseed :: "Random.seed"
+
+instantiation rangen_ext :: (type) seed_state
+begin
+
+definition rseed_rangen_ext :: "Random.seed \<Longrightarrow> 'a rangen_ext" where 
+"rseed_rangen_ext = ranseed" 
+
+instance 
+  by (intro_classes, simp add: rseed_rangen_ext_def)
+
+end
+
+consts INITIAL_SEED :: "Random.seed"
+
 end
