@@ -34,6 +34,17 @@ syntax
 translations
   "_lens_get_pretty x s" == "CONST lens_get x s"
 
+(* Syntax to allow programs to exit returning a value *)
+
+definition exit_prog :: "('a, 's) expr \<Rightarrow> 's \<Rightarrow> ('e, 'a) itree" where 
+"exit_prog e = (\<lambda> s. Ret (e s))"
+
+syntax "_exit_prog" :: "logic \<Rightarrow> logic" ("exit _")
+translations "exit e" == "CONST exit_prog (e)\<^sub>e"
+
+lemma hl_exit [hoare_safe]: "\<forall> s. (P)\<^sub>e s \<longrightarrow> (Q)\<^sub>e (e s) \<Longrightarrow> H{P} exit e {Q}"
+  by (simp add: exit_prog_def hoare_alt_def)
+
 (* Set up the program and procedure command *)
 
 ML \<open>

@@ -5,7 +5,8 @@ struct
 
 fun mk_program evT (((n, p), st), body) ctx =
   let open Syntax
-      val ty = (check_typ ctx (Type (@{type_abbrev htree}, [evT, read_typ ctx st])))
+      val stT = read_typ ctx st
+      val ty = (check_typ ctx (Type (@{type_abbrev ktree}, [evT, stT, dummyT])))
       val pat = read_term ctx p
       val vs = map (fst o dest_Free) (HOLogic.strip_tuple pat)
       val pat' = HOLogic.mk_tuple (map free vs)
