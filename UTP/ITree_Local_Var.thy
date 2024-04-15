@@ -365,11 +365,20 @@ text \<open> Create a local variable block \<close>
 definition vblock :: "uname \<Rightarrow> 'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
   where "vblock n t B = open_var n (utyp TYPE('v))  ;; let_itree (SEXP (\<lambda> s. lvar_lens n)) B ;; close_var n"
 
-syntax "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _ :: _./ _" [0, 0, 10] 10)
+nonterminal vdecls
 
-translations 
+syntax 
+  "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _::_./ _" [0, 0, 10] 10)
+  "_vblock_multi" :: "vdecls \<Rightarrow> logic \<Rightarrow> logic" ("var '(_')./ _" [0, 10] 10)
+  "_vdecl" :: "id \<Rightarrow> type \<Rightarrow> vdecls" ("_::_")
+  "_vdecls" :: "id \<Rightarrow> type \<Rightarrow> vdecls \<Rightarrow> vdecls" ("_::_, _")
+
+translations
+  "_vblock_multi (_vdecl x t) e" => "_vblock x t e"
+  "_vblock_multi (_vdecls x t vs) e" == "_vblock x t (_vblock_multi vs e)"
   "_vblock x t e" => "CONST vblock IDLIT(x) (_TYPE t) (_lvar_abs x t e)"
   "_vblock x t e" <= "CONST vblock n (_TYPE t) (\<lambda> x. e)"
+  "_vblock_multi (_vdecls x t1 (_vdecl y t2)) e" <= "_vblock x t1 (_vblock y t2 e)"
 
 lemma hl_vblock [hoare_safe]:
   assumes
