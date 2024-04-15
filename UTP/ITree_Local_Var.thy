@@ -369,7 +369,7 @@ nonterminal vdecls
 
 syntax 
   "_vblock" :: "id \<Rightarrow> type \<Rightarrow> logic \<Rightarrow> logic" ("var _::_./ _" [0, 0, 10] 10)
-  "_vblock_multi" :: "vdecls \<Rightarrow> logic \<Rightarrow> logic" ("var '(_')./ _" [0, 10] 10)
+  "_vblock_multi" :: "vdecls \<Rightarrow> logic \<Rightarrow> logic" ("var '(_')/./ _" [0, 10] 10)
   "_vdecl" :: "id \<Rightarrow> type \<Rightarrow> vdecls" ("_::_")
   "_vdecls" :: "id \<Rightarrow> type \<Rightarrow> vdecls \<Rightarrow> vdecls" ("_::_, _")
 
