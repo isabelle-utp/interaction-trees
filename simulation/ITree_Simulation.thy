@@ -1,28 +1,74 @@
 subsection \<open> Simulation Harness \<close>
 
-theory ITree_Simulation
-  imports "Interaction_Trees.ITree_Extraction"
+theory ITree_Simulation                 
+  imports Show_Channel Executable_Universe Channel_Type_Rep Animation_Event 
+    Code_Rational "Interaction_Trees.ITrees" 
   keywords "animate" :: "thy_defn"
 begin
+
+(* I've commented out pfun_of_animevs for now as a constructor, because it imposes sort contraints
+  that we cannot easily satisfy. *)
+
+code_datatype pfun_of_alist pfun_of_map (* pfun_of_animevs *) pfun_entries
+
+code_identifier
+  code_module ITree_Simulation \<rightharpoonup> (Haskell) Interaction_Trees
+| code_module Partial_Fun \<rightharpoonup> (Haskell) Interaction_Trees
+| code_module Executable_Universe \<rightharpoonup> (Haskell) Interaction_Trees
+| code_module Channel_Type_Rep \<rightharpoonup> (Haskell) Interaction_Trees
+| code_module Animation_Event \<rightharpoonup> (Haskell) Interaction_Trees
+| code_module Interaction_Trees \<rightharpoonup> (Haskell) Interaction_Trees
 
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
 module Simulate (simulate) where
 import Interaction_Trees;
-import Partial_Fun;
+import Prelude;
 import System.IO;
-
--- These library functions help us to trim the "_C" strings from pretty printed events
-
-isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
-isPrefixOf [] _         =  True;
-isPrefixOf _  []        =  False;
-isPrefixOf (x:xs) (y:ys)=  x == y && isPrefixOf xs ys;
+import Data.Ratio;
+import Data.List;
 
 removeSubstr :: String -> String -> String;
 removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
-simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
+instance Show Uval where
+  show UnitV = "()"
+  show (BoolV x) = show x
+  show (IntV x) = show x
+  show (RatV x) = show (fromRational x)
+  show (StringV x) = show x
+  show (EnumV _ x) = x
+  show (PairV xy) = show xy
+  show (ListV typ xs) = show xs
+
+instance Show Utyp where
+  show UnitT = "()"
+  show BoolT = "bool"
+  show IntT = "int"
+  show RatT = "rat"
+  show StringT = "string"
+  show (EnumT s) = "enum"
+  show (PairT (s, t)) = "(" ++ show s ++ ", " ++ show t ++ ")"
+  show (ListT s) = "[" ++ show s ++ "]"
+
+mk_readUval :: Read a => (a -> Uval) -> String -> IO Uval
+mk_readUval f n = 
+  do { putStr ("Input <" ++ n ++ "> value: ")
+     ; e <- getLine
+     ; return (f (read e)) }
+
+readUtyp :: Utyp -> IO Uval
+readUtyp BoolT = mk_readUval BoolV "bool"
+readUtyp IntT = mk_readUval IntV "int"
+readUtyp UnitT = return UnitV
+
+eventHierarchy :: [(String, p)] -> [(String, [(String, p)])]
+eventHierarchy m = map (\c -> (c, map (\(e, p) -> (tail (dropWhile (\x -> x /= ' ') e), p)) $ filter (isPrefixOf (c ++ " ") . fst) m)) chans
+  where
+--  m = map (\(e, p) -> (Prelude.show e, p)) m
+  chans = nub $ map (takeWhile (\x -> x /= ' ') . fst) m
+
+simulate_cnt :: (Eq e, Prelude.Show e, Prelude.Show s) => Prelude.Int -> Itree e s -> Prelude.IO ();
 simulate_cnt n (Ret x) = Prelude.putStrLn ("Terminated: " ++ Prelude.show x);
 simulate_cnt n (Sil p) = 
   do { if (n == 0) then Prelude.putStrLn "Internal Activity..." else return ();
@@ -31,19 +77,29 @@ simulate_cnt n (Sil p) =
                             }
                     else simulate_cnt (n + 1) p
      };
-simulate_cnt n (Vis (Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n (Vis (Pfun_of_alist [])) = putStrLn "Deadlocked.";
 simulate_cnt n t@(Vis (Pfun_of_alist m)) = 
-  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
-       e <- Prelude.getLine;
+  do { putStrLn ("Events:" ++ concat (map (\(n, e) -> " (" ++ show n ++ ") " ++ e ++ ";") (zip [1..] (map (show . fst) m))));
+       e <- getLine;
        if (e == "q" || e == "Q") then
-         Prelude.putStrLn "Simulation terminated"
+         putStrLn "Simulation terminated"
        else
-       case (Prelude.reads e) of
-         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
-         [(v, _)] -> if (v > Prelude.length m)
-                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+       case (reads e) of
+         []       -> do { putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > length m)
+                       then do { putStrLn "Rejected"; simulate_cnt n t }
                        else simulate_cnt 0 (snd (m !! (v - 1)))
-     };
+     }                                                            
+  where eh = eventHierarchy (map (\(e, p) -> (Prelude.show e, p)) m);
+simulate :: (Eq e, Prelude.Show e, Prelude.Show s) => Itree e s -> Prelude.IO ();
+simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
+
+
+\<close>
+
+(* The code below is the case for an opaque map function. It depends on there being a Read instance. *)
+
+(*
 simulate_cnt n t@(Vis (Pfun_of_map f)) = 
   do { Prelude.putStr ("Enter an event:");
        e <- Prelude.getLine;
@@ -55,11 +111,61 @@ simulate_cnt n t@(Vis (Pfun_of_map f)) =
          [(v, _)] -> case f v of
                        Nothing -> do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
                        Just t' -> simulate_cnt 0 t'
-     };                                                                
+     };    
+*)
 
-simulate :: (Eq e, Prelude.Show e, Prelude.Read e, Prelude.Show s) => Itree e s -> Prelude.IO ();
-simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
-\<close>
+(* The following code is for animation support by symbolic animation events. It works, but
+   the approach using them needs further development, and imposes sort constaints. *)
+
+(*
+
+show_animev :: Animev a b -> String
+show_animev (AnimInput (Name_of (n, t)) _ _) = n ++ "?<"  ++ show t ++ ">"
+show_animev (AnimOutput (Name_of (n, t)) v _) = n ++ "!" ++ show v
+
+simulate_cnt n t@(Vis (Pfun_of_animevs m)) =
+  do { putStrLn ("Events:" ++ concat (map (\(i, e) -> " (" ++ show i ++ ") " ++ show_animev e ++ ";") (zip [1..] m)));
+       e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
+       case (Prelude.reads e) of
+         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > Prelude.length m)
+                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       else case (m!!(v - 1)) of
+                              (AnimInput (Name_of (nm, typ)) b p) ->
+                                do { val <- readUtyp typ -- Ask for any inputs needed
+                                   ; if b val 
+                                     then simulate_cnt 0 (p val) 
+                                     else do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                                   }
+                              (AnimOutput (Name_of (n, t)) v p) -> simulate_cnt 0 p };
+*)
+
+(* The code below is for simulations containing uval functions *)
+
+(*
+simulate_cnt n t@(Vis (Pfun_of_ufun chan typ m)) = 
+  do { v <- readUtyp typ; 
+       simulate_cnt 0 (m v) }
+simulate_cnt n (Vis (Pfun_of_chfuns [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n t@(Vis (Pfun_of_chfuns m)) =
+  do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(i, ChanF c (n, p) _ _) -> " (" ++ show i ++ ") " ++ n ++ " " ++ show p ++ ";") (zip [1..] m)));
+       e <- Prelude.getLine;
+       if (e == "q" || e == "Q") then
+         Prelude.putStrLn "Simulation terminated"
+       else
+       case (Prelude.reads e) of
+         []       -> do { Prelude.putStrLn "No parse"; simulate_cnt n t }
+         [(v, _)] -> if (v > Prelude.length m)
+                       then do { Prelude.putStrLn "Rejected"; simulate_cnt n t }
+                       else let (typ, p) = (\(ChanF _ _ t p) -> (t, p)) (m!!(v - 1)) 
+                            in do { val <- readUtyp typ
+                                  ; simulate_cnt 0 (p val) } -- Ask for any inputs needed
+     };                                                            
+
+*)
 
 ML \<open> 
 
@@ -122,8 +228,8 @@ fun run_simulation thy =
 fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
       val ctx' =
-        (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), (Token.explode (Thy_Header.get_keywords' @{context}) Position.none "string_classes"))] ctx)
-        |> prep_simulation model (Context.theory_name thy)
+        (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), [])] ctx)
+        |> prep_simulation model (Context.theory_name {long = false} thy)
   in run_simulation (Local_Theory.exit_global ctx'); (Local_Theory.exit_global ctx')
   end 
 

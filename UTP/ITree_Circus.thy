@@ -12,6 +12,8 @@ type_synonym 'e process = "('e, unit) itree"
 definition Skip :: "('e, 'r) htree" where
 "Skip = (\<lambda> s. Ret s)"
 
+adhoc_overloading uskip Skip
+
 lemma Skip_unit [simp]: 
   "Skip ;; S = S" "S ;; Skip = S"
   by (simp_all add: seq_itree_def Skip_def kleisli_comp_def bind_itree_right_unit)
@@ -42,8 +44,7 @@ lemma Stop_left_zero [simp]: "Stop ;; S = Stop"
 definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
 
-syntax "_assume" :: "logic \<Rightarrow> logic" ("\<questiondown>_?")
-translations "_assume b" == "CONST assume (b)\<^sub>e"
+adhoc_overloading utest "assume"
 
 lemma assume_true: "\<questiondown>True? = Skip"
   by (simp add: assume_def Skip_def)
@@ -68,41 +69,37 @@ lemma test_false: "\<exclamdown>False! = Stop"
 definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "cond_itree P b Q = (\<lambda> s. if b s then P s else Q s)"
 
+adhoc_overloading ucond cond_itree
+
 text \<open> Similar to @{const Let} in HOL, but it evaluates the assigned expression on the initial state. \<close>
 
-definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> 's \<Rightarrow> ('e, 't) itree) \<Rightarrow> 's \<Rightarrow> ('e, 't) itree" where
 "let_itree e S = (\<lambda> s. S (e s) s)"
 
-definition for_itree :: "'i list \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
-"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) I Skip) s)"
+definition for_itree :: "('s \<Rightarrow> 'i list) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"for_itree I P = (\<lambda> s. (foldr (\<lambda> i Q. P i ;; Q) (I s) Skip) s)"
+
+lemma for_itree_eval_bounds: "for_itree I P s = for_itree (\<guillemotleft>I s\<guillemotright>)\<^sub>e P s"
+  by (simp add: for_itree_def)
+
+adhoc_overloading uwhile iterate
 
 syntax 
-  "_cond_itree"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ else _ fi")
-  "_cond_itree1" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("if _ then _ fi")
-  "_cond_itree_infix"  :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(3_ \<lhd> _ \<rhd>/ _)" [52,0,53] 52)
-  "_while_itree" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("while _ do _ od")
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
   "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
+  "_for_to_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ to _ do _ od")
+  "_for_downto_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ = _ downto _ do _ od")
 
 translations
-  "_cond_itree b P Q" == "CONST cond_itree P (b)\<^sub>e Q"
-  "_cond_itree1 b P " == "CONST cond_itree P (b)\<^sub>e (CONST Skip)"
-  "_cond_itree_infix P b Q" => "_cond_itree b P Q"
-  "_while_itree b P" == "CONST iterate (b)\<^sub>e P"
   "_let_itree x e S" == "CONST let_itree (e)\<^sub>e (\<lambda> x. S)"
-  "_for_itree i I P" == "CONST for_itree I (\<lambda> i. P)"
+  "_for_itree i I P" == "CONST for_itree (I)\<^sub>e (\<lambda> i. P)"
+  "_for_to_itree i m n P" == "_for_itree i [m..<CONST Suc n] P"
+  "_for_downto_itree i n m P" == "_for_itree i (CONST rev [m..<CONST Suc n]) P"
 
-definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" ("\<langle>_\<rangle>\<^sub>a") where
+definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
 
-syntax
-  "_assignment"     :: "svids \<Rightarrow> uexprs \<Rightarrow> logic"  (infixr ":=" 61)
-  "_swap" :: "svid \<Rightarrow> svid \<Rightarrow> logic" ("swap'(_, _')")
-
-translations
-  "_assignment x e" == "CONST assigns (CONST subst_upd (CONST subst_id) x (e)\<^sub>e)"
-  "_assignment (_svid_tuple (_of_svid_list (x +\<^sub>L y))) e" <= "_assignment (x +\<^sub>L y) e"
-  "_swap x y" => "(x, y) := ($y, $x)"
+adhoc_overloading uassigns assigns
 
 named_theorems assigns_combine
 
@@ -157,7 +154,7 @@ lemma cond1_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<
   by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
 
 lemma assign_cond: "if b then x := e else x := f fi = x := (if b then e else f)"
-  by (simp add: assigns_combine usubst, simp add: expr_if_def)
+  by (simp add: assigns_combine usubst, simp add: expr_if_def SEXP_def)
 
 lemma cond_simps:
   "S \<lhd> True \<rhd> T = S"
@@ -168,14 +165,60 @@ lemma cond_simps:
   "x := e ;; (S \<lhd> b \<rhd> T) = (x := e ;; S) \<lhd> b\<lbrakk>e/x\<rbrakk> \<rhd> (x := e ;; T)"
    by (simp_all add: seq_itree_def cond_itree_def fun_eq_iff kleisli_comp_def assigns_def expr_defs)
 
-lemma for_empty: "for x in [] do P x od = Skip"
+lemma for_empty: "for_itree ([])\<^sub>e P = Skip"
   by (simp add: for_itree_def)
 
-lemma for_Cons: "for_itree (x # xs) P = P x ;; for_itree xs P"
+lemma for_Cons: "for_itree (\<guillemotleft>x\<guillemotright> # \<guillemotleft>xs\<guillemotright>)\<^sub>e P = P x ;; for_itree (\<lambda> s. xs) P"
   by (simp add: for_itree_def)
+
+text \<open> A for loop terminates provided that the body does so in each iteration. We use an invariant
+  expression @{term R} to restrict the possible states encountered. \<close>
+
+lemma terminates_for_itree:
+  assumes  
+    "\<And> i s\<^sub>0 tr\<^sub>0 s\<^sub>1. \<lbrakk> i < length xs; R i s\<^sub>0; S (xs ! i) s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> Ret s\<^sub>1 \<rbrakk> \<Longrightarrow> R (i + 1) s\<^sub>1"
+    "\<And> i s\<^sub>0. \<lbrakk> i < length xs; R i s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (S (xs ! i) s\<^sub>0)"
+  shows "R 0 s \<Longrightarrow> terminates (for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S s)"
+using assms proof (induct xs arbitrary: R s)
+  case Nil
+  then show ?case by (simp add: for_empty Skip_def terminates_Ret del: SEXP_apply)
+next
+  case (Cons a xs) 
+  have 1: "terminates (S a s)"
+    by (metis Cons.prems(1) Cons.prems(3) length_greater_0_conv list.distinct(1) nth_Cons_0)
+  have 2: "\<And> s\<^sub>0. s\<^sub>0 \<in> \<^bold>R (S a s) \<Longrightarrow> terminates (for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S s\<^sub>0)"
+  proof -
+    fix s\<^sub>0
+    assume "s\<^sub>0 \<in> \<^bold>R (S a s)"
+    then obtain tr\<^sub>0 where S_term: "S a s \<midarrow>tr\<^sub>0\<leadsto> Ret s\<^sub>0"
+      by (auto simp add: retvals_def)
+    hence R_1: "R 1 s\<^sub>0"
+      by (metis Cons.prems(1) Cons.prems(2) One_nat_def Suc_eq_plus1 length_Cons nth_Cons_0 zero_less_Suc)
+    with S_term show "terminates (for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S s\<^sub>0)"
+      by (auto intro!: Cons(1)[of "\<lambda> i s. R (i + 1) s"] simp del: SEXP_apply)
+         (metis Cons.prems(2) Suc_eq_plus1 Suc_less_eq length_Cons nth_Cons_Suc
+         ,metis Cons.prems(3) Suc_less_eq length_Cons nth_Cons_Suc)
+    qed
+
+    from 1 2 show ?case
+      by (simp add: for_Cons seq_itree_def kleisli_comp_def del: SEXP_apply)
+         (auto intro!: terminates_bind simp add: SEXP_def)
+qed
+
+lemma terminates_for_itree_prestate:
+  assumes  
+    "\<And> i s\<^sub>0 tr\<^sub>0 s\<^sub>1. \<lbrakk> i < length (xs s); R s i s\<^sub>0; S (xs s ! i) s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> Ret s\<^sub>1 \<rbrakk> \<Longrightarrow> R s (i + 1) s\<^sub>1"
+    "\<And> i s\<^sub>0. \<lbrakk> i < length (xs s); R s i s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (S ((xs s) ! i) s\<^sub>0)"
+  shows "R s 0 s \<Longrightarrow> terminates (for_itree xs S s)"
+proof -
+  from assms have "R s 0 s \<Longrightarrow> terminates (for_itree (\<guillemotleft>xs s\<guillemotright>)\<^sub>e S s)"
+    by (rule_tac terminates_for_itree[where xs="xs s" and R="R s"], auto)
+  thus "R s 0 s \<Longrightarrow> terminates (for_itree xs S s)"
+    by (simp add: for_itree_def)
+qed
 
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"
-  by (auto simp add: seq_itree_def fun_eq_iff iterate.code kleisli_comp_def cond_itree_def Step_def Skip_def comp_def)
+  by (auto simp add: seq_itree_def fun_eq_iff kleisli_comp_def iterate.code cond_itree_def Step_def Skip_def comp_def)
 
 lemma while_True_Skip: "while True do Skip od = Div"
   by (simp add: Skip_def SEXP_def loop_Ret)
@@ -184,6 +227,11 @@ text \<open> Hide the state of an action to produce a process \<close>
 
 definition process :: "'s::default subst \<Rightarrow> ('e, 's, 'a) ktree \<Rightarrow> 'e process" where
 "process I A = (\<langle>(\<lambda> _. default)\<rangle>\<^sub>a ;; \<langle>I\<rangle>\<^sub>a ;; A ;; assigns (\<lambda> s. ())) ()"
+
+text \<open> Animatable processes -- need a show instance for the event type \<close>
+
+definition anim_process :: "'s::default subst \<Rightarrow> ('e::show, 's, 'a) ktree \<Rightarrow> 'e process" where
+"anim_process = process"
 
 lemma deadlock_free_processI: "(\<And> s. deadlock_free ((\<langle>\<sigma>\<rangle>\<^sub>a ;; P) s)) \<Longrightarrow> deadlock_free (process \<sigma> P)"
   by (simp add: process_def seq_itree_def kleisli_comp_def deadlock_free_bind_iff assigns_def deadlock_free_Ret)
@@ -307,17 +355,88 @@ syntax
 translations
   "_cguard b P" == "(CONST test (b)\<^sub>e) ;; P"
 
+text \<open> The frame operator deletes updates made outside of the frame @{term a}. \<close>
+
 definition frame :: "'s scene \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
-"frame a P = (\<lambda> s. P s \<bind> (\<lambda> s'. Ret (s' \<oplus>\<^sub>S s on a)))"
+"frame a P = (\<lambda> s. P s \<bind> (\<lambda> s'. Ret (s \<oplus>\<^sub>S s' on a)))"
 
-definition frame_ext :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>1) htree \<Rightarrow> ('e, 's\<^sub>2) htree" where
-"frame_ext a P = (\<lambda> s. P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. Ret (put\<^bsub>a\<^esub> s v)))"
+syntax
+  "_frame" :: "salpha \<Rightarrow> logic \<Rightarrow> logic" ("(frame _ in (_))" [0, 10] 10)
 
-definition promote :: "('e, 's\<^sub>1) htree \<Rightarrow> ('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>2) htree" where
-[code_unfold]: "promote P a = \<exclamdown>\<^bold>D(a)! ;; frame_ext a P"
+translations
+  "_frame a P" == "CONST ITree_Circus.frame a P"
 
-syntax "_promote" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
-translations "_promote P a" == "CONST promote P a"
+definition promote_itree :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('e, 's\<^sub>1) htree \<Rightarrow> ('e, 's\<^sub>2) htree" where
+"promote_itree a P = (\<lambda> s. if s \<in> \<S>\<^bsub>a\<^esub> then P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> v. \<checkmark> (put\<^bsub>a\<^esub> s v)) else diverge)"
+
+syntax "_promote_itree" :: "logic \<Rightarrow> svid \<Rightarrow> logic" (infix "\<Up>\<Up>" 60)
+translations "_promote_itree P a" == "CONST promote_itree a P"
+
+definition not_modifies :: "('e, 's) htree \<Rightarrow> ('a, 's) expr \<Rightarrow> bool" where
+"not_modifies P e = (\<forall> s s'. s' \<in> \<^bold>R(P s) \<longrightarrow> e s' = e s)"
+
+lemma not_modifiesI: "(\<And> s s'. s' \<in> \<^bold>R(P s) \<Longrightarrow> e s' = e s) \<Longrightarrow> not_modifies P e"
+  by (auto simp add: not_modifies_def)
+
+syntax
+  "_nmods" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_ nmods _" [40, 41] 40)
+
+translations
+  "P nmods e" == "CONST not_modifies P (e)\<^sub>e"
+
+named_theorems nmods
+
+lemma assigns_nmods_iff : "\<langle>\<sigma>\<rangle>\<^sub>a nmods e \<longleftrightarrow> \<sigma> \<dagger> (e)\<^sub>e = (e)\<^sub>e"
+  by (simp add: not_modifies_def assigns_def subst_app_def fun_eq_iff)
+
+lemma assigns_nmods [nmods]: "\<sigma> \<dagger> (e)\<^sub>e = (e)\<^sub>e \<Longrightarrow> \<langle>\<sigma>\<rangle>\<^sub>a nmods e"
+  by (simp add: assigns_nmods_iff)
+
+lemma Skip_nmods [nmods]: "Skip nmods e"
+  by (simp add: Skip_def not_modifies_def)
+
+lemma seq_nmods [nmods]: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> P ;; Q nmods e"
+  by (auto elim!:trace_to_bindE bind_RetE' simp add: seq_itree_def kleisli_comp_def not_modifies_def retvals_def)
+     (metis trace_to_Nil)+
+
+text \<open> The following law ignore the condition when checking for modification. However, if we were
+  checking for modification conditions, we could make use of it. \<close>
+
+lemma cond_nmods [nmods]: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> if b then P else Q fi nmods e"
+  by (simp add: not_modifies_def cond_itree_def)
+
+lemma while_nmods_lemma: "\<lbrakk> s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'; P nmods e; s\<^sub>0 \<in> chain_states chn \<rbrakk> \<Longrightarrow> e s = e s\<^sub>0"
+  by (induct arbitrary: s\<^sub>0 rule: itree_chain.induct)
+     (auto simp add: SEXP_def not_modifies_def retvals_def, metis+)
+
+lemma while_nmods [nmods]: 
+  assumes "P nmods e"
+  shows "while b do P od nmods e"
+proof (rule not_modifiesI, simp add: SEXP_def)
+  fix s s'
+  assume s': "s' \<in> \<^bold>R (iterate b P s)"
+  show "e s' = e s"
+  proof (cases "b s")
+    case True
+    with s' obtain chn s\<^sub>0 tr\<^sub>0 where "b s" "\<not> b s'" "s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0" "\<forall>x\<in>chain_states chn. b x" "P s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'"
+      by (auto simp add: retvals_def iterate_term_chain_iff itree_term_chain.simps)
+    have "\<forall> s\<^sub>0 \<in> chain_states chn. e s = e s\<^sub>0"
+      by (meson \<open>s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0\<close> assms while_nmods_lemma)
+    hence "e s = e s\<^sub>0"
+      by (metis \<open>s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>0\<close> final_state_in_chain itree_chain.cases list.discI)
+    then show ?thesis
+      by (metis SEXP_def \<open>P s\<^sub>0 \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s'\<close> assms not_modifies_def retvals_traceI)
+  next
+    case False
+    then show ?thesis
+      using s' by force
+  qed
+qed
+
+text \<open> @{const not_modifies} is quite useful as a predicate to determine whether expressions are
+  invariant under a program by checking whether variables are updated. However, it may be better
+  to have a ``weakest modification condition'' calculus, that allows us to determine the weakest
+  precondition under which a program will not modify a particular expression. \<close>
 
 named_theorems prog_defs
 
@@ -355,5 +474,15 @@ lemma extchoice_event_block:
   shows "event_block c A P\<sigma> \<box> event_block d B Q\<sigma> = event_block (c +\<^sub>\<triangle> d) (A <+> B)\<^sub>e (case_sum P\<sigma> Q\<sigma>)"
   using assms
   by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
+
+definition match_itree :: "('a, 's) expr \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+"match_itree e P = (\<lambda> s. P (e s) s)"
+
+syntax
+  "_match_syntax" :: "['a, cases_syn] \<Rightarrow> 'b"  ("(match _ of/ _)" 10)
+
+translations
+  "_match_syntax e P" => "CONST match_itree (e)\<^sub>e (\<lambda> _sexp_state. (_case_syntax _sexp_state P))"
+  "_match_syntax e P" <= "CONST match_itree (e)\<^sub>e (\<lambda> s. (_case_syntax s2 P))"
 
 end

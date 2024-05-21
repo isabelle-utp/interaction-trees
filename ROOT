@@ -1,5 +1,7 @@
 session "Interaction_Trees" = "Shallow-Expressions-Z" +
   options [timeout = 600, document = pdf, document_output = "output"]
+  sessions
+    Abstract_Prog_Syntax
   theories
     ITrees
   document_files
@@ -15,6 +17,7 @@ session "ITree_UTP" in "UTP" = "Interaction_Trees" +
   theories
     ITree_UTP
     ITree_Countable_Nondeterminism
+    ITree_Random
 
 session "ITree_VCG" in "UTP/VCG" = "ITree_UTP" +
   options [timeout = 600, document = false]

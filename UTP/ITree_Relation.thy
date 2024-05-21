@@ -33,10 +33,13 @@ lemma test_rel [itree_rel]: "itree_rel (test P) = {(s, s'). s' = s \<and> P s}"
   using nonterminates_iff apply force
   done
 
+lemma Skip_pred [itree_rel]: "itree_pred Skip = (\<lambda> (s, s'). s = s')"
+  by (auto simp add: itree_rel_defs retvals_def Skip_def)
+
 lemma Skip_rel [itree_rel]: "itree_rel Skip = Id"
   by (auto simp add: itree_rel_defs retvals_def Skip_def)
 
-lemma assigns_pred [itree_pred]: "\<lbrakk>\<langle>\<sigma>\<rangle>\<^sub>a\<rbrakk>\<^sub>p (s, s') = (s' = \<sigma> s)"
+lemma assigns_pred [itree_pred]: "\<lbrakk>\<langle>\<sigma>\<rangle>\<^sub>a\<rbrakk>\<^sub>p = (\<lambda> (s, s'). s' = \<sigma> s)"
   by (auto simp add: itree_rel_defs retvals_def assigns_def)
 
 lemma assigns_rel [itree_rel]: "itree_rel \<langle>\<sigma>\<rangle>\<^sub>a = {(s, s'). s' = \<sigma> s}"
@@ -57,14 +60,23 @@ lemma seq_pred [itree_pred]: "\<lbrakk>P ;; Q\<rbrakk>\<^sub>p (s, s') = (\<exis
 lemma seq_rel [itree_rel]: "itree_rel (P ;; Q) = itree_rel P O itree_rel Q"
   by (auto simp add: seq_itree_def kleisli_comp_def itree_rel_defs relcomp_unfold)
 
-lemma cond_pred [itree_pred]: 
-  "\<lbrakk>cond_itree C\<^sub>1 B C\<^sub>2\<rbrakk>\<^sub>p (s, s') = (if B s then \<lbrakk>C\<^sub>1\<rbrakk>\<^sub>p (s, s') else \<lbrakk>C\<^sub>2\<rbrakk>\<^sub>p (s, s'))"
+lemma cond_itree_pred [itree_pred]: 
+  "\<lbrakk>P \<lhd> b \<rhd> Q\<rbrakk>\<^sub>p = (\<lambda> (s, s'). if b s then \<lbrakk>P\<rbrakk>\<^sub>p (s, s') else \<lbrakk>Q\<rbrakk>\<^sub>p (s, s'))"
   by (auto simp add: cond_itree_def itree_rel_defs)
 
 lemma cond_rel [itree_rel]: 
   "itree_rel (if B then C\<^sub>1 else C\<^sub>2 fi) 
     = {(s\<^sub>1, s\<^sub>2). if (B s\<^sub>1) then (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>1 else (s\<^sub>1, s\<^sub>2) \<in> itree_rel C\<^sub>2}"
   by (auto simp add: cond_itree_def itree_rel_defs)
+
+lemma iterate_pred [itree_pred]: 
+  "\<lbrakk>iterate P C\<rbrakk>\<^sub>p = (\<lambda> (s, s'). (\<not> P s \<and> s = s') \<or> (\<exists> es. P s \<and> (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> P s'))"
+  by (simp add: itree_pred_def retvals_iterate)
+
+lemma itree_while_pred: 
+  "\<lbrakk>while P do C od\<rbrakk>\<^sub>p (s, s') = 
+   ((s = s' \<or> (\<exists>xs. xs \<noteq> [] \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> \<lbrakk>C\<rbrakk>\<^sub>p ((s # xs) ! i, xs ! i)) \<and> s' = last xs)) \<and> \<not> P s')"
+  by (simp add: iterate_pred itree_chain_iff_rtc_chain, simp add: itree_pred_def)
 
 lemma input_in_where_rel [itree_rel]: 
   "wb_prism c \<Longrightarrow> itree_rel (input_in_where c A P) = {(s, s'). \<exists> v \<in> A s. fst (P v) s \<and> (s, s') \<in> itree_rel (snd (P v))}" 
@@ -84,10 +96,15 @@ lemma input_rel [itree_rel]: "wb_prism c \<Longrightarrow> itree_rel (input c P)
 lemma input_in_lit_rel [itree_rel]: "wb_prism c \<Longrightarrow> itree_rel (input_in c (\<guillemotleft>A\<guillemotright>)\<^sub>e P) = (\<Union> v \<in> A. itree_rel (P v))"
   by (auto simp add: input_in_rel)
 
+lemma promote_rel [itree_pred]: 
+  "mwb_lens a \<Longrightarrow> \<lbrakk>P \<Up>\<Up> a\<rbrakk>\<^sub>p (s, s') = (s \<in> \<S>\<^bsub>a\<^esub> \<and> \<lbrakk>P\<rbrakk>\<^sub>p (get\<^bsub>a\<^esub> s, get\<^bsub>a\<^esub> s') \<and> s \<oplus>\<^sub>L s' on a = s')"
+  by (auto elim!: trace_to_bindE bind_RetE' simp add: itree_pred_def retvals_def promote_itree_def lens_override_def)
+     (metis bind_Ret trace_to_bind_left)
+
 ML_file \<open>Lens_Rel_Utils.ML\<close>
 
 method rename_rel_alpha_vars = tactic \<open> Lens_Rel_Utils.rename_rel_alpha_vars \<close>
 
-method itree_pred uses add = (expr_simp add: prog_defs itree_pred add; ((rule allI)+)?; rename_rel_alpha_vars)
-                
+method itree_pred uses add = (simp add: prog_defs itree_pred add; expr_simp add: prog_defs itree_pred add; ((rule allI)+)?; rename_rel_alpha_vars)
+
 end

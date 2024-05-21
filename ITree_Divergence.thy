@@ -181,6 +181,9 @@ lemma diverge_no_Ret_trans [dest]: "diverge \<midarrow>tr\<leadsto> Ret v \<Long
 lemma diverge_no_Vis_trans [dest]: "diverge \<midarrow>tr\<leadsto> Vis F \<Longrightarrow> False"
   by (metis diverge_not_Vis diverges_diverge snd_conv trace_of_divergent)
 
+lemma pure_diverge: "pure_itree diverge"
+  by (auto simp add: pure_itree_def) (meson diverges_diverge stabilises_traceI)
+
 text \<open> Any interaction either stabilises to a visible event, stabilises to termination, or diverges. \<close>
 
 lemma itree_disj_cases:
@@ -443,6 +446,12 @@ lemma un_Sils_n_Sils_stable: "\<lbrakk> n \<le> m; stable P \<rbrakk> \<Longrigh
   apply (simp_all add: stable_un_Sils_n)
   apply (metis Suc_le_D Suc_le_lessD less_Suc_eq_le un_Sils_n.simps(2))+
   done
+
+lemma un_Sils_n_code [code]:
+  "un_Sils_n n P = (if n = 0 then P
+                    else if is_Sil P then un_Sils_n (n - 1) (un_Sil P) 
+                    else P)"
+  by (induct n, auto simp add: stable_un_Sils_n, metis itree.collapse(2) un_Sils_n.simps(2))
 
 lemma stabilises_un_Sils_n: "stabilises P \<Longrightarrow> \<exists> n. un_Sils P = un_Sils_n n P"
   by (metis lessI less_Suc_eq_le stabilises_def stable_un_Sils un_Sils_n_Sils_stable)

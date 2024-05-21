@@ -7,9 +7,11 @@ theory ITree_UTP
     ITree_FDSem
     ITree_Circus
     ITree_Relation
+    ITree_Local_Var
     ITree_Procedure
-    ITree_Hoare
     ITree_WP
+    ITree_Hoare
+    ITree_THoare
     ITree_DFP
     ITree_Designs
 begin end

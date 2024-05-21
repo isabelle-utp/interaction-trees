@@ -1,53 +1,81 @@
 section \<open> Procedures \<close>
 
 theory ITree_Procedure
-  imports ITree_Circus ITree_Hoare
+  imports ITree_Circus ITree_Hoare ITree_THoare
   keywords "over"
 begin
 
-datatype (discs_sels) ('inp, 'outp) methop = Call_C 'inp | Return_C 'outp
+definition "rbind x = (\<lambda> (r, s). Ret (put\<^bsub>x\<^esub> s r))"
 
-definition [lens_defs]: "Call = ctor_prism Call_C is_Call_C un_Call_C"
-definition [lens_defs]: "Return = ctor_prism Return_C (Not \<circ> is_Call_C) un_Return_C"
+definition "rdrop = (\<lambda> (r, s). Ret s)"
 
-record ('val, 'st) valst =
-  vval :: 'val
-  vst  :: 'st
+definition proc_call :: 
+  "('r \<Longrightarrow> 's) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> ('e, 'r \<times> 's) itree) \<Rightarrow> ('a, 's) expr \<Rightarrow> ('e, 's) htree" where
+[code_unfold]: 
+  "proc_call x pr prm = (\<lambda> s. pr (prm s) s \<bind> rbind x)"
 
-type_synonym ('e, 'inp, 'outp, 'st) "procedure" = "('e, ('inp, 'st) valst, ('outp, 'st) valst) ktree"
+definition proc_call_nret :: 
+  "('a \<Rightarrow> 's \<Rightarrow> ('e, 'r \<times> 's) itree) \<Rightarrow> ('a, 's) expr \<Rightarrow> ('e, 's) htree" where
+  [code_unfold]: 
+  "proc_call_nret pr prm = (\<lambda> s. pr (prm s) s \<bind> rdrop)"
 
-translations
-  (type) "('e, 'inp, 'outp, 'st) procedure" <= (type) "('inp, 'st) valst \<Rightarrow> ('e, ('outp, 'st') valst) itree" 
+definition proc_ret :: "('s \<Rightarrow> 'a) \<Rightarrow> 's \<Rightarrow> ('e, 'a \<times> 's) itree" where 
+  "proc_ret e = (\<lambda> s. Ret (e s, s))"
 
-definition procproc :: "(_, 'inp, 'outp, 'st::default) procedure \<Rightarrow> ('inp, 'outp) methop process" where
-"procproc P = process [\<leadsto>] (\<lambda> s. inp Call \<bind> (\<lambda> inp. P \<lparr> vval = inp, vst = s \<rparr> \<bind> (\<lambda> vst. outp Return (vval vst) \<bind> Ret)))"
+abbreviation proc_ret_empty :: "'s \<Rightarrow> ('e, unit \<times> 's) itree" where
+"proc_ret_empty \<equiv> proc_ret (())\<^sub>e"
 
-definition promote_proc :: "('e, 'inp, 'outp, 'ls) procedure \<Rightarrow> ('i \<Rightarrow> ('ls \<Longrightarrow> 's)) \<Rightarrow> ('e, 'i \<times> 'inp, 'outp, 's) procedure" where
-"promote_proc P a = (\<lambda> v. P \<lparr> vval = snd (vval v), vst = get\<^bsub>a (fst (vval v))\<^esub> (vst v) \<rparr> \<bind> (\<lambda> v'. Ret \<lparr> vval = vval v', vst = put\<^bsub>a (fst (vval v))\<^esub> (vst v) (vst v')\<rparr>))"
+lemma ret_rbind [simp]: "proc_ret e ;; rbind x = x := e"
+  by (simp add: proc_ret_def rbind_def seq_itree_def kleisli_comp_def assigns_def expr_defs)
 
-lemma Call_wb_prism [simp, code_unfold]: "wb_prism Call" by (unfold_locales, auto simp add: lens_defs)
-lemma Return_wb_prism [simp, code_unfold]: "wb_prism Return" by (unfold_locales, auto simp add: lens_defs)
+lemma ret_rbind' [simp]: "(P ;; proc_ret e) ;; rbind x = P ;; x := e"
+  by (simp add: kcomp_assoc)
 
-definition "proc_ret e = (\<lambda> s. Ret \<lparr> vval = e s, vst = s \<rparr>)"
+lemma ret_drop [simp]: "proc_ret e ;; rdrop = Skip"
+  by (simp add: proc_ret_def rdrop_def Skip_def seq_itree_def kleisli_comp_def)
 
-definition "procedure" :: "('inp \<Rightarrow> 'st \<Rightarrow> ('e, ('outp, 'st) valst) itree) \<Rightarrow> ('e, 'inp, 'outp, 'st) procedure" where
-"procedure P = (\<lambda> vs. P (vval vs) (vst vs))"
-
-definition proc_call :: "('o \<Longrightarrow> 's) \<Rightarrow> ('e, 'i, 'o, 'ls::default) procedure \<Rightarrow> ('i, 's) expr \<Rightarrow> ('e, 's) htree" 
-  where "proc_call x P e = (\<lambda> s. P \<lparr> vval = e s, vst = default \<rparr> \<bind> (\<lambda> vs. Ret (put\<^bsub>x\<^esub> s (vval vs))))"
-
-definition exec_proc :: "(unit, 'inp, 'out, 'st::default) procedure \<Rightarrow> 'inp \<Rightarrow> (unit, 'out) itree" where
-"exec_proc P i = P \<lparr> vval = i, vst = default \<rparr> \<bind> (\<lambda> x. Ret (vval x))"
+lemma ret_drop' [simp]: "(P ;; proc_ret e) ;; rdrop = P"
+  by (simp add: kcomp_assoc)
 
 syntax 
-  "_procedure" :: "pttrn \<Rightarrow> logic \<Rightarrow> logic" ("proc _./ _" [0, 20] 20)
-  "_call" :: "svid \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ := call _ _" [61, 0, 61] 61)
-  "_return" :: "logic \<Rightarrow> logic" ("return")
+  "_call"      :: "svid \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic" ("_ := <_ _>" [61, 0, 61] 61)
+  "_call_nret" :: "id \<Rightarrow> logic \<Rightarrow> logic" ("call _ _" [0, 61] 61) 
+  "_return"    :: "logic \<Rightarrow> logic" ("return")
 
 translations 
-  "_procedure x P" == "CONST procedure (\<lambda> x. P)"
   "_return e" == "CONST proc_ret (e)\<^sub>e"
   "_call x P e" == "CONST proc_call x P (e)\<^sub>e"
+  "_call_nret P e" == "CONST proc_call_nret P (e)\<^sub>e"
+
+lemma hl_proc_call [hoare_safe]: 
+  assumes "\<And> v. H{P \<and> \<guillemotleft>v\<guillemotright> = e} C(v) ;; rbind x {Q}"
+  shows "H{P} x := <C(e)> {Q}"
+  using assms
+  by (auto simp add: hoare_alt_def proc_call_def seq_itree_def kleisli_comp_def)
+
+lemma thl_proc_call [hoare_safe]: 
+  assumes "\<And> v. H[P \<and> \<guillemotleft>v\<guillemotright> = e] C(v) ;; rbind x [Q]"
+  shows "H[P] x := <C(e)> [Q]"
+  using assms
+  apply (auto simp add: thoare_triple_def hl_proc_call wp)
+  apply (auto simp add: proc_call_def taut_def seq_itree_def kleisli_comp_def)
+  apply (metis (mono_tags, lifting) SEXP_def kleisli_comp_def pre_terminates seq_itree_def wp_seq)
+  done
+
+lemma hl_proc_call_nret [hoare_safe]: 
+  assumes "\<And> v. H{P \<and> \<guillemotleft>v\<guillemotright> = e} C(v) ;; rdrop {Q}"
+  shows "H{P} call C(e) {Q}"
+  using assms
+  by (auto simp add: hoare_alt_def proc_call_nret_def seq_itree_def kleisli_comp_def)
+
+lemma thl_proc_call_nret [hoare_safe]: 
+  assumes "\<And> v. H[P \<and> \<guillemotleft>v\<guillemotright> = e] C(v) ;; rdrop [Q]"
+  shows "H[P] call C(e) [Q]"
+  using assms
+  apply (auto simp add: thoare_triple_def hl_proc_call_nret wp)
+  apply (auto simp add: proc_call_nret_def taut_def seq_itree_def kleisli_comp_def)
+  apply (metis (mono_tags, lifting) SEXP_def kleisli_comp_def pre_terminates seq_itree_def wp_seq)
+  done
 
 ML_file \<open>ITree_Procedure.ML\<close>
 

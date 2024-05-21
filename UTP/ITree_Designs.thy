@@ -28,6 +28,9 @@ lemma assert_pre [dpre]: "itree_pre (assert b) = (True)\<^sub>e"
   by (auto simp add: itree_pre_def test_def fun_eq_iff)
      (metis deadlock_def deadlock_trace_to diverge_not_Vis)
 
+lemma Skip_pre [dpre]: "itree_pre Skip = (True)\<^sub>e"
+  by (auto simp add: itree_pre_def Skip_def)
+
 lemma assigns_pre [dpre]: "itree_pre \<langle>\<sigma>\<rangle>\<^sub>a = (True)\<^sub>e"
   by (auto simp add: itree_pre_def assigns_def)
 
@@ -46,6 +49,9 @@ lemma seq_pre [dpre]: "itree_pre (P ;; Q) = (itree_pre P \<and> wlp P (itree_pre
   apply (meson trace_to_bind)
   apply (metis trace_of_Sils trace_to_Nil trace_to_trans)
   done
+
+lemma cond_itree_pre [dpre]: "itree_pre (P \<lhd> b \<rhd> Q) = itree_pre P \<triangleleft> b \<triangleright> itree_pre Q"
+  by (auto simp add: cond_itree_def itree_pre_def fun_eq_iff expr_if_def)
 
 lemma input_in_pre [dpre]:
   "wb_prism c \<Longrightarrow> itree_pre (input_in c A P) = (\<forall> v \<in> A. itree_pre (P v))\<^sub>e"

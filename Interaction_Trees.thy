@@ -2,7 +2,7 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Relation_Toolkit"
+  "Z_Toolkit.Relation_Toolkit" "Abstract_Prog_Syntax.Abstract_Prog_Syntax"
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -36,8 +36,11 @@ translations
 
 text \<open> A stable process has no possible internal activity \<close>
 
-abbreviation "unstable P \<equiv> is_Sil P"
-abbreviation "stable P \<equiv> \<not> unstable P"
+abbreviation unstable :: "('e, 's) itree \<Rightarrow> bool" where
+"unstable P \<equiv> is_Sil P"
+
+abbreviation stable :: "('e, 's) itree \<Rightarrow> bool" where
+"stable P \<equiv> \<not> unstable P"
 
 translations "CONST stable P" <= "\<not> CONST unstable P"
 
@@ -139,8 +142,10 @@ lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind
 
 definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 
-definition seq_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" (infixr ";;" 54) where 
+definition seq_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" where 
 "seq_itree P Q = kleisli_comp bind_itree P Q"
+
+adhoc_overloading useq seq_itree
 
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
@@ -630,7 +635,7 @@ lemma trace_to_post_Sil_iff:
 
 text \<open> Termination is deterministic. \<close>
 
-lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> Ret x; P \<midarrow>tr\<leadsto> Ret y \<rbrakk> \<Longrightarrow> x = y"
+lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> \<checkmark> x; P \<midarrow>tr\<leadsto> \<checkmark> y \<rbrakk> \<Longrightarrow> x = y"
   by (induct tr arbitrary: P, auto)
      (metis Sils_to_Ret Vis_Cons_trns trace_to_ConsE trace_to_singleE)
 
@@ -687,6 +692,39 @@ lemma retvals_bind [simp]: "\<^bold>R(P \<bind> Q) = \<Union> {\<^bold>R (Q x)| 
   apply (metis mem_Collect_eq trace_to_Nil)
   apply (meson trace_to_bind)
   done
+
+subsection \<open> Pure ITrees \<close>
+
+text \<open> A pure ITree does not exhibit any visible choices, and therefore cannot be influenced by
+  the environment. \<close>
+
+definition pure_itree :: "('e, 's) itree \<Rightarrow> bool" where
+"pure_itree P = (\<forall> tr\<^sub>0 P'. P \<midarrow>tr\<^sub>0\<leadsto> P' \<longrightarrow> tr\<^sub>0 = [])"
+
+lemma pure_itree_Sil: "pure_itree (Sil P) = pure_itree P"
+  by (auto simp add: pure_itree_def)
+
+lemma pure_itree_Ret: "pure_itree (Ret x)"
+  by (auto simp add: pure_itree_def)
+
+lemma pure_itree_trace_to:
+  assumes "pure_itree P" "P \<midarrow>tr\<leadsto> P'"
+  shows "pure_itree P'"
+  using assms by (auto simp add: pure_itree_def, blast)
+
+lemma pure_itree_Vis: "pure_itree (Vis F) = (F = {\<mapsto>})"
+  by (auto simp add: pure_itree_def)
+     (metis Vis_Cons_trns ex_in_conv pdom_empty_iff_dom_empty trace_to_Nil)
+
+lemma pure_itree_bind: "pure_itree (P \<bind> Q) = (pure_itree(P) \<and> (\<forall> x\<in>\<^bold>R(P). pure_itree (Q x)))" (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (auto simp add: pure_itree_def retvals_def)
+       (meson trace_to_bind_left, meson append_is_Nil_conv trace_to_bind)
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (auto simp add: pure_itree_def retvals_def)
+       (metis append_self_conv2 trace_to_bindE)
+qed
 
 subsection \<open> Termination \<close>
 

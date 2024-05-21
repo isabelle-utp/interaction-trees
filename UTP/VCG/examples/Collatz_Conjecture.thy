@@ -1,3 +1,5 @@
+section \<open> Collatz Conjecture \<close>
+
 theory Collatz_Conjecture
   imports "ITree_VCG.ITree_VCG"
 begin
@@ -6,7 +8,7 @@ zstore state =
   n :: nat
   hist :: "nat list"
 
-procedure collatz "N :: nat" over state = 
+program collatz "N :: nat" over state = 
   "n := N ;
    hist := [n] ;
    while n \<noteq> 1 inv True do
@@ -23,7 +25,6 @@ execute "collatz 7"
 execute "collatz 27"
 
 lemma "\<^bold>{True\<^bold>} collatz N \<^bold>{n = 1\<^bold>}"
-  unfolding collatz_def
-  by hoare
+  by vcg
 
 end

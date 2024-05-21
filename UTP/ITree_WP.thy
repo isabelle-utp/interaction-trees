@@ -1,7 +1,7 @@
 section \<open> Weakest Preconditions \<close>
 
 theory ITree_WP
-  imports ITree_Hoare
+  imports ITree_Relation
 begin
 
 named_theorems wp
@@ -24,7 +24,18 @@ translations
   "_wlp S P" == "CONST wlp_itree S (P)\<^sub>e"
   "_wlp S" == "CONST wlp_itree S"
 
+lemma wlp_alt_def: "wlp S P = (\<lambda> s. \<forall> tr s'. S(s) \<midarrow>tr\<leadsto> \<checkmark> s' \<longrightarrow> P s')"
+  by (auto simp add: wlp_itree_def itree_rel_def itree_pred_def retvals_def fun_eq_iff)
+
+lemma wp_alt_def: "wp S P = (\<lambda> s. \<exists> tr s'. S(s) \<midarrow>tr\<leadsto> \<checkmark> s' \<and> P s')"
+  by (auto simp add: wp_itree_def itree_rel_def itree_pred_def retvals_def fun_eq_iff)
+
 abbreviation "pre P \<equiv> wp P True"
+
+text \<open> The precondition corresponds to termination \<close>
+
+lemma pre_terminates: "pre P = (terminates P)\<^sub>e"
+  unfolding wp_alt_def by (auto simp add: SEXP_def terminates_def)
 
 expr_constructor pre
 
@@ -75,6 +86,9 @@ lemma wp_foldr_seq_term:
 lemma wlp_seq [wp]: "wlp (S ;; R) P = wlp S (wlp R P)"
   by (auto simp add: wlp_itree_def seq_rel)
 
+lemma wp_cond [wp]: "wp (if B then C\<^sub>1 else C\<^sub>2 fi) P = ((B \<longrightarrow> wp C\<^sub>1 P) \<and> (\<not> B \<longrightarrow> wp C\<^sub>2 P))\<^sub>e"
+  by (auto simp add: wp_itree_def cond_rel fun_eq_iff)
+
 lemma wlp_cond [wp]: "wlp (if B then C\<^sub>1 else C\<^sub>2 fi) P = ((B \<longrightarrow> wlp C\<^sub>1 P) \<and> (\<not> B \<longrightarrow> wlp C\<^sub>2 P))\<^sub>e"
   by (auto simp add: wlp_itree_def cond_rel fun_eq_iff)
 
@@ -104,14 +118,10 @@ lemma wlp_input_in_where [wp]:
   "wb_prism c \<Longrightarrow> wlp_itree (input_in_where c A S) P = [\<lambda> s. \<forall> v\<in>A s. fst (S v) s \<longrightarrow> wlp_itree (snd (S v)) P s]\<^sub>e"
   by (auto simp add: wlp_itree_def itree_rel fun_eq_iff)
 
-theorem hl_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
-  by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
-
-lemma hl_wlp: "`P \<longrightarrow> wlp S Q` \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
-  by (simp add: hl_via_wlp)
-
-method hoare_wlp uses add = (simp add: prog_defs hl_via_wlp wp usubst_eval add)
-method hoare_wlp_auto uses add = (hoare_wlp add: add; expr_auto)
+lemma pre_itree_promote [wp, code_unfold]: 
+  "mwb_lens a \<Longrightarrow> pre (C \<Up>\<Up> a) = ((pre C) \<up> a \<and> \<^bold>D(a))\<^sub>e"
+  by (expr_auto add: wp_itree_def itree_rel_def itree_pred)
+     (metis mwb_lens_weak weak_lens_def)
 
 method wp uses add = (simp add: prog_defs wp usubst_eval add)
 

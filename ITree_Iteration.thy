@@ -184,6 +184,22 @@ fun itree_term_chain ::
 
 declare itree_term_chain.simps [simp del]
 
+lemma term_chain_step:
+  assumes "b s" "P(s) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>0" "(b, s\<^sub>0) \<turnstile> P \<midarrow>tr\<^sub>1\<leadsto>\<^sub>\<checkmark> s'"
+  shows "(b, s) \<turnstile> P \<midarrow>tr\<^sub>0 @ tr\<^sub>1\<leadsto>\<^sub>\<checkmark> s'"
+proof -
+  obtain chn s\<^sub>1 tr\<^sub>2 where chn: "b s\<^sub>0" "s\<^sub>0 \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s\<^sub>1" "\<forall>s\<in>chain_states chn. b s" "P s\<^sub>1 \<midarrow>tr\<^sub>2\<leadsto> \<checkmark> s'" "tr\<^sub>1 = chain_trace chn @ tr\<^sub>2"
+    by (metis assms(3) itree_term_chain.simps)
+  have chn': "s \<turnstile> P \<midarrow>(tr\<^sub>0, s\<^sub>0) # chn\<leadsto>\<^sup>* s\<^sub>1"
+    by (simp add: assms(2) chain_step chn(2))
+  show ?thesis
+    apply (simp add: itree_term_chain.simps assms)
+    apply (rule_tac x="(tr\<^sub>0, s\<^sub>0) # chn" in exI)
+    apply (rule_tac x="s\<^sub>1" in exI)
+    apply (simp_all add: chn chn')
+    done
+qed
+
 lemma iterate_transition_chain:
   assumes "s \<turnstile> P \<midarrow>chn\<leadsto>\<^sup>* s'" "b s" "\<forall> s\<^sub>0\<in>chain_states chn. b s\<^sub>0"
   shows "iterate b P s \<midarrow>chain_trace chn\<leadsto> iterate b P s'"
@@ -503,26 +519,114 @@ next
     by force 
 qed
 
-definition terminates :: "('e, 's) itree \<Rightarrow> bool" where
-"terminates P = (\<forall> tr P'. P \<midarrow>tr\<leadsto> P' \<longrightarrow> \<not> nonterminating P')"
+text \<open> These results also allow us to calculate the return values of @{const iterate}. \<close>
 
-term "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+lemma retvals_iterate: "\<^bold>R(iterate P C s) = {s'. (\<not> P s \<and> s = s') \<or> (\<exists> es. P s \<and> (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> P s')}"
+  by (auto simp add: retvals_def iterate_term_chain_iff)
 
-lemma
-  fixes V :: "'s \<Rightarrow> nat"
-  assumes 
-    "\<forall> s\<^sub>0. terminates (P s\<^sub>0)"
-    "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
-  shows "\<exists> chn s'. itree_chain P s s' chn"
-  oops
+text \<open> A result linking relational while loops and ITree iteration: \<close>
 
-lemma
-  fixes V :: "'s \<Rightarrow> nat"
-  assumes 
-    "\<forall> s\<^sub>0. terminates (P s\<^sub>0)"
-    "\<forall> s\<^sub>0 s\<^sub>1 tr. P(s\<^sub>0) \<midarrow>tr\<leadsto> Ret s\<^sub>1 \<longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
-  shows "terminates (iterate b P s)"
-  oops
+lemma rel_while_implies_chain:
+  assumes "\<exists>xs. \<not> xs = [] \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> (\<exists>es. C ((s # xs) ! i) \<midarrow>es\<leadsto> \<checkmark> (xs ! i))) \<and> s' = List.last xs" 
+          "\<not> P s'"
+  shows "P s" "\<exists>es. (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s'"
+proof -
+  obtain xs where xs: "xs \<noteq> []" "\<forall>i < length xs. P ((s # xs) ! i) \<and> (\<exists>es. C ((s # xs) ! i) \<midarrow>es\<leadsto> \<checkmark> (xs ! i))" "s' = List.last xs"
+    using assms(1) by blast
+  hence "\<forall>i < length xs. \<exists>es. C ((s # xs) ! i) \<midarrow>es\<leadsto> \<checkmark> (xs ! i)"
+    by presburger
+  then obtain ess where ess: "length ess = length xs" "\<And> i. i < length xs \<Longrightarrow> C ((s # xs) ! i) \<midarrow>ess ! i\<leadsto> \<checkmark> (xs ! i)"
+    by (auto simp add: Skolem_list_nth)
+  obtain chn where chn_def: "chn = butlast (zip ess xs)" by blast
+  have chn: "\<And> i. i < length chn \<Longrightarrow> C ((s # map snd chn) ! i) \<midarrow>fst (chn ! i)\<leadsto> \<checkmark> (snd (chn ! i))"
+            "\<And> i. i < Suc (length chn) \<Longrightarrow> P ((s # map snd chn) ! i)"
+    using chn_def ess xs 
+    by auto
+       (smt (verit) One_nat_def Suc_less_eq diff_less_Suc length_butlast length_map less_trans_Suc map_fst_zip map_snd_zip nth_Cons' nth_butlast nth_map
+       ,metis append_butlast_last_id butlast.simps(2) length_Cons length_append_singleton map_butlast map_snd_zip nth_butlast)
+  show P: "P s"
+    by (metis length_greater_0_conv nth_Cons_0 xs(1) xs(2))
+
+  have chn_st: "(\<forall>x\<in>chain_states chn. P x)"
+    by (simp add: chain_states_def all_set_conv_all_nth)
+       (metis chn(2) not_less_eq nth_Cons_Suc nth_map)
+
+  let ?s\<^sub>0 = "List.last (s # map snd chn)"
+
+  from chn have C_steps: "s \<turnstile> C \<midarrow>chn\<leadsto>\<^sup>* ?s\<^sub>0"
+  proof (induct chn arbitrary: s)
+    case Nil
+    then show ?case
+      by force
+  next
+    case (Cons a chn)
+    have C:"C s \<midarrow>fst a\<leadsto> \<checkmark> (snd a)"
+      using Cons.prems(1) by force
+    have 1:"\<And>i. i < length chn \<Longrightarrow> C ((snd a # map snd chn) ! i) \<midarrow>fst (chn ! i)\<leadsto> \<checkmark> (snd (chn ! i))"
+      by (metis (no_types, opaque_lifting) Cons.prems(1) Suc_less_eq2 length_Cons list.simps(9) nth_Cons_Suc)
+    have 2:"\<And>i. i < Suc (length chn) \<Longrightarrow> P ((snd a # map snd chn) ! i)"
+      by (metis Cons.prems(2) Suc_less_eq length_Cons list.simps(9) nth_Cons_Suc)
+    have R:"snd a \<turnstile> C \<midarrow>chn\<leadsto>\<^sup>* (List.last (snd a # map snd chn))"
+      using "1" "2" Cons.hyps by presburger
+    show ?case
+      using C R chain_step by fastforce
+  qed
+
+  let ?tr\<^sub>0 = "List.last ess"
+
+  have Cs': "C ?s\<^sub>0 \<midarrow>?tr\<^sub>0\<leadsto> \<checkmark> s'" 
+    apply (auto simp add: chn_def map_butlast map_fst_zip_take ess(1))
+    apply (metis ess(1) ess(2) last_conv_nth length_butlast length_greater_0_conv list.size(3) nth_Cons_0 xs(1) xs(3))
+    apply (metis (no_types, lifting) One_nat_def Suc_pred ess(1) ess(2) last_conv_nth length_butlast length_greater_0_conv lessI nth_Cons_Suc nth_butlast xs(1) xs(3))
+    done
+
+  have concat_ess: "concat ess = chain_trace chn @ ?tr\<^sub>0"
+    by (simp add: chn_def chain_trace_def map_butlast map_fst_zip_take ess(1))
+       (metis append.right_neutral append_butlast_last_id concat.simps(1) concat.simps(2) concat_append ess(1) length_0_conv xs(1))
+
+  have "(P, s) \<turnstile> C \<midarrow>concat ess\<leadsto>\<^sub>\<checkmark> s'"
+    by (metis Cs' P C_steps chn_st concat_ess itree_term_chain.simps)
+
+  thus "\<exists>es. (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s'" by blast
+qed
+
+text \<open> There is an ITree chain if-and-only-if there is a reflexive transitive closure (relational) chain \<close>
+
+lemma itree_chain_iff_rtc_chain:
+    "(\<not> P s \<and> s = s' \<or> P s \<and> (\<exists>es. ((P)\<^sub>e, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s') \<and> \<not> P s') =
+       ((s = s' \<or> (\<exists>xs. \<not> xs = [] 
+                      \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> (xs ! i) \<in> \<^bold>R(C ((s # xs) ! i))) 
+                      \<and> s' = last xs)) 
+                      \<and> \<not> P s')"
+  apply (rule iffI)
+  apply (erule disjE)
+    apply simp
+  apply force
+   apply (simp_all add: itree_term_chain.simps retvals_def)
+   apply (rule disjI2)
+  apply clarify
+   apply (rule_tac x="map snd chn @ [s']" in exI)
+  apply (auto)[1]
+  apply (metis cancel_ab_semigroup_add_class.add_diff_cancel_left' chain_states_def length_map less_Suc_eq_0_disj nth_Cons' nth_append nth_mem plus_1_eq_Suc)
+   apply (case_tac "chn = []")
+  apply simp
+    apply (metis itree_chain.cases list.discI)
+   apply (case_tac "i = 0")
+  apply simp
+  apply (metis (no_types, opaque_lifting) append.simps(2) chain_first_step list.map(2) list.sel(1) neq_Nil_conv nth_Cons_0)
+  apply simp
+   apply (case_tac "i = length chn")
+  apply (simp add: nth_append)
+    apply (metis One_nat_def chain_last last_conv_nth)
+  apply (auto simp add: nth_append)[1]
+    apply (rule_tac x="fst (chn ! i)" in exI)
+  apply (smt (verit, best) One_nat_def Suc_less_eq Suc_pred chain_steps less_Suc_eq less_trans_Suc) 
+  apply (erule conjE)
+  apply (erule disjE)
+   apply simp
+  apply (rule disjI2)
+  apply (metis itree_term_chain.simps rel_while_implies_chain(2))
+  done
 
 
 text \<open> If @{term P} is an invariant of a chain for process @{term C}, then the invariant holds
@@ -572,25 +676,108 @@ lemma chain_invariant_simple:
   using assms
   by (rule_tac chain_invariant[of "\<lambda> s. True" s P C chn s'], auto)
 
-text \<open> Generalised deadlock freedom check for loops. If @{term P} is sufficient establish deadlock
-  freedom of @{term C}, and @{term P} is an invariant of @{term C}, which holds also in the initial
-  state @{term s}, then @{term "loop C s"} is also deadlock free. \<close>
+text \<open> We can establish termination, as usual, with an variant function. Here, ``terminates'' means 
+  that an ITree may terminate. \<close>
 
-lemma deadlock_free_loop:
-  assumes cond_dlockf: "\<And> s. P s \<Longrightarrow> deadlock_free (C s)" 
+definition terminates :: "('e, 's) itree \<Rightarrow> bool" where
+"terminates P = (\<exists> tr s'. P \<midarrow>tr\<leadsto> \<checkmark> s')"
+
+lemma terminates_Ret: "terminates (\<checkmark> s')"
+  by (simp add: terminates_def)
+
+lemma terminates_Sil: "terminates (Sil P) = terminates P"
+  by (simp add: terminates_def)
+
+lemma terminates_Sils: "terminates (Sils n P) = terminates P"
+  by (simp add: terminates_def)
+
+lemma terminates_bind:
+  assumes "terminates P" "\<And> v. v \<in> \<^bold>R(P) \<Longrightarrow> terminates(Q v)"
+  shows "terminates (P \<bind> Q)"
+  by (meson assms(1) assms(2) retvals_traceI terminates_def trace_to_bind)
+
+lemma not_terminates_diverge:
+  "terminates diverge = False"
+  by (meson diverge_no_Ret_trans terminates_def)
+
+text \<open> A terminating pure ITree is divergence free \<close>
+
+lemma terminates_pure_implies_div_free:
+  assumes "pure_itree P" "terminates P"
+  shows "div_free P"
+  by (metis Sils_diverge assms div_free_is_no_divergence no_divergence_def not_terminates_diverge pure_itree_def trace_to_Nil_Sils)
+
+text \<open> The following theorem using both a variant @{term V} and invariant @{term I} to establish
+  termination. \<close>
+
+lemma wellorder_variant_term_chain:
+  fixes V :: "'s \<Rightarrow> 'a::wellorder" and I :: "'s \<Rightarrow> bool"
+  assumes 
+    "\<And> s\<^sub>0. \<lbrakk> b s\<^sub>0; I s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (B s\<^sub>0)"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+  shows "\<lbrakk> I s; b s \<rbrakk> \<Longrightarrow> \<exists> tr s'. (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
+proof (induct "V(s)" arbitrary: s rule: less_induct)
+  case (less s\<^sub>0)
+  obtain s\<^sub>1 tr\<^sub>0 where B_next: "B(s\<^sub>0) \<midarrow>tr\<^sub>0\<leadsto> \<checkmark> s\<^sub>1"
+    by (meson assms(1) less.prems(1) less.prems(2) terminates_def)
+  have inv: "I s\<^sub>1"
+    using B_next assms(2) less.prems(1) less.prems(2) by presburger
+  have dec: "V(s\<^sub>1) < V(s\<^sub>0)"
+    using B_next assms(3) less.prems(1) less.prems(2) by force
+  show ?case
+  proof (cases "b s\<^sub>1")
+    case True
+    obtain tr\<^sub>1 s' where chain: "(b, s\<^sub>1) \<turnstile> B \<midarrow>tr\<^sub>1\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
+      using True dec inv less.hyps by presburger
+    then show ?thesis
+      by (meson B_next less.prems term_chain_step) 
+  next
+    case False
+    then show ?thesis
+      by (metis B_next iterate_term_chain_iff iterate_term_once less.prems(2)) 
+  qed  
+qed
+
+lemma terminates_iterate_wellorder_variant:
+  fixes V :: "'s \<Rightarrow> 'a::wellorder" and I :: "'s \<Rightarrow> bool"
+  assumes 
+    "\<And> s\<^sub>0. \<lbrakk> b s\<^sub>0; I s\<^sub>0 \<rbrakk> \<Longrightarrow> terminates (B s\<^sub>0)"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> I s\<^sub>1"
+    "\<And> s\<^sub>0 s\<^sub>1 tr. \<lbrakk> b s\<^sub>0; I s\<^sub>0; B(s\<^sub>0) \<midarrow>tr\<leadsto> \<checkmark> s\<^sub>1 \<rbrakk> \<Longrightarrow> V(s\<^sub>1) < V(s\<^sub>0)"
+    "I s"
+  shows "terminates (iterate b B s)"
+proof (cases "b s")
+  case True
+  have "\<exists> tr s'. (b, s) \<turnstile> B \<midarrow>tr\<leadsto>\<^sub>\<checkmark> s' \<and> \<not> b s'"
+    by (rule wellorder_variant_term_chain[of b I B V], simp_all add: assms True)
+  then show ?thesis
+    by (metis iterate_term_chain_iff terminates_def)
+  next
+  case False
+  then show ?thesis
+    by (simp add: terminates_def)
+qed
+
+text \<open> Generalised deadlock freedom check for loops. If @{term B} (the condition) @{term P} are 
+  sufficient to establish deadlock freedom of @{term C}, and @{term P} is an invariant of @{term C}, 
+  which holds also in the initial state @{term s}, then @{term "loop C s"} is also deadlock free. \<close>
+
+lemma deadlock_free_iterate:
+  assumes cond_dlockf: "\<And> s. \<lbrakk> B s; P s \<rbrakk> \<Longrightarrow> deadlock_free (C s)" 
   and invariant: "\<And> s s'. \<lbrakk> P s; s' \<in> \<^bold>R(C s) \<rbrakk> \<Longrightarrow> P s'"
   and initial: "P s"
-  shows "deadlock_free (loop C s)"
+  shows "deadlock_free (iterate B C s)"
 proof (simp add: deadlock_free_def deadlock_def, clarify)
   fix tr 
-  assume "loop C s \<midarrow>tr\<leadsto> Vis {\<mapsto>}"
+  assume "iterate B C s \<midarrow>tr\<leadsto> Vis {\<mapsto>}"
   thus False
   proof (cases rule: iterate_chain)
     case (iterates chn s\<^sub>0 tr\<^sub>0 P' n)
     with initial invariant have "\<forall> s\<in>chain_states chn. P s"
       by (rule_tac chain_invariant_simple[where s="s" and C="C" and s'="s\<^sub>0"], auto)
     hence dlckf_C_s\<^sub>0: "deadlock_free (C s\<^sub>0)"
-      by (metis cond_dlockf final_state_in_chain initial iterates(2) itree_chain.cases list.distinct(1))
+      by (metis cond_dlockf final_state_in_chain initial iterates(1) iterates(2) iterates(3) itree_chain.cases list.discI)
     with iterates(6) show False
     proof (cases rule: bind_VisE')
       case (initial F')
@@ -598,7 +785,7 @@ proof (simp add: deadlock_free_def deadlock_def, clarify)
         by (metis deadlock_def deadlock_free_def dlckf_C_s\<^sub>0 iterates(4) pdom_empty_iff_dom_empty pdom_map_pfun)
     next
       case (continue s')
-      have "loop C s' = Vis {\<mapsto>}"
+      have "iterate B C s' = Vis {\<mapsto>}"
         by (metis comp_apply continue(2) deadlock_def deadlock_trace_to trace_of_Sils)
       then show ?thesis
         by (metis (no_types, lifting) \<open>\<forall>s\<in>chain_states chn. P s\<close> cond_dlockf continue(1) deadlock_def deadlock_free_def deadlock_trace_to final_state_in_chain initial invariant iterate_VisE iterates(2) iterates(4) itree_chain.simps list.distinct(1) pdom_empty_iff_dom_empty pdom_map_pfun pdom_zero retvals_traceI)
@@ -609,6 +796,12 @@ proof (simp add: deadlock_free_def deadlock_def, clarify)
       by blast
   qed
 qed
-    
 
+lemma deadlock_free_loop:
+  assumes cond_dlockf: "\<And> s. P s \<Longrightarrow> deadlock_free (C s)" 
+  and invariant: "\<And> s s'. \<lbrakk> P s; s' \<in> \<^bold>R(C s) \<rbrakk> \<Longrightarrow> P s'"
+  and initial: "P s"
+  shows "deadlock_free (loop C s)"
+  using assms by (auto intro: deadlock_free_iterate)
+    
 end
