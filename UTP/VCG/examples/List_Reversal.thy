@@ -4,7 +4,7 @@ theory List_Reversal
   imports "ITree_VCG.ITree_VCG"
 begin 
 
-zstore state = lvar +
+zstore state = lvstore +
   xs :: "int list"
   ys :: "int list"
 

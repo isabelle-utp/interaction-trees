@@ -73,7 +73,7 @@ adhoc_overloading ucond cond_itree
 
 text \<open> Similar to @{const Let} in HOL, but it evaluates the assigned expression on the initial state. \<close>
 
-definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
+definition let_itree :: "('i, 's) expr \<Rightarrow> ('i \<Rightarrow> 's \<Rightarrow> ('e, 't) itree) \<Rightarrow> 's \<Rightarrow> ('e, 't) itree" where
 "let_itree e S = (\<lambda> s. S (e s) s)"
 
 definition for_itree :: "('s \<Rightarrow> 'i list) \<Rightarrow> ('i \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where

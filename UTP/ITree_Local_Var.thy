@@ -230,8 +230,41 @@ type_synonym uname = "String.literal"
 text \<open> We model the store as a partial function from names (strings) to values in the 
   universe defined above. \<close>
 
-zstore lvar =
-  lstore :: "uname \<Zpfun> uval"
+class lvar =
+  fixes lstore :: "(uname \<Zpfun> uval) \<Longrightarrow> 'a"
+  assumes lstore_vwb [simp]: "vwb_lens lstore"
+
+zstore lvstore =
+  local_store :: "uname \<Zpfun> uval"
+
+instantiation lvstore_ext :: (type) lvar
+begin
+
+definition lstore_lvstore_ext :: "uname \<Zpfun> uval \<Longrightarrow> 'a lvstore_scheme"
+  where "lstore_lvstore_ext = local_store"
+
+instance by (intro_classes, simp add: lstore_lvstore_ext_def)
+
+end
+
+lemma local_store_indeps [simp]: 
+  "x \<bowtie> local_store \<Longrightarrow> x \<bowtie> lstore"
+  "local_store \<bowtie> x \<Longrightarrow> lstore \<bowtie> x"
+  by (simp_all add: lstore_lvstore_ext_def)
+
+text \<open> The following instance allows the use of return values as the first component of a pair. The
+  store is therefore in the state, which is the second component. \<close>
+
+instantiation prod :: (type, lvar) lvar
+begin
+
+definition lstore_prod :: "uname \<Zpfun> uval \<Longrightarrow> 'a \<times> 'b" where
+"lstore_prod = (lstore ;\<^sub>L snd\<^sub>L)"
+
+instance
+  by (intro_classes, simp add: lstore_prod_def comp_vwb_lens)
+
+end
 
 subsection \<open> Identifiers as Strings \<close>
 
@@ -262,7 +295,7 @@ subsection \<open> Local Variable Lenses \<close>
 text \<open> The local variable lens projects the store, followed by the value (@{typ uval}) at the given 
   name, followed by projecting out a value of the correct type. \<close>
 
-definition lvar_lens :: "uname \<Rightarrow> ('a::injval \<Longrightarrow> 's lvar_scheme)" where 
+definition lvar_lens :: "uname \<Rightarrow> ('a::injval \<Longrightarrow> 's::lvar)" where 
 "lvar_lens n = (uval_lens ;\<^sub>L pfun_lens n ;\<^sub>L lstore)" 
 
 lemma mwb_lvar_lens [simp]: "mwb_lens (lvar_lens n)"
@@ -288,7 +321,7 @@ lemma source_lvar_lens:
    = {s. n \<in> pdom (get\<^bsub>lstore\<^esub> s) \<and> pfun_app (get\<^bsub>lstore\<^esub> s) n \<in> uvals (utyp TYPE('a::injval))}"
   by (simp add: lvar_lens_def lens_defined_def comp_mwb_lens source_lens_comp pfun_lens_src source_uval_lens univ_var_def id_lens_def get_pfun_lens)
 
-definition lv_lens :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> bool" where
+definition lv_lens :: "('a::injval \<Longrightarrow> 's::lvar) \<Rightarrow> uname \<Rightarrow> bool" where
 "lv_lens x n = (x = lvar_lens n)"
 
 syntax "_lv_lens" :: "id \<Rightarrow> logic" ("lvlens'(_')")
@@ -313,7 +346,7 @@ lemma lv_lens_indep_3 [simp]: "\<lbrakk> lv_lens x m; lv_lens y n; m \<noteq> n 
 
 text \<open> The next predicate characterises that a given lens is defined in a particular state. \<close>
 
-definition lvname :: "('a::injval \<Longrightarrow> 's lvar_scheme) \<Rightarrow> uname \<Rightarrow> 'a itself \<Rightarrow> 's lvar_scheme \<Rightarrow> bool" where 
+definition lvname :: "('a::injval \<Longrightarrow> 's::lvar) \<Rightarrow> uname \<Rightarrow> 'a itself \<Rightarrow> 's::lvar \<Rightarrow> bool" where 
 [expr_defs]: "lvname x n t = (\<guillemotleft>n\<guillemotright> \<in> pdom lstore \<and> lstore(\<guillemotleft>n\<guillemotright>)\<^sub>p \<in> uvals (utyp TYPE('a)))\<^sub>e"
 
 expr_constructor lvname
@@ -352,17 +385,17 @@ subsection \<open> Variable Blocks \<close>
 
 text \<open> Extend the variable stack \<close>
 
-definition open_var :: "uname \<Rightarrow> utype \<Rightarrow> ('e, 'a lvar_scheme) htree" where
+definition open_var :: "uname \<Rightarrow> utype \<Rightarrow> ('e, 's::lvar) htree" where
 "open_var n a = (\<exclamdown>\<guillemotleft>n\<guillemotright> \<notin> pdom lstore! ;; lstore := lstore \<oplus> {\<guillemotleft>n\<guillemotright> \<mapsto> uval_default \<guillemotleft>a\<guillemotright>}\<^sub>p)"
 
 text \<open> Reduce the variable stack \<close>
 
-definition close_var :: "uname \<Rightarrow> ('e, 'a lvar_scheme) htree" where
+definition close_var :: "uname \<Rightarrow> ('e, 's::lvar) htree" where
 "close_var n = (lstore := {\<guillemotleft>n\<guillemotright>} \<Zndres> lstore)"
 
 text \<open> Create a local variable block \<close>
 
-definition vblock :: "uname \<Rightarrow> 'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 'a lvar_scheme) \<Rightarrow> ('e, 'a lvar_scheme) htree) \<Rightarrow> ('e, 'a lvar_scheme) htree"
+definition vblock :: "uname \<Rightarrow> 'v itself \<Rightarrow> (('v::injval \<Longrightarrow> 's::lvar) \<Rightarrow> 's \<Rightarrow> ('e, 't::lvar) itree) \<Rightarrow> 's \<Rightarrow> ('e, 't) itree"
   where "vblock n t B = open_var n (utyp TYPE('v))  ;; let_itree (SEXP (\<lambda> s. lvar_lens n)) B ;; close_var n"
 
 nonterminal vdecls

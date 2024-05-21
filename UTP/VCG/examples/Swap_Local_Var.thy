@@ -2,7 +2,7 @@ theory Swap_Local_Var
   imports "ITree_VCG.ITree_VCG"
 begin
 
-zstore st = lvar +
+zstore st = lvstore +
   x :: int
   y :: int
 

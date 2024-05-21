@@ -39,7 +39,7 @@ lemma ret_drop' [simp]: "(P ;; proc_ret e) ;; rdrop = P"
 
 syntax 
   "_call"      :: "svid \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic" ("_ := <_ _>" [61, 0, 61] 61)
-  "_call_nret" :: "id \<Rightarrow> logic \<Rightarrow> logic" ("call _ _") 
+  "_call_nret" :: "id \<Rightarrow> logic \<Rightarrow> logic" ("call _ _" [0, 61] 61) 
   "_return"    :: "logic \<Rightarrow> logic" ("return")
 
 translations 
