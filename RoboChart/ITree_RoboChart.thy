@@ -1,7 +1,9 @@
 section \<open> RoboChart semantics \<close>
 
 theory ITree_RoboChart
-  imports "Interaction_Trees.ITree_Extraction" "HOL-Library.Numeral_Type" 
+  imports "Interaction_Trees.ITree_Extraction"
+          "Interaction_Trees.ITree_Deadlock"
+          "HOL-Library.Numeral_Type" 
           "ITree_UTP.ITree_CSP_Biased"
 begin
 

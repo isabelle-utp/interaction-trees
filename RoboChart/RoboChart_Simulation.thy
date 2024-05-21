@@ -12,9 +12,9 @@ begin
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
 module Simulate (simulate) where
 import Interaction_Trees;
-import Partial_Fun;
+import Prelude;
+-- import Partial_Fun;
 import System.IO;
-import qualified Data.List.Split;
 import qualified Data.List;
 
 -- These library functions help us to trim the "_C" strings from pretty printed events
@@ -29,7 +29,7 @@ removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
 replace :: String -> String -> String -> String;
-replace old new = Data.List.intercalate new . Data.List.Split.splitOn old;
+replace old new orig = orig;-- Data.List.intercalate new . old;
 
 renameGasEvent :: String -> String;
 renameGasEvent gas = 
@@ -165,7 +165,7 @@ fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
       val ctx' =
         (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), (Token.explode (Thy_Header.get_keywords' @{context}) Position.none "string_classes"))] ctx)
-        |> prep_simulation model (Context.theory_name thy)
+        |> prep_simulation model (Context.theory_name {long = false} thy)
   in run_simulation (Local_Theory.exit_global ctx'); (Local_Theory.exit_global ctx')
   end 
 

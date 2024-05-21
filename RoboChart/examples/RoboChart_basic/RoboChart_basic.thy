@@ -34,7 +34,8 @@ This theory, on the contrary, is built from the bottom up because the definition
 relies on the definitions of other processes in the top process. 
 \<close>
 theory RoboChart_basic
-  imports "ITree_RoboChart.ITree_RoboChart" "ITree_Simulation.ITree_Simulation"
+  imports "Interaction_Trees.ITree_Deadlock" 
+          "ITree_RoboChart.ITree_RoboChart" "ITree_Simulation.ITree_Simulation"
 begin
 
 text \<open>We, therefore, structure the theory as follows. In Sect.~\ref{ssec:basic_general}, we give 

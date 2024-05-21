@@ -1379,14 +1379,14 @@ export_code
   D__PatrolMod
   in Haskell 
   (* module_name RoboChart_basic *)
-  file_prefix RoboChart_basic_v1 
+  file_prefix Patrol_Robot 
   (string_classes) 
 
 text \<open>A simulation file is generated as a pure Haskell code. \<close>
-generate_file \<open>code/RoboChart_basic_v1/Simulate.hs\<close> = 
+generate_file \<open>code/Patrol_Robot/Simulate.hs\<close> = 
 \<open>module Simulate (simulate) where
 import qualified Interaction_Trees;
-import qualified Partial_Fun;
+-- import qualified Partial_Fun;
 
 isPrefixOf              :: (Eq a) => [a] -> [a] -> Bool;
 isPrefixOf [] _         =  True;
@@ -1406,8 +1406,8 @@ simulate_cnt n (Interaction_Trees.Sil p) =
                             }
                     else simulate_cnt (n + 1) p
      };
-simulate_cnt n (Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
-simulate_cnt n t@(Interaction_Trees.Vis (Partial_Fun.Pfun_of_alist m)) =
+simulate_cnt n (Interaction_Trees.Vis (Interaction_Trees.Pfun_of_alist [])) = Prelude.putStrLn "Deadlocked.";
+simulate_cnt n t@(Interaction_Trees.Vis (Interaction_Trees.Pfun_of_alist m)) =
   do { Prelude.putStrLn ("Events:" ++ Prelude.concat (map (\(n, e) -> " (" ++ Prelude.show n ++ ") " ++ removeSubstr "_C" e ++ ";") (zip [1..] (map (Prelude.show . fst) m))));
        e <- Prelude.getLine;
        case (Prelude.reads e) of
@@ -1427,20 +1427,20 @@ text \<open>The @{verbatim Main.hs} generated below is the main module in the ge
 to compile and build the generated code to an executable file by ghc. We note a compiled version has 
 better performance than the interpreted version by ghci.
 \<close>
-generate_file \<open>code/RoboChart_basic_v1/Main.hs\<close> = 
+generate_file \<open>code/Patrol_Robot/Main.hs\<close> = 
 \<open>import qualified Interaction_Trees;
-import qualified Partial_Fun;
+-- import qualified Partial_Fun;
 import qualified Simulate;
-import qualified RoboChart_basic_v1;
+import qualified Patrol_Robot;
 
 main :: IO ()
 main =
   do
-    Simulate.simulate (RoboChart_basic_v1.d_PatrolMod 0);
+    Simulate.simulate (Patrol_Robot.d_PatrolMod 0);
 \<close>
 
 export_generated_files 
-  \<open>code/RoboChart_basic_v1/Simulate.hs\<close>
-  \<open>code/RoboChart_basic_v1/Main.hs\<close>
+  \<open>code/Patrol_Robot/Simulate.hs\<close>
+  \<open>code/Patrol_Robot/Main.hs\<close>
 
 end
