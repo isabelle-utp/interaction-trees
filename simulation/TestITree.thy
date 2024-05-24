@@ -64,9 +64,7 @@ lift_definition c_Input :: "(integer, chan) channel" is "n_Input" .
 lift_definition c_State :: "(integer list, chan) channel" is "n_State" .
 lift_definition c_Output :: "(integer, chan) channel" is "n_Output" .
 
-term Input
-
-lemma Input_channel_prism: "Input = channel_prism (c_Input)"
+lemma Input_channel_prism [code_unfold]: "Input = channel_prism (c_Input)"
   apply (simp add: channel_prism_def Input_def ctor_prism_def, transfer)
   apply auto
   apply (auto simp add: fun_eq_iff)
@@ -75,6 +73,16 @@ lemma Input_channel_prism: "Input = channel_prism (c_Input)"
    apply (case_tac x; simp)
   apply (case_tac x; simp)
   apply (metis uchan_dest_chan.simps(1) uchan_dest_inv)
+  done
+
+lemma Output_channel_prism [code_unfold]: "Output = channel_prism (c_Output)"
+  apply (simp add: channel_prism_def Output_def ctor_prism_def, transfer)
+  apply auto
+  apply (auto simp add: fun_eq_iff)
+  apply (metis chan.disc(4) chan.sel(2) uchan_dest_inv uchan_mk_chan_def)
+  using is_Output_C_def apply force
+   apply (metis chan.discI(2) uchan_dest_chan.simps(1) uchan_dest_chan.simps(2) uchan_dest_inv uchan_mk_chan_def)
+  apply (metis uchan_dest_chan.simps(2) uchan_dest_inv)
   done
 
 definition inp_prism :: "('a \<Longrightarrow>\<^sub>\<triangle> 'c) \<Rightarrow> ('a \<times> unit \<Longrightarrow>\<^sub>\<triangle> 'c)" where
@@ -109,7 +117,18 @@ lemma "mwb_lens uval\<^sub>L"
 definition mk_eq_ITree :: "('e::{equal,show}, 's) itree \<Rightarrow> ('e,'s) itree" where
 "mk_eq_ITree x = x"
 
-lemma inp_as_animev:
+find_theorems inp_in_where
+
+declare inp_in_where_map_code [code_unfold del]
+
+lemma wf_c_Input [simp, code_unfold]: "wf_channel c_Input"
+  by (simp add: wf_channel_def c_Input.rep_eq)
+
+lemma wf_c_Output [simp, code_unfold]: "wf_channel c_Output"
+  by (simp add: c_Output.rep_eq wf_channel_def)
+
+
+lemma inp_as_animev [code_unfold]:
   "wf_channel c \<Longrightarrow> inp_in_where (channel_prism c) A P = animevs [anim_inp c True (\<lambda> v. v \<in> A \<and> P v) Ret]"
   apply (simp add: animevs_def channel_prism_def inp_in_where_def pfun_eq_iff pfun_of_animevs_def)
   using to_uval_typ apply (auto simp add: animevs_def pfun_of_animevs_def anim_inp_def inp_in_where_def pfun_eq_iff wf_channel_def channel_prism_def channel_build_def channel_match_def mk_event_event_of_def ev_name_labelled_event ev_uval.rep_eq ev_val.rep_eq)
@@ -125,6 +144,17 @@ lemma inp_as_animev:
   apply (metis (mono_tags, lifting) case_prodI event_of_inverse label_of_in_names mem_Collect_eq snd_conv to_uval_inv to_uval_typ)
   done
 
+term outp
+
+term anim_outp
+
+lemma outp_as_animev [code_unfold]:
+  "wf_channel c \<Longrightarrow> outp (channel_prism c) v = animevs [anim_outp c True v (Ret ())]"
+  apply (simp add: animevs_def channel_prism_def outp_def pfun_eq_iff pfun_of_animevs_def)
+  using to_uval_typ apply (auto simp add: animevs_def pfun_of_animevs_def anim_outp_def inp_in_where_def pfun_eq_iff wf_channel_def channel_prism_def channel_build_def channel_match_def mk_event_event_of_def ev_name_labelled_event ev_uval.rep_eq ev_val.rep_eq)
+  done
+
+
 definition 
   "test_anim_inp = 
       mk_eq_ITree (loop (\<lambda> s::integer list. 
@@ -132,11 +162,22 @@ definition
                   ,anim_outp c_State True s (Ret s)
                   ,anim_outp c_Output (s \<noteq> []) (hd s) (Ret (tl s))]))) [])"
 
+term outp
+
+term map_prod
+
+definition
+"test_anim_inp2 = 
+  mk_eq_ITree (loop (\<lambda> s::integer list. 
+                     (inp Input \<bind> (\<lambda> x. Ret (x # s))) \<box> (guard (s \<noteq> []) >> outp Output (hd s) >> (Ret (tl s)))) [])" 
+        
 export_code test_anim_inp in Haskell
 
 declare map_pfun_pfun_of_animevs [code]
 
-animate test_anim_inp
+declare pfun_of_aevs_override [code]
+
+animate test_anim_inp2
 
 typ integer
 

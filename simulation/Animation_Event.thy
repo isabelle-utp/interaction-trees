@@ -1,7 +1,7 @@
 section \<open> Animation Events \<close>
 
 theory Animation_Event
-  imports Channel_Type_Rep "Interaction_Trees.ITree_Extraction"
+  imports Channel_Type_Rep "Interaction_Trees.ITree_Extraction" 
 begin
 
 declare [[typedef_overloaded]]
@@ -26,8 +26,8 @@ fun pfun_of_animev :: "('e::uchantyperep, 'proc) animev \<Rightarrow> 'e \<Zpfun
 "pfun_of_animev (AnimOutput n v P) 
   = (\<lambda> e\<in>{uchan_mk (event_of (label_of n, v))} \<bullet> P)" |
 \<comment> \<open> I *think* the next line is correct, but it needs checking \<close>
-"pfun_of_animev (AnimIO n outp B Q) 
-  = (\<lambda> e\<in>{uchan_mk (event_of (label_of n, PairV (outp, inp))) | inp. inp :\<^sub>u snd (ofPairT (name_type n)) \<and> B inp} 
+"pfun_of_animev (AnimIO n out B Q) 
+  = (\<lambda> e\<in>{uchan_mk (event_of (label_of n, PairV (out, inp))) | inp. inp :\<^sub>u snd (ofPairT (name_type n)) \<and> B inp} 
      \<bullet> Q (snd (ofPairV (ev_uval (uchan_dest e)))))"
 
 lemma map_pfun_pfun_of_animev: 
@@ -57,6 +57,16 @@ text \<open> How can we represent the domain of an animation event partial funct
 definition pfun_of_animevs ::
   "('e::uchantyperep, 'b) animev list \<Rightarrow> 'e \<Zpfun> 'b" where
 "pfun_of_animevs aevs = foldr (\<lambda> c f. pfun_of_animev c \<oplus> f) aevs {}\<^sub>p"
+
+(* Need channel set notation *)
+(*
+lemma pdom_anim_inp: 
+  "\<lbrakk> wf_channel d; c = channel_prism d \<rbrakk> \<Longrightarrow> pdom (pfun_of_animevs (anim_inp d True B P)) = \<lbrace> c v. B v \<rbrace>"
+  apply (auto simp add: pfun_of_animevs_def anim_inp_def evcollect_def channel_prism_def)
+  apply (smt (verit, ccfv_SIG) channel_build.rep_eq from_uval_inv mk_event_event_of_def name_type_chantype wf_channel_def)
+  apply (smt (verit, del_insts) channel_build.rep_eq mk_event_event_of_def name_type_chantype to_uval_inv to_uval_typ wf_channel_def)
+  done
+*)
 
 definition animevs :: "('e::uchantyperep, ('e, 's) itree) animev list list \<Rightarrow> ('e, 's) itree" where
 "animevs aevss = Vis (pfun_of_animevs (concat aevss))"
