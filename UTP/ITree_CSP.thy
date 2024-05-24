@@ -1,49 +1,8 @@
 section \<open> CSP Operators \<close>
 
 theory ITree_CSP
-  imports "Interaction_Trees.ITrees" "Optics.Optics"
+  imports "Interaction_Trees.ITrees" "Optics.Optics" "Z_Toolkit.Channels_Events"
 begin
-
-subsection \<open> Event Trace and Set Syntax\<close>
-
-definition evinsert :: "'e \<Rightarrow> 'e set \<Rightarrow> 'e set" where
-[code_unfold]: "evinsert e E = insert e E"
-
-definition evsimple :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e" where
-[code_unfold]: "evsimple c = build\<^bsub>c\<^esub> ()"
-
-definition evparam :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> 'e" where
-[code_unfold]: "evparam c v = build\<^bsub>c\<^esub> v"
-
-definition evcollect :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'e set" where
-[code_unfold]: "evcollect c A P = {build\<^bsub>c\<^esub> v | v. v \<in> A \<and> P v}"
-
-definition empty_evset ("\<lbrace>\<rbrace>") where [code_unfold]: "\<lbrace>\<rbrace> = {}"
-
-nonterminal evt and evts
-
-syntax 
-  "_evt"       :: "evt \<Rightarrow> evts" ("_")
-  "_evts"      :: "evt \<Rightarrow> evts \<Rightarrow> evts" ("_,/ _")
-  "_evt_id"    :: "id \<Rightarrow> evt" ("_")
-  "_evt_param" :: "id \<Rightarrow> logic \<Rightarrow> evt" ("_/ _")
-  "_evt_set"   :: "evts \<Rightarrow> logic" ("\<lbrace>_\<rbrace>")
-  "_evt_collect" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_/ _ \<in> _./ _\<rbrace>")
-  "_evt_collect_ns" :: "id \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_/ _./ _\<rbrace>")
-  "_evt_trace"   :: "evts \<Rightarrow> logic" ("\<langle>_\<rangle>")
-
-translations 
-  "_evt e" => "CONST evinsert e \<lbrace>\<rbrace>"
-  "_evts e es" => "CONST evinsert e es"
-  "_evt_id x" == "CONST evsimple x"
-  "_evt_param x v" == "CONST evparam x v"
-  "_evt_set A" => "A"
-  "_evt_collect e x A P" == "CONST evcollect e A (\<lambda> x. P)"
-  "_evt_collect_ns e x P" == "_evt_collect e x (CONST UNIV) P"
-  "\<lbrace>e\<rbrace>" <= "CONST evinsert e \<lbrace>\<rbrace>"
-  "\<lbrace>e, es\<rbrace>" <= "CONST evinsert e (_evt_set es)"
-  "_evt_trace (_evt e)" => "[e]"
-  "_evt_trace (_evts e tr)" => "e # _evt_trace tr"
 
 subsection \<open> Basic Constructs \<close>
 
@@ -1023,22 +982,6 @@ primcorec exception :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, '
                 (pfun_entries (A \<inter> pdom(F)) ((\<lambda> _. Q))))))"
 
 subsection \<open> Renaming \<close>
-
-text \<open> We define notation for writing renaming relations \<close>
-
-definition rncollect :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e\<^sub>1) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e\<^sub>2) \<Rightarrow> 'c set \<Rightarrow> ('c \<Rightarrow> ('a \<times> 'b) \<times> bool) \<Rightarrow> 'e\<^sub>1 \<leftrightarrow> 'e\<^sub>2" where
-"rncollect c\<^sub>1 c\<^sub>2 A f = {(build\<^bsub>c\<^sub>1\<^esub> (fst (fst (f x))), build\<^bsub>c\<^sub>2\<^esub> (snd (fst (f x)))) | x. x \<in> A \<and> snd (f x)}"
- 
-syntax 
-  "_rncollect"    :: "evt \<Rightarrow> evt \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_ \<mapsto> _ | _ \<in> _./ _\<rbrace>")
-  "_rncollect_ns" :: "evt \<Rightarrow> evt \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("\<lbrace>_ \<mapsto> _ | _./ _\<rbrace>")
-
-translations 
-  "_rncollect (_evt_param c\<^sub>1 v\<^sub>1) (_evt_param c\<^sub>2 v\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. ((v\<^sub>1, v\<^sub>2), P))"
-  "_rncollect (_evt_id c\<^sub>1) (_evt_param c\<^sub>2 v\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. (((), v\<^sub>2), P))"
-  "_rncollect (_evt_param c\<^sub>1 v\<^sub>1) (_evt_id c\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. ((v\<^sub>1, ()), P))"
-  "_rncollect (_evt_id c\<^sub>1) (_evt_id c\<^sub>2) x A P" == "CONST rncollect c\<^sub>1 c\<^sub>2 A (\<lambda> x. (((), ()), P))"
-  "_rncollect_ns e\<^sub>1 e\<^sub>2 x P" == "_rncollect e\<^sub>1 e\<^sub>2 x (CONST UNIV) P"
 
 primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>2, 'a) itree" where
 "rename \<rho> P = 
