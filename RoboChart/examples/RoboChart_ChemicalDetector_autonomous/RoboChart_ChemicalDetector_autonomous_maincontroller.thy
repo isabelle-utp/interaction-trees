@@ -750,8 +750,14 @@ definition rename_GasAnalysis_events where
   )
 "
 
-term "\<lbrace>resume__GasAnalysis (t, x) \<mapsto> resume_GasAnalysis x | (x, t). x \<in> InOut_set\<rbrace>"
-term "\<lbrace>terminate_GasAnalysis () \<mapsto> terminate_GasAnalysis () | _. True\<rbrace>"
+(* A set of maps: relations *)
+term "\<lbrace>resume__GasAnalysis (t, x) \<mapsto> resume_GasAnalysis x | (t, x). x \<in> InOut_set\<rbrace>"
+term "\<lbrace>terminate_GasAnalysis () \<mapsto> terminate_GasAnalysis () | x. True\<rbrace>"
+(* A set of events. *)
+value "\<lbrace>resume__GasAnalysis (TID_GasAnalysis_t1, din)\<rbrace>"
+term "\<lbrace>resume__GasAnalysis (TID_GasAnalysis_t1, din)\<rbrace>"
+term "\<lbrace>resume__GasAnalysis x \<in> {(TID_GasAnalysis_t1, din), (TID_GasAnalysis_t2, dout)}. snd x = din \<rbrace>"
+value "\<lbrace>resume__GasAnalysis x \<in> {(TID_GasAnalysis_t1, din), (TID_GasAnalysis_t2, dout)}. snd x = din \<rbrace>"
 
 definition rename_GasAnalysis_events_others where
 "rename_GasAnalysis_events_others = 
@@ -770,9 +776,8 @@ definition rename_GasAnalysis_events_others where
 
 definition rename_MemorySTM_opt_GasAnalysis where
 "rename_MemorySTM_opt_GasAnalysis idd = 
-  ( (MemorySTM_opt_GasAnalysis idd) \<lbrakk>
-      (set (rename_GasAnalysis_events @ rename_GasAnalysis_events_others))
-    \<rbrakk>)
+  ( (MemorySTM_opt_GasAnalysis idd) 
+      \<lbrace>(set (rename_GasAnalysis_events @ rename_GasAnalysis_events_others))\<rbrace>)
 "
 
 definition AUX_opt_GasAnalysis where
@@ -814,7 +819,7 @@ definition rename_MainController_GasAnalysis_events where
 
 definition rename_D__GasAnalysis where
 "rename_D__GasAnalysis idd = (
-    (D__GasAnalysis idd) \<lbrakk> (set rename_MainController_GasAnalysis_events)\<rbrakk>
+    (D__GasAnalysis idd)\<lbrace> (set rename_MainController_GasAnalysis_events)\<rbrace>
 )"
 
 definition D__MainController where
@@ -825,11 +830,11 @@ definition D__MainController where
     (discard_state (Memory_MainController idd))
   ) \<lbrakk> set [terminate_MainController_C ()] \<Zrres> skip
 "
-(*
-definition "D__MainController_sim = D__MainController 0"
+
+definition "D_MainController_sim = D__MainController 0"
 text \<open>Uncomment the line below to animate @{term AUX_opt_Movement}.\<close>
-animate1 D__MainController_sim
-*)
+animate1 D_MainController_sim
+
 subsubsection \<open> Export code \<close>
 export_code
   GasAnalysis_Memory_opt_gs

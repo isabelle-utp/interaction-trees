@@ -30,6 +30,7 @@ session "ITree_RoboChart" in "RoboChart" = "ITree_UTP" +
   options [timeout = 600, document = pdf, document_output = "output"]
   theories
     ITree_RoboChart
+    RoboChart_Simulation
   document_files
     "root.tex"
 
@@ -49,6 +50,7 @@ session "RoboChart_ChemicalDetector_autonomous" in "RoboChart/examples/RoboChart
   options [timeout = 600, document = pdf, document_output = "output"]
   sessions
     "ITree_RoboChart"
+    "ITree_Simulation"
   theories
     RoboChart_ChemicalDetector_autonomous 
   document_files

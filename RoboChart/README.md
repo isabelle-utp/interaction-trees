@@ -1,29 +1,17 @@
 This folder contains theories and examples for animation of RoboChart.
 
-# Installation
-1. Download and install [Isabelle2021](https://isabelle.in.tum.de/index.html).
-2. Install GHC for Haskell, see [here](https://www.haskell.org/platform/) for details.
-2. Clone the following repositories inside a folder (for example, `/path/to/repos`).
-- [Mirror AFP 2021](https://github.com/isabelle-utp/mirror-afp-2021)
-- [Z Toolkit](https://github.com/isabelle-utp/Z_Toolkit)
-- [Shallow Expressions](https://github.com/isabelle-utp/Shallow-Expressions)
-- [Interaction Trees (robochart branch)](https://github.com/isabelle-utp/interaction-trees/tree/robochart)
-
-3. Create a `ROOTS` file in `/path/to/repos` with content below.
-```
-mirror-afp-2021/thys
-Z_Toolkit/
-Shallow-Expressions/
-Shallow-Expressions/Z/
-interaction-trees/
-```
-
-4. Load Isabelle/jedit
-```
-$ /path/to/Isabelle2021/bin/isabelle jedit -d /path/to/repos
-```
-
 # Animate RoboChart
+## Prebuild-image
+Load the theory `examples/RoboChart_basic_v1/RoboChart_basic_v1_1.thy` for animation, then move your cursor to a line `animate1 D_PatrolMod_p_sim` to animate. When the cursor stops there, code generator starts to generate Haskell code, and compile. Usually, we will see below on the `Output` window.
+```
+See theory exports 
+Compiling animation... 
+See theory exports 
+Start animation
+```
+Then click `Start animation`.
+
+## Standard
 General steps are shown below. Please see instructions in each specific example for further considerations.
 
 1. Open the main theory file for a RoboChart model, such as `RoboChart_basic.thy` for the model in `examples/RoboChart_basic.thy/`
@@ -45,5 +33,3 @@ $ ghci main.hs
 $ ghc -g main.hs
 $ ./main
 ```
-
-Please note that we do have a customised Isabelle2021 version on which the animation process is very much simplified. All work is done in Isabelle. The only thing users need to do is to click an **animate1** command for animation, which will automatically export Haskell, compile into an executable, and then execute the animation on console of jedit. However, this particular version is for experiment only.

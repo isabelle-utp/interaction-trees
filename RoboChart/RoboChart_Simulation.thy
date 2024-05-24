@@ -12,9 +12,9 @@ begin
 generate_file \<open>code/simulate/Simulate.hs\<close> = \<open>
 module Simulate (simulate) where
 import Interaction_Trees;
-import Partial_Fun;
+import Prelude;
+-- import Partial_Fun;
 import System.IO;
-import qualified Data.List.Split;
 import qualified Data.List;
 
 -- These library functions help us to trim the "_C" strings from pretty printed events
@@ -29,7 +29,7 @@ removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
 replace :: String -> String -> String -> String;
-replace old new = Data.List.intercalate new . Data.List.Split.splitOn old;
+replace old new orig = orig;-- Data.List.intercalate new . old;
 
 renameGasEvent :: String -> String;
 renameGasEvent gas = 
@@ -117,12 +117,12 @@ structure ISim_Path = Theory_Data
 fun simulator_setup thy = 
   let open Isabelle_System; val tmp = Path.expand (create_tmp_path "itree-simulate" "")
   in case (ISim_Path.get thy) of NONE => () | SOME oldtmp => rm_tree oldtmp;
-    mkdir tmp; (tmp, ISim_Path.put (SOME tmp) thy)
+    make_directory tmp; (tmp, ISim_Path.put (SOME tmp) thy)
   end
 
-fun sim_files_cp tmp = 
+fun sim_files_cp ghc tmp = 
   "(fn path => let open Isabelle_System; val path' = Path.append path (Path.make [\"code\", \"simulate\"])" ^
-  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; ghc Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
+  " in writeln \"Compiling animation...\"; bash (\"cd \" ^ Path.implode path' ^ \"; " ^ ghc ^ " Simulation >> /dev/null\") ; copy_dir path' (Path.explode \"" ^ tmp ^ "\") end)"
 
 open Named_Target
 
@@ -139,6 +139,8 @@ fun prep_simulation model thy ctx =
   let open Generated_Files; 
       val (tmp, thy') = simulator_setup (Local_Theory.exit_global ctx);
       val ctx' = Named_Target.theory_init thy'
+      val ghc = getenv "ISABELLE_GHC"
+      val _ = if (ghc = "") then error "GHC is not set up. Please set the environment variable ISABELLE_GHC." else ()
   in
   generate_file (Path.binding0 (Path.make ["code", "simulate", "Simulation.hs"]), (Input.string (simulation_file model thy))) ctx' |>
   (fn ctx' => 
@@ -147,7 +149,7 @@ fun prep_simulation model thy ctx =
                  [([], (Local_Theory.exit_global ctx')), ([Path.binding0 (Path.make ["code", "simulate", "Simulate.hs"])], @{theory})] 
                  [] [([Path.binding0 (Path.make ["code", "simulate", "Simulation"])], SOME true)]
                  (Path.binding0 (Path.make []))
-                 (Input.string (sim_files_cp (Path.implode tmp)))
+                 (Input.string (sim_files_cp ghc (Path.implode tmp)))
     in ctx' end)
 
 
@@ -157,13 +159,13 @@ fun prep_simulation model thy ctx =
 fun run_simulation thy =
   case ISim_Path.get thy of
     NONE => error "No animation" |
-    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./Simulation") "Start animation")
+    SOME f => writeln (Active.run_system_shell_command (SOME (Path.implode f)) ("./simulate/Simulation") "Start animation")
 
 fun simulate model thy =
   let val ctx = Named_Target.theory_init thy
       val ctx' =
         (Code_Target.export_code true [Code.read_const (Local_Theory.exit_global ctx) model] [((("Haskell", ""), SOME ({physical = false}, (Path.explode "simulate", Position.none))), (Token.explode (Thy_Header.get_keywords' @{context}) Position.none "string_classes"))] ctx)
-        |> prep_simulation model (Context.theory_name thy)
+        |> prep_simulation model (Context.theory_name {long = false} thy)
   in run_simulation (Local_Theory.exit_global ctx'); (Local_Theory.exit_global ctx')
   end 
 

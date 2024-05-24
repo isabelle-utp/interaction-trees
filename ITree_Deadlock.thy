@@ -9,6 +9,8 @@ text \<open> Deadlock is an interaction with no visible event \<close>
 definition deadlock :: "('e, 'r) itree" where
 "deadlock = Vis {}\<^sub>p"
 
+abbreviation stop where "stop \<equiv> deadlock"
+
 lemma stable_deadlock [simp]: "stable deadlock"
   by (simp add: deadlock_def)
 

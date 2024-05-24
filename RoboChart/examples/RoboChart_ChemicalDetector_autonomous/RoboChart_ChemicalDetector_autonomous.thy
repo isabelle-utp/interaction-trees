@@ -44,7 +44,7 @@ definition rename_ChemicalDetector_D__MainController_events where
 
 definition rename_D__MainController where
 "rename_D__MainController idd = (
-  (D__MainController idd) \<lbrakk>(set rename_ChemicalDetector_D__MainController_events)\<rbrakk>) "
+  (D__MainController idd) \<lbrace>(set rename_ChemicalDetector_D__MainController_events)\<rbrace>) "
 
 text \<open>As mentioned previously, for the events of @{text MicroController} that are connected to 
 @{text MainController}, the directions of those renamed events should be opposite. In the definition 
@@ -74,7 +74,7 @@ definition rename_ChemicalDetector_D__MicroController_events where
 
 definition rename_D__MicroController where
 "rename_D__MicroController idd = (
-  (D__MicroController idd) \<lbrakk>(set rename_ChemicalDetector_D__MicroController_events)\<rbrakk>)"
+  (D__MicroController idd) \<lbrace>(set rename_ChemicalDetector_D__MicroController_events)\<rbrace>)"
 
 text \<open> The connection from @{text MainController} to @{text MicroController} on the event 
 @{text turn} is asynchronous, and so its CSP semantics has a buffer in between. 
