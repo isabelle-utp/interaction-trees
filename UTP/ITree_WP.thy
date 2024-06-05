@@ -92,6 +92,9 @@ lemma wp_cond [wp]: "wp (if B then C\<^sub>1 else C\<^sub>2 fi) P = ((B \<longri
 lemma wlp_cond [wp]: "wlp (if B then C\<^sub>1 else C\<^sub>2 fi) P = ((B \<longrightarrow> wlp C\<^sub>1 P) \<and> (\<not> B \<longrightarrow> wlp C\<^sub>2 P))\<^sub>e"
   by (auto simp add: wlp_itree_def cond_rel fun_eq_iff)
 
+lemma wp_let [wp]: "wp (let x \<leftarrow> e in S x) b = (wp (S (e \<s>)) b)\<^sub>e"
+  by (auto simp add: wp_itree_def let_itree_def itree_rel_defs retvals_def SEXP_def)
+
 lemma wlp_let [wp]: "wlp (let x \<leftarrow> e in S x) b = (wlp (S (e \<s>)) b)\<^sub>e"
   by (auto simp add: wlp_itree_def let_itree_def itree_rel_defs retvals_def SEXP_def)
 

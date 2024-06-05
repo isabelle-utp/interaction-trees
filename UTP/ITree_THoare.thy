@@ -80,6 +80,12 @@ lemma thl_cond [hoare_safe]:
   shows "H[P] if B then S else T fi [Q]"
   using assms by (simp add: thoare_triple_def hl_cond wp taut_def)
 
+lemma thl_let [hoare_safe]:
+  assumes "\<And> s. H[P \<and> \<guillemotleft>s\<guillemotright> = \<^bold>v] (S (e s)) [Q]"
+  shows "H[P] let x \<leftarrow> e in S x [Q]"
+  using assms
+  by (auto intro: hl_let simp add: thoare_triple_def wp, expr_simp)
+
 text \<open> For loops do not require a variant, as termination is guaranteed by construction \<close>
 
 lemma thl_for:
