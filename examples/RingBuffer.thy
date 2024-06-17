@@ -41,7 +41,6 @@ subsection \<open> Controller Process \<close>
 
 zstore ControllerState =
   sz       :: nat
-  ringsize :: int
   cache    :: int
   rtop     :: RingIndex
   rbot     :: RingIndex
