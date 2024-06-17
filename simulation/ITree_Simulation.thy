@@ -31,37 +31,6 @@ removeSubstr :: String -> String -> String;
 removeSubstr w "" = "";
 removeSubstr w s@(c:cs) = (if w `isPrefixOf` s then Prelude.drop (Prelude.length w) s else c : removeSubstr w cs);
 
-instance Show Uval where
-  show UnitV = "()"
-  show (BoolV x) = show x
-  show (IntV x) = show x
-  show (RatV x) = show (fromRational x)
-  show (StringV x) = show x
-  show (EnumV _ x) = x
-  show (PairV xy) = show xy
-  show (ListV typ xs) = show xs
-
-instance Show Utyp where
-  show UnitT = "()"
-  show BoolT = "bool"
-  show IntT = "int"
-  show RatT = "rat"
-  show StringT = "string"
-  show (EnumT s) = "enum"
-  show (PairT (s, t)) = "(" ++ show s ++ ", " ++ show t ++ ")"
-  show (ListT s) = "[" ++ show s ++ "]"
-
-mk_readUval :: Read a => (a -> Uval) -> String -> IO Uval
-mk_readUval f n = 
-  do { putStr ("Input <" ++ n ++ "> value: ")
-     ; e <- getLine
-     ; return (f (read e)) }
-
-readUtyp :: Utyp -> IO Uval
-readUtyp BoolT = mk_readUval BoolV "bool"
-readUtyp IntT = mk_readUval IntV "int"
-readUtyp UnitT = return UnitV
-
 eventHierarchy :: [(String, p)] -> [(String, [(String, p)])]
 eventHierarchy m = map (\c -> (c, map (\(e, p) -> (tail (dropWhile (\x -> x /= ' ') e), p)) $ filter (isPrefixOf (c ++ " ") . fst) m)) chans
   where
@@ -82,7 +51,7 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
   do { putStrLn ("Events:" ++ concat (map (\(n, e) -> " (" ++ show n ++ ") " ++ e ++ ";") (zip [1..] (map (show . fst) m))));
        e <- getLine;
        if (e == "q" || e == "Q") then
-         putStrLn "Simulation terminated"
+         putStrLn "Animation terminated"
        else
        case (reads e) of
          []       -> do { putStrLn "No parse"; simulate_cnt n t }
@@ -92,7 +61,7 @@ simulate_cnt n t@(Vis (Pfun_of_alist m)) =
      }                                                            
   where eh = eventHierarchy (map (\(e, p) -> (Prelude.show e, p)) m);
 simulate :: (Eq e, Prelude.Show e, Prelude.Show s) => Itree e s -> Prelude.IO ();
-simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Simulation..."; simulate_cnt 0 p }
+simulate p = do { hSetBuffering stdout NoBuffering; putStrLn ""; putStrLn "Starting ITree Animation..."; simulate_cnt 0 p }
 
 
 \<close>
@@ -146,7 +115,38 @@ simulate_cnt n t@(Vis (Pfun_of_animevs m)) =
 (* The code below is for simulations containing uval functions *)
 
 (*
-simulate_cnt n t@(Vis (Pfun_of_ufun chan typ m)) = 
+instance Show Uval where
+  show UnitV = "()"
+  show (BoolV x) = show x
+  show (IntV x) = show x
+  show (RatV x) = show (fromRational x)
+  show (StringV x) = show x
+  show (EnumV _ x) = x
+  show (PairV xy) = show xy
+  show (ListV typ xs) = show xs
+
+instance Show Utyp where
+  show UnitT = "()"
+  show BoolT = "bool"
+  show IntT = "int"
+  show RatT = "rat"
+  show StringT = "string"
+  show (EnumT s) = "enum"
+  show (PairT (s, t)) = "(" ++ show s ++ ", " ++ show t ++ ")"
+  show (ListT s) = "[" ++ show s ++ "]"
+
+mk_readUval :: Read a => (a -> Uval) -> String -> IO Uval
+mk_readUval f n = 
+  do { putStr ("Input <" ++ n ++ "> value: ")
+     ; e <- getLine
+     ; return (f (read e)) }
+
+readUtyp :: Utyp -> IO Uval
+readUtyp BoolT = mk_readUval BoolV "bool"
+readUtyp IntT = mk_readUval IntV "int"
+readUtyp UnitT = return UnitV
+
+simulate_cnt n t@(Vis (Pfun_of_ufun chan typ m)) =
   do { v <- readUtyp typ; 
        simulate_cnt 0 (m v) }
 simulate_cnt n (Vis (Pfun_of_chfuns [])) = Prelude.putStrLn "Deadlocked.";
