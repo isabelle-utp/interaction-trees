@@ -66,7 +66,7 @@ lemma test_true: "\<exclamdown>True! = Skip"
 lemma test_false: "\<exclamdown>False! = Stop"
   by (simp add: test_def)
 
-definition cond_itree :: "('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+definition cond_itree :: "('e, 'r, 's) ktree \<Rightarrow> ('r \<Rightarrow> bool) \<Rightarrow> ('e, 'r, 's) ktree \<Rightarrow> ('e, 'r, 's) ktree" where
 "cond_itree P b Q = (\<lambda> s. if b s then P s else Q s)"
 
 adhoc_overloading ucond cond_itree

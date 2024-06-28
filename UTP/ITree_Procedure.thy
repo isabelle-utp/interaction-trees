@@ -91,9 +91,19 @@ translations
   "H{P} C {x. Q}" => "CONST hoare_rel_proc_triple (P)\<^sub>e C (\<lambda> x _ghost_old. (Q)\<^sub>e)"
   "H{P} C {x. Q}" <= "CONST hoare_rel_proc_triple (P)\<^sub>e C (\<lambda> x g. (Q)\<^sub>e)"
 
+lemma hl_proc_conseq:
+  assumes "H{P\<^sub>2} S {ret. @(Q\<^sub>2 ret)}" "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "\<And> ret. `@(Q\<^sub>2 ret) \<longrightarrow> @(Q\<^sub>1 ret)`"
+  shows "H{P\<^sub>1} S {ret. @(Q\<^sub>1 ret)}"
+  using assms by (auto simp add: hoare_rel_proc_triple_def, expr_simp, force)
+
 lemma hl_return: 
   "H{P} return e {ret. \<guillemotleft>ret\<guillemotright> = e \<and> P}"
   by (simp add: hoare_rel_proc_triple_def proc_ret_def)
+
+lemma hl_return' [hoare_safe]:
+  assumes "\<And> ret. `\<guillemotleft>ret\<guillemotright> = e \<and> P \<longrightarrow> @(Q ret)`"
+  shows "H{P} return e {ret. @(Q ret)}"
+  by (force intro: hl_proc_conseq[where P\<^sub>2="P"] hl_return assms)
 
 lemma hl_proc_seq:
   assumes "H{P} C\<^sub>1 {Q}" "H{Q} C\<^sub>2 {ret. @(R ret)}"
@@ -101,6 +111,11 @@ lemma hl_proc_seq:
   using assms
   by (auto elim!:trace_to_bindE bind_RetE' simp add: hoare_rel_proc_triple_def hoare_rel_triple_def seq_itree_def kleisli_comp_def)
      (metis trace_to_Nil)+
+
+lemma hl_proc_cond [hoare_safe]:
+  assumes "H{B \<and> P} S {ret. @(Q ret)}" "H{\<not>B \<and> P} T {ret. @(Q ret)}"
+  shows "H{P} if B then S else T fi {ret. @(Q ret)}"
+  using assms by (simp add: hoare_rel_proc_triple_def cond_itree_def)
 
 lemma hl_proc_seq_return [hoare_safe]:
   assumes "H{P} C {Q}"
