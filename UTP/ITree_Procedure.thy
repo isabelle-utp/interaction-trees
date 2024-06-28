@@ -152,4 +152,9 @@ lemma thl_proc_call_nret [hoare_safe]:
   apply (metis (mono_tags, lifting) SEXP_def kleisli_comp_def pre_terminates seq_itree_def wp_seq)
   done
 
+subsection \<open> Promotion \<close>
+
+definition promote_iproc :: "('s\<^sub>1 \<Longrightarrow> 's\<^sub>2) \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 'a \<times> 's\<^sub>1) itree) \<Rightarrow> 's\<^sub>2 \<Rightarrow> ('e, 'a \<times> 's\<^sub>2) itree" where
+"promote_iproc a P = (\<lambda> s. if s \<in> \<S>\<^bsub>a\<^esub> then P (get\<^bsub>a\<^esub> s) \<bind> (\<lambda> (r, v). \<checkmark> (r, put\<^bsub>a\<^esub> s v)) else diverge)"
+
 end
