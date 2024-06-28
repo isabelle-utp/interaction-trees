@@ -27,7 +27,6 @@ lemma hoare_triple_def: "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<to
   by (auto simp add: hoare_rel_triple_def itree_rel_def spec_def itree_pred_def retvals_def)
 
 syntax 
-  "_hoare_rel"       :: "logic \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_./ _}")
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_}")
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2\<^bold>{_\<^bold>} /_) /\<^bold>{_\<^bold>}")
   "_preserves"       :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "preserves" 40)
@@ -35,8 +34,7 @@ syntax
   "_establishes"     :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "establishes" 40)
 
 translations
-  "_hoare_rel P C x Q" == "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> x. (Q)\<^sub>e)"
-  "H{P} C {Q}" => "H{P} C {_ghost_old. Q}" 
+  "H{P} C {Q}" => "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> _ghost_old. (Q)\<^sub>e)" 
   "H{P} C {Q}" <= "CONST hoare_triple (P)\<^sub>e C (Q)\<^sub>e"
   "_preserves S P" => "H{P} S {P}"
   "_preserves_under S P Q" => "H{P \<and> Q} S {P}"
