@@ -191,6 +191,18 @@ lemma hl_choice [hoare_safe]:
   apply (metis (mono_tags, lifting) Un_iff extchoice_fun_def in_mono retvals_extchoice)
   done
 
+lemma hl_input [hoare_safe]: 
+  assumes "wb_prism c" "\<And> x. H{P \<and> \<guillemotleft>x\<guillemotright> \<in> A \<and> @(B x)} C(x) {Q}" 
+  shows "H{P} c?(x):A|@(B x) \<rightarrow> C(x) {Q}"
+  using assms
+  by (force simp add: hoare_alt_def input_in_where_def inp_in_where_def)
+
+lemma hl_output:
+  assumes "H{P} C {Q}"
+  shows "H{P} c!(e) \<rightarrow> C {Q}"
+  using assms
+  by (force simp add: hoare_alt_def output_def outp_def)
+
 lemma hl_let [hoare_safe]:
   assumes "\<And> s. \<^bold>{P \<and> \<guillemotleft>s\<guillemotright> = \<^bold>v\<^bold>} (S (e s)) \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} let x \<leftarrow> e in S x \<^bold>{Q\<^bold>}"

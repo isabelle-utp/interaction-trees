@@ -61,6 +61,11 @@ lemma ret_drop [simp]: "proc_ret e ;; rdrop = Skip"
 lemma ret_drop' [simp]: "(P ;; proc_ret e) ;; rdrop = P"
   by (simp add: kcomp_assoc)
 
+text \<open> Output the return value of a procedure as an event \<close>
+
+definition output_return :: "('s \<Rightarrow> ('e, 'a \<times> 's) itree) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 's) htree" where
+"output_return P c = (\<lambda> s. P(s) \<bind> (\<lambda> (v, s'). outp c v \<then> Ret s'))" 
+
 subsection \<open> Syntax \<close>
 
 syntax 
@@ -151,6 +156,13 @@ lemma thl_proc_call_nret [hoare_safe]:
   apply (auto simp add: proc_call_nret_def taut_def seq_itree_def kleisli_comp_def)
   apply (metis (mono_tags, lifting) SEXP_def kleisli_comp_def pre_terminates seq_itree_def wp_seq)
   done
+
+lemma hl_output_return: 
+  assumes "H{P} C ;; rdrop {Q}"
+  shows "H{P} output_return C c {Q}"
+  using assms
+  by (auto elim!: trace_to_bindE trace_to_VisE simp add: output_return_def hoare_alt_def outp_def rdrop_def)
+     (metis bind_Ret case_prod_conv kleisli_comp_def seq_itree_def trace_to_bind_left)
 
 subsection \<open> Promotion \<close>
 
