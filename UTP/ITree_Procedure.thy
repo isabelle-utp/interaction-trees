@@ -89,7 +89,7 @@ definition ret_pred :: "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> (
 
 expr_constructor ret_pred
 
-syntax "_ret_pred" :: "id \<Rightarrow> logic \<Rightarrow> logic" ("retp[_./ _]")
+syntax "_ret_pred" :: "pttrn \<Rightarrow> logic \<Rightarrow> logic" ("retp[_./ _]")
 
 translations
   "_ret_pred r P" == "CONST ret_pred (\<lambda> r. (P)\<^sub>e)"
@@ -103,9 +103,8 @@ text \<open> We implement a specialised form of Hoare triple, which accepts a pr
 abbreviation hoare_rel_proc_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> ('e, 'a \<times> 's) itree) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_rel_proc_triple P C Q \<equiv> hoare_rel_triple P C (\<lambda> old. (ret_pred (\<lambda> r. Q r old)))"
 
-
 syntax   
-  "_hoare_proc" :: "logic \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_./ _}")
+  "_hoare_proc" :: "logic \<Rightarrow> logic \<Rightarrow> pttrn \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_./ _}")
 
 translations
   "H{P} C {x. Q}" => "CONST hoare_rel_proc_triple (P)\<^sub>e C (\<lambda> x _ghost_old. (Q)\<^sub>e)"
@@ -173,11 +172,16 @@ lemma thl_proc_call_nret [hoare_safe]:
   done
 
 lemma hl_output_return [hoare_safe]: 
-  assumes "H{P} C ;; rdrop {Q}"
+  assumes "H{P} C {ret. Q}"
   shows "H{P} output_return C c {Q}"
   using assms
-  by (auto elim!: trace_to_bindE trace_to_VisE simp add: output_return_def hoare_alt_def outp_def rdrop_def)
-     (metis bind_Ret case_prod_conv kleisli_comp_def seq_itree_def trace_to_bind_left)
+  by (auto elim!: trace_to_bindE trace_to_VisE simp add: output_return_def hoare_rel_triple_def outp_def)
+     (metis SEXP_def old.prod.case ret_pred_def)
+
+lemma hl_proc_conj_pre:
+  assumes "H{P\<^sub>1} C {r. Q}"
+  shows "H{P\<^sub>1 \<and> P\<^sub>2} C {r. Q}"
+  by (metis SEXP_def assms hl_conj_pre)
 
 lemma dfp_proc_ret [wp]: "dfp (proc_ret e) = (True)\<^sub>e"
   by (force simp add: dfp_def proc_ret_def deadlock_free_Ret)
@@ -186,7 +190,7 @@ lemma dfp_output_return [wp]: "dfp (output_return P a) = dfp P"
   using deadlock_free_Ret deadlock_free_Vis 
   by (force simp add: output_return_def dfp_def outp_def deadlock_free_bind_iff)
 
-lemma hoare_proc_via_wlp: "H{P} C {r. @(Q r)} \<longleftrightarrow> `P \<longrightarrow> wlp C retp[r. @(Q r)]`"
+lemma hoare_proc_via_wlp [wp]: "H{P} C {r. @(Q r)} \<longleftrightarrow> `P \<longrightarrow> wlp C retp[r. @(Q r)]`"
   by (auto simp add: hoare_rel_triple_def wlp_alt_def ret_pred_def)
      (expr_auto)+
 

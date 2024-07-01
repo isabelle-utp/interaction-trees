@@ -29,17 +29,11 @@ lemma hoare_triple_def: "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<to
 syntax 
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_}")
   "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2\<^bold>{_\<^bold>} /_) /\<^bold>{_\<^bold>}")
-  "_preserves"       :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "preserves" 40)
-  "_preserves_under" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_ preserves _ under _" [40, 0, 40] 40)
-  "_establishes"     :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "establishes" 40)
 
 translations
   "H{P} C {Q}" => "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> _ghost_old. (Q)\<^sub>e)"
   "H{P} C {Q}" <= "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> old. (Q)\<^sub>e)"
   "H{P} C {Q}" <= "CONST hoare_triple (P)\<^sub>e C (Q)\<^sub>e"
-  "_preserves S P" => "H{P} S {P}"
-  "_preserves_under S P Q" => "H{P \<and> Q} S {P}"
-  "_establishes \<sigma> P" => "H{CONST True} \<langle>\<sigma>\<rangle>\<^sub>a {P}"
 
 lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s')"
   by (auto simp add: hoare_rel_triple_def spec_def itree_rel_defs retvals_def subset_iff)
@@ -102,8 +96,8 @@ lemma hl_cut:
   using assms by (auto intro: hl_conseq hl_conj)
 
 lemma hl_cut_inv:
-  assumes "S preserves P" "S preserves Q under P"
-  shows "S preserves (P \<and> Q)"
+  assumes "\<^bold>{P\<^bold>} S \<^bold>{P\<^bold>}" "\<^bold>{Q \<and> P\<^bold>} S \<^bold>{Q\<^bold>}"
+  shows "\<^bold>{P \<and> Q\<^bold>} S \<^bold>{P \<and> Q\<^bold>} "
   using assms by (rule hl_cut)
 
 lemma hl_skip: "\<^bold>{P\<^bold>} Skip \<^bold>{P\<^bold>}"

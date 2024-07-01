@@ -483,10 +483,17 @@ lemma extchoice_event_block:
 
 lemma extchoice_inp_where_combine: 
   assumes "wb_prism a" "wb_prism b" "a \<nabla> b"
+  shows "input_in_where a A PC \<box> input_in_where b B QD 
+         = input_in_where (a +\<^sub>\<triangle> b) (A <+> B)\<^sub>e (case_sum PC QD)"
+  using assms
+  by (auto intro!:prism_fun_cong simp add: simp add: input_in_where_prism_fun extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if fun_eq_iff)
+
+lemma extchoice_inp_where_combine': 
+  assumes "wb_prism a" "wb_prism b" "a \<nabla> b"
   shows "a?(x):A|@(P x) \<rightarrow> C(x) \<box> b?(y):B|@(Q y) \<rightarrow> D(y) 
          = input_in_where (a +\<^sub>\<triangle> b) (A <+> B)\<^sub>e (case_sum (\<lambda> x. (P x, C x)) (\<lambda> y. (Q y, D y)))"
   using assms
-  by (auto intro!:prism_fun_cong simp add: simp add: input_in_where_prism_fun extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if fun_eq_iff)
+  by (simp add: extchoice_inp_where_combine SEXP_def)
 
 definition match_itree :: "('a, 's) expr \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "match_itree e P = (\<lambda> s. P (e s) s)"

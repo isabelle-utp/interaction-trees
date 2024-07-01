@@ -45,7 +45,7 @@ lemma dfp_event_block [wp]: "wb_prism c \<Longrightarrow> dfp (event_block c A P
   by (simp add: dfp_def event_block_def deadlock_free_Vis_Ret_prism_fun SEXP_def) 
 
 lemma deadlock_free_init_iterate:
-  assumes "\<sigma> establishes P" "C preserves P" "`B \<and> P \<longrightarrow> dfp C`"
+  assumes "\<^bold>{True\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}" "\<^bold>{P\<^bold>} C \<^bold>{P\<^bold>}" "`B \<and> P \<longrightarrow> dfp C`"
   shows "deadlock_free ((\<langle>\<sigma>\<rangle>\<^sub>a ;; iterate B C) s)"
   using assms
   apply (simp add: seq_itree_def kleisli_comp_def deadlock_free_bind_iff assigns_def dfp_def taut_def hoare_alt_def)
@@ -54,7 +54,7 @@ lemma deadlock_free_init_iterate:
   done
 
 lemma deadlock_free_init_loop:
-  assumes "\<sigma> establishes P" "C preserves P" "`P \<longrightarrow> dfp C`"
+  assumes "\<^bold>{True\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}" "\<^bold>{P\<^bold>} C \<^bold>{P\<^bold>}" "`P \<longrightarrow> dfp C`"
   shows "deadlock_free ((\<langle>\<sigma>\<rangle>\<^sub>a ;; loop C) s)"
   using assms
   by (auto intro: deadlock_free_init_iterate[of _ P])
