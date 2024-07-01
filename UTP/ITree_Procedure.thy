@@ -157,7 +157,7 @@ lemma thl_proc_call_nret [hoare_safe]:
   apply (metis (mono_tags, lifting) SEXP_def kleisli_comp_def pre_terminates seq_itree_def wp_seq)
   done
 
-lemma hl_output_return: 
+lemma hl_output_return [hoare_safe]: 
   assumes "H{P} C ;; rdrop {Q}"
   shows "H{P} output_return C c {Q}"
   using assms

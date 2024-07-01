@@ -9,25 +9,22 @@ subsection \<open> Basic Constructs \<close>
 definition skip :: "('e, unit) itree" where
 "skip = Ret ()"
 
-abbreviation inp_in_where_choice :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> _" where
-  "inp_in_where_choice c A P \<equiv> (\<lambda> e \<in> build\<^bsub>c\<^esub> ` A | P (the (match\<^bsub>c\<^esub> e)) \<bullet> \<checkmark> (the (match\<^bsub>c\<^esub> e)))"
-
 definition inp_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('e, 'a) itree" where
-"inp_in_where c A P = Vis (inp_in_where_choice c A P)"
+"inp_in_where c A P = Vis (prism_fun c A (\<lambda> x. (P x, Ret x)))"
 
 abbreviation "inp_in c A \<equiv> inp_in_where c A (\<lambda> s. True)"
 
 abbreviation "inp_where c P \<equiv> inp_in_where c UNIV P"
 
 lemma retvals_inp_in_where: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in_where c A P) = {x \<in> A. P x}"
-  by (auto simp add: inp_in_where_def)
+  by (auto simp add: inp_in_where_def prism_fun_def)
      (metis image_insert insertCI insert_Diff option.sel retvals_Ret wb_prism.match_build)
 
 lemma retvals_inp_in: "wb_prism c \<Longrightarrow> \<^bold>R(inp_in c A) = A"
   by (simp add: retvals_inp_in_where)
 
 lemma div_free_inp_in: "div_free (inp_in c A)"
-  by (auto simp add: inp_in_where_def div_free_Vis)
+  by (auto simp add: inp_in_where_def prism_fun_def div_free_Vis)
 
 abbreviation inp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> ('e, 'a) itree" where
 "inp c \<equiv> inp_in c UNIV"
@@ -48,13 +45,13 @@ definition inp_map :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e)\<Rightarrow> 
 
 lemma inp_in_where_map_code [code_unfold]:
   "wb_prism c \<Longrightarrow> inp_in_where c A P = inp_map_in_where c A P"
-  apply (auto simp add: inp_in_where_def inp_map_in_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
+  apply (auto simp add: inp_in_where_def prism_fun_def inp_map_in_where_def fun_eq_iff pfun_eq_iff domI pdom.abs_eq option.case_eq_if)
   apply (metis (no_types, opaque_lifting) imageI option.distinct(1) option.exhaust_sel wb_prism_def)
   done
 
 lemma inp_in_where_list_code [code_unfold]:
   "wb_prism c \<Longrightarrow> inp_in_where c (set xs) P = inp_list_where c xs P"
-  unfolding inp_in_where_def inp_list_where_def
+  unfolding inp_in_where_def prism_fun_def inp_list_where_def
   by (simp only: set_map [THEN sym] inter_set_filter pabs_set filter_map comp_def, simp add: comp_def)
 
 lemma inp_map_in_where_list_code [code_unfold]:

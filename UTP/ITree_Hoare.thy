@@ -195,7 +195,7 @@ lemma hl_input [hoare_safe]:
   assumes "wb_prism c" "\<And> x. H{P \<and> \<guillemotleft>x\<guillemotright> \<in> A \<and> @(B x)} C(x) {Q}" 
   shows "H{P} c?(x):A|@(B x) \<rightarrow> C(x) {Q}"
   using assms
-  by (force simp add: hoare_alt_def input_in_where_def inp_in_where_def)
+  by (force simp add: hoare_alt_def input_in_where_def prism_fun_def inp_in_where_def)
 
 lemma hl_output:
   assumes "H{P} C {Q}"

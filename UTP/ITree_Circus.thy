@@ -240,7 +240,7 @@ abbreviation "abs_st P \<equiv> P ;; assigns (\<lambda> s. ())"
 
 lemma traces_inp: "wb_prism c \<Longrightarrow> traces (inp c) = {[]} \<union> {[Ev (build\<^bsub>c\<^esub> v)] | v. True} \<union> {[Ev (build\<^bsub>c\<^esub> v), \<checkmark> v] | v. True}" 
   apply (simp add: inp_in_where_def traces_Vis traces_Ret)
-  apply (auto simp add: inp_in_where_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
+  apply (auto simp add: inp_in_where_def prism_fun_def bind_eq_Some_conv traces_Ret domIff pdom.abs_eq  elim!: in_tracesE trace_to_VisE)
   done 
 
 definition input_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> (('s \<Rightarrow> bool) \<times> ('e, 's) htree)) \<Rightarrow> ('e, 's) htree" where
@@ -484,5 +484,11 @@ syntax
 translations
   "_match_syntax e P" => "CONST match_itree (e)\<^sub>e (\<lambda> _sexp_state. (_case_syntax _sexp_state P))"
   "_match_syntax e P" <= "CONST match_itree (e)\<^sub>e (\<lambda> s. (_case_syntax s2 P))"
+
+(*
+lemma "a?(x):A|@(P x) \<rightarrow> C(x) \<box> b?(y):B|@(Q y) \<rightarrow> D(y) 
+       = input_in_where (a +\<^sub>\<triangle> b) (A <+> B)\<^sub>e (case_sum (\<lambda> x. (P x, C x)) (\<lambda> y. (Q y, D y)))"
+  oops
+*)
 
 end
