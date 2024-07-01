@@ -271,6 +271,9 @@ lemma input_in_where_enum [code_unfold]: "wb_prism c \<Longrightarrow> input_in_
 
 abbreviation input_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('s \<Rightarrow> bool) \<times> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input_where c P \<equiv> input_in_where c (UNIV)\<^sub>e P"
+  
+lemma input_in_where_prism_fun: "input_in_where c A PC = (\<lambda> s. Vis (prism_fun c (A s) (\<lambda> c. (fst (PC c) s, (snd (PC c) s)))))"
+  by (simp add: input_in_where_def inp_in_where_def fun_eq_iff)
 
 (*
 definition "input' c P = (\<lambda>s. inp' c \<bind> (\<lambda>x. P x s))"
@@ -475,6 +478,13 @@ lemma extchoice_event_block:
   using assms
   by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
 
+lemma extchoice_inp_where_combine: 
+  assumes "wb_prism a" "wb_prism b" "a \<nabla> b"
+  shows "a?(x):A|@(P x) \<rightarrow> C(x) \<box> b?(y):B|@(Q y) \<rightarrow> D(y) 
+         = input_in_where (a +\<^sub>\<triangle> b) (A <+> B)\<^sub>e (case_sum (\<lambda> x. (P x, C x)) (\<lambda> y. (Q y, D y)))"
+  using assms
+  by (auto intro!:prism_fun_cong simp add: simp add: input_in_where_prism_fun extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if fun_eq_iff)
+
 definition match_itree :: "('a, 's) expr \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "match_itree e P = (\<lambda> s. P (e s) s)"
 
@@ -484,11 +494,5 @@ syntax
 translations
   "_match_syntax e P" => "CONST match_itree (e)\<^sub>e (\<lambda> _sexp_state. (_case_syntax _sexp_state P))"
   "_match_syntax e P" <= "CONST match_itree (e)\<^sub>e (\<lambda> s. (_case_syntax s2 P))"
-
-(*
-lemma "a?(x):A|@(P x) \<rightarrow> C(x) \<box> b?(y):B|@(Q y) \<rightarrow> D(y) 
-       = input_in_where (a +\<^sub>\<triangle> b) (A <+> B)\<^sub>e (case_sum (\<lambda> x. (P x, C x)) (\<lambda> y. (Q y, D y)))"
-  oops
-*)
-
+  
 end
