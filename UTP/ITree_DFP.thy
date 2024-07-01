@@ -25,8 +25,13 @@ lemma dfp_seq [wp]: "dfp (P ;; Q) = (dfp P \<and> wlp P (dfp Q))\<^sub>e"
 lemma dfp_event_choice [wp]: "dfp (event_choice F) = (pdom(F) \<noteq> {} \<and> (\<forall> e\<in>pdom(F). dfp(F(\<guillemotleft>e\<guillemotright>)\<^sub>p)\<^sub>e))\<^sub>e"
   by (simp add: dfp_def event_choice_def deadlock_free_Vis SEXP_def)
 
+lemma dfp_input_in_where [wp]: 
+  assumes "wb_prism c"
+  shows "dfp (input_in_where c A PC) = [\<lambda> s. (\<exists> v\<in>A s. fst (PC v) s) \<and> (\<forall> v\<in>A s. fst (PC v) s \<longrightarrow> dfp (snd (PC v)) s)]\<^sub>e"
+  by (simp add: dfp_def input_in_where_prism_fun deadlock_free_Vis_prism_fun SEXP_def assms)
+
 lemma dfp_event_block [wp]: "wb_prism c \<Longrightarrow> dfp (event_block c A P\<sigma>) = [\<lambda> s. \<exists> v\<in>A s. fst (P\<sigma> v) s]\<^sub>e"
-  by (simp add: dfp_def event_block_def deadlock_free_Vis_prism_fun SEXP_def) 
+  by (simp add: dfp_def event_block_def deadlock_free_Vis_Ret_prism_fun SEXP_def) 
 
 lemma deadlock_free_init_iterate:
   assumes "\<sigma> establishes P" "C preserves P" "`B \<and> P \<longrightarrow> dfp C`"

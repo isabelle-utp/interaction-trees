@@ -84,7 +84,11 @@ lemma deadlock_free_bind_iff:
   done
 
 lemma deadlock_free_Vis_prism_fun: 
-  "wb_prism c \<Longrightarrow> deadlock_free (Vis (prism_fun c A (\<lambda> x. (P x, Ret (f x))))) = (\<exists>v\<in>A. P v)"
+  "wb_prism c \<Longrightarrow> deadlock_free (Vis (prism_fun c A (\<lambda> x. (P x, C x)))) = ((\<exists>v\<in>A. P v) \<and> (\<forall>v\<in>A. P v \<longrightarrow> deadlock_free (C v)))"
   by (auto simp add: deadlock_free_Vis dom_prism_fun prism_fun_apply deadlock_free_Ret)
+
+lemma deadlock_free_Vis_Ret_prism_fun:
+  "wb_prism c \<Longrightarrow> deadlock_free (Vis (prism_fun c A (\<lambda> x. (P x, Ret (f x))))) = (\<exists>v\<in>A. P v)"
+  by (simp add: deadlock_free_Vis_prism_fun deadlock_free_Ret)
 
 end
