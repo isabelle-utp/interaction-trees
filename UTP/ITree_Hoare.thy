@@ -17,7 +17,7 @@ named_theorems hoare_safe and hoare_lemmas
 (* Should the following be separate definitions? If they are, we can have an introduction law
   that removes the ghost state at particular points. *)
 
-definition hoare_rel_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
+definition hoare_rel_triple :: "('s\<^sub>1 \<Rightarrow> bool) \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree) \<Rightarrow> ('s\<^sub>1 \<Rightarrow> 's\<^sub>2 \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_rel_triple P C Q = (\<forall> s s' es. P s \<and> C s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s s')"
 
 abbreviation hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
@@ -34,14 +34,18 @@ syntax
   "_establishes"     :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "establishes" 40)
 
 translations
-  "H{P} C {Q}" => "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> _ghost_old. (Q)\<^sub>e)" 
+  "H{P} C {Q}" => "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> _ghost_old. (Q)\<^sub>e)"
+  "H{P} C {Q}" <= "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> old. (Q)\<^sub>e)"
   "H{P} C {Q}" <= "CONST hoare_triple (P)\<^sub>e C (Q)\<^sub>e"
   "_preserves S P" => "H{P} S {P}"
   "_preserves_under S P Q" => "H{P \<and> Q} S {P}"
   "_establishes \<sigma> P" => "H{CONST True} \<langle>\<sigma>\<rangle>\<^sub>a {P}"
 
 lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s')"
-  by (auto simp add: hoare_triple_def spec_def itree_rel_defs retvals_def subset_iff)
+  by (auto simp add: hoare_rel_triple_def spec_def itree_rel_defs retvals_def subset_iff)
+
+lemma hoare_ret_def: "\<^bold>{P\<^bold>} C \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s'. P s \<and> s' \<in> \<^bold>R(C s) \<longrightarrow> Q s')"
+  by (auto simp add: hoare_alt_def retvals_def)
 
 lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<checkmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (auto simp add: hoare_alt_def)
@@ -110,8 +114,9 @@ lemma hl_skip':
   shows "\<^bold>{P\<^bold>} Skip \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def Skip_def, expr_simp)
 
+
 lemma hl_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{R\<^bold>}"
-  by (auto simp add: hoare_triple_def seq_rel spec_def)
+  by (auto simp add: hoare_ret_def seq_itree_def kleisli_comp_def)
 
 lemma hoare_seq_inv [hoare_safe]: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{P\<^bold>}; \<^bold>{P\<^bold>} S\<^sub>2 \<^bold>{P\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{P\<^bold>}"
   by (simp add: hl_seq)
@@ -186,7 +191,7 @@ lemma hl_choice [hoare_safe]:
   assumes "\<^bold>{P\<^bold>} C\<^sub>1 \<^bold>{Q\<^bold>}" "\<^bold>{P\<^bold>} C\<^sub>2 \<^bold>{Q\<^bold>}"
   shows "\<^bold>{P\<^bold>} C\<^sub>1 \<box> C\<^sub>2 \<^bold>{Q\<^bold>}"
   using assms
-  apply (auto simp add: hoare_ref_by itree_pred_def)
+  apply (simp add: hoare_ret_def)
   apply expr_auto
   apply (metis (mono_tags, lifting) Un_iff extchoice_fun_def in_mono retvals_extchoice)
   done
@@ -545,7 +550,7 @@ lemma nmods_hlI: "\<lbrakk> \<And> v. H{e = \<guillemotleft>v\<guillemotright>} 
   by (simp add: nmods_via_hl)
 
 theorem hl_via_wlp: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} = `P \<longrightarrow> wlp S Q`"
-  by (simp add: hoare_triple_def spec_def wlp_itree_def, expr_auto)
+  by (auto simp add: hoare_ret_def wlp_itree_def itree_rel_def itree_pred_def taut_def)
 
 lemma hl_wlp: "`P \<longrightarrow> wlp S Q` \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (simp add: hl_via_wlp)

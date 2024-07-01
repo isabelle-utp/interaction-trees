@@ -80,14 +80,29 @@ translations
 
 ML_file \<open>ITree_Procedure.ML\<close>
 
+subsection \<open> Return Predicates \<close>
+
+text \<open> Predicates with an abstract return value \<close>
+
+definition ret_pred :: "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<times> 's) \<Rightarrow> bool" where
+"ret_pred P = (\<lambda> (r, s). P r s)"
+
+expr_constructor ret_pred
+
+syntax "_ret_pred" :: "id \<Rightarrow> logic \<Rightarrow> logic" ("retp[_./ _]")
+
+translations
+  "_ret_pred r P" == "CONST ret_pred (\<lambda> r. (P)\<^sub>e)"
+
 subsection \<open> Hoare logic \<close>
 
 text \<open> We implement a specialised form of Hoare triple, which accepts a procedure as the program.
   The postcondition introduces a variable, to which the return value of the procedure is bound.
   Otherwise, the postcondition is the same as a normal Hoare triple. \<close>
 
-definition hoare_rel_proc_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> ('e, 'a \<times> 's) itree) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
-"hoare_rel_proc_triple P C Q = (\<forall> s s' r es. P s \<and> C s \<midarrow>es\<leadsto> \<checkmark> (r, s') \<longrightarrow> Q r s s')"
+abbreviation hoare_rel_proc_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> ('e, 'a \<times> 's) itree) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
+"hoare_rel_proc_triple P C Q \<equiv> hoare_rel_triple P C (\<lambda> old. (ret_pred (\<lambda> r. Q r old)))"
+
 
 syntax   
   "_hoare_proc" :: "logic \<Rightarrow> logic \<Rightarrow> id \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_./ _}")
@@ -99,11 +114,11 @@ translations
 lemma hl_proc_conseq:
   assumes "H{P\<^sub>2} S {ret. @(Q\<^sub>2 ret)}" "`P\<^sub>1 \<longrightarrow> P\<^sub>2`" "\<And> ret. `@(Q\<^sub>2 ret) \<longrightarrow> @(Q\<^sub>1 ret)`"
   shows "H{P\<^sub>1} S {ret. @(Q\<^sub>1 ret)}"
-  using assms by (auto simp add: hoare_rel_proc_triple_def, expr_simp, force)
+  using assms by (auto simp add: hoare_rel_triple_def ret_pred_def, expr_simp, force)
 
 lemma hl_return: 
   "H{P} return e {ret. \<guillemotleft>ret\<guillemotright> = e \<and> P}"
-  by (simp add: hoare_rel_proc_triple_def proc_ret_def)
+  by (simp add: hoare_rel_triple_def ret_pred_def proc_ret_def)
 
 lemma hl_return' [hoare_safe]:
   assumes "\<And> ret. `\<guillemotleft>ret\<guillemotright> = e \<and> P \<longrightarrow> @(Q ret)`"
@@ -114,13 +129,13 @@ lemma hl_proc_seq:
   assumes "H{P} C\<^sub>1 {Q}" "H{Q} C\<^sub>2 {ret. @(R ret)}"
   shows "H{P} C\<^sub>1 ;; C\<^sub>2 {ret. @(R ret)}"
   using assms
-  by (auto elim!:trace_to_bindE bind_RetE' simp add: hoare_rel_proc_triple_def hoare_rel_triple_def seq_itree_def kleisli_comp_def)
+  by (auto elim!:trace_to_bindE bind_RetE' simp add: hoare_rel_triple_def ret_pred_def seq_itree_def kleisli_comp_def)
      (metis trace_to_Nil)+
 
 lemma hl_proc_cond [hoare_safe]:
   assumes "H{B \<and> P} S {ret. @(Q ret)}" "H{\<not>B \<and> P} T {ret. @(Q ret)}"
   shows "H{P} if B then S else T fi {ret. @(Q ret)}"
-  using assms by (simp add: hoare_rel_proc_triple_def cond_itree_def)
+  using assms by (simp add: hoare_rel_triple_def ret_pred_def cond_itree_def)
 
 lemma hl_proc_seq_return [hoare_safe]:
   assumes "H{P} C {Q}"
@@ -170,6 +185,10 @@ lemma dfp_proc_ret [wp]: "dfp (proc_ret e) = (True)\<^sub>e"
 lemma dfp_output_return [wp]: "dfp (output_return P a) = dfp P"
   using deadlock_free_Ret deadlock_free_Vis 
   by (force simp add: output_return_def dfp_def outp_def deadlock_free_bind_iff)
+
+lemma hoare_proc_via_wlp: "H{P} C {r. @(Q r)} \<longleftrightarrow> `P \<longrightarrow> wlp C retp[r. @(Q r)]`"
+  by (auto simp add: hoare_rel_triple_def wlp_alt_def ret_pred_def)
+     (expr_auto)+
 
 subsection \<open> Promotion \<close>
 
