@@ -111,6 +111,9 @@ lemma inp_in_coset [code_unfold]:
 definition outp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('e, unit) itree" where
 "outp c v = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> v, Ret())])"
 
+lemma outp_as_inp: "outp c v = (inp_in c {v} \<then> Ret ())"
+  by (simp add: outp_def inp_in_where_def prism_fun_def pabs_insert_maplet)
+
 definition sync :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, unit) itree" where
 "sync c = Vis (pfun_of_alist [(build\<^bsub>c\<^esub> (), Ret())])"
 

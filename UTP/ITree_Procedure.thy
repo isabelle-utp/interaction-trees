@@ -1,7 +1,7 @@
 section \<open> Procedures \<close>
 
 theory ITree_Procedure
-  imports ITree_Circus ITree_Hoare ITree_THoare
+  imports ITree_Circus ITree_Hoare ITree_THoare ITree_DFP
   keywords "over"
 begin
 
@@ -163,6 +163,13 @@ lemma hl_output_return [hoare_safe]:
   using assms
   by (auto elim!: trace_to_bindE trace_to_VisE simp add: output_return_def hoare_alt_def outp_def rdrop_def)
      (metis bind_Ret case_prod_conv kleisli_comp_def seq_itree_def trace_to_bind_left)
+
+lemma dfp_proc_ret [wp]: "dfp (proc_ret e) = (True)\<^sub>e"
+  by (force simp add: dfp_def proc_ret_def deadlock_free_Ret)
+
+lemma dfp_output_return [wp]: "dfp (output_return P a) = dfp P"
+  using deadlock_free_Ret deadlock_free_Vis 
+  by (force simp add: output_return_def dfp_def outp_def deadlock_free_bind_iff)
 
 subsection \<open> Promotion \<close>
 

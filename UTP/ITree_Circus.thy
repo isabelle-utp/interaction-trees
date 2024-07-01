@@ -322,6 +322,9 @@ translations "c!(e) \<rightarrow> P" == "CONST output c (e)\<^sub>e P"
 lemma assigns_output: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c!(e) \<rightarrow> P = c!(\<sigma> \<dagger> e) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a ;; P)"
   by (simp add: seq_itree_def assigns_def kleisli_comp_def output_def expr_defs)
 
+lemma output_as_input: "c!(e) \<rightarrow> P = c?(x):{e} \<rightarrow> P"
+  by (simp add:output_def input_in_where_def outp_as_inp bind_itree_assoc[THEN sym])
+
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
 

@@ -15,6 +15,12 @@ lemma dfp_Stop [wp]: "dfp Stop = (False)\<^sub>e"
 lemma dfp_Skip [wp]: "dfp Skip = (True)\<^sub>e"
   by (simp add: dfp_def Skip_def deadlock_free_Ret SEXP_def)
 
+lemma dfp_assume [wp]: "dfp (assume P) = (True)\<^sub>e"
+  by (auto simp add: dfp_def assume_def deadlock_free_Ret deadlock_free_diverge)
+
+lemma dfp_assert [wp]: "dfp (assert P) = (P)\<^sub>e"
+  using deadlock_free_deadlock by (auto simp add: dfp_def test_def deadlock_free_Ret)
+
 lemma dfp_assigns [wp]: "dfp \<langle>\<sigma>\<rangle>\<^sub>a = (True)\<^sub>e"
   by (simp add: dfp_def assigns_def deadlock_free_Ret SEXP_def)
 
@@ -29,6 +35,11 @@ lemma dfp_input_in_where [wp]:
   assumes "wb_prism c"
   shows "dfp (input_in_where c A PC) = [\<lambda> s. (\<exists> v\<in>A s. fst (PC v) s) \<and> (\<forall> v\<in>A s. fst (PC v) s \<longrightarrow> dfp (snd (PC v)) s)]\<^sub>e"
   by (simp add: dfp_def input_in_where_prism_fun deadlock_free_Vis_prism_fun SEXP_def assms)
+
+lemma dfp_output [wp]:
+  assumes "wb_prism c"
+  shows "dfp (c!(v) \<rightarrow> P) = dfp P"
+  by (simp add: output_as_input wp assms, force)
 
 lemma dfp_event_block [wp]: "wb_prism c \<Longrightarrow> dfp (event_block c A P\<sigma>) = [\<lambda> s. \<exists> v\<in>A s. fst (P\<sigma> v) s]\<^sub>e"
   by (simp add: dfp_def event_block_def deadlock_free_Vis_Ret_prism_fun SEXP_def) 

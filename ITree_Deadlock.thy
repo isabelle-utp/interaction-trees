@@ -44,6 +44,9 @@ lemma retvals_deadlock [simp]: "\<^bold>R(deadlock) = {}"
 definition deadlock_free :: "('e, 'r) itree \<Rightarrow> bool" where
 "deadlock_free P = (\<forall> tr. \<not> P \<midarrow>tr\<leadsto> deadlock)"
 
+lemma deadlock_free_diverge: "deadlock_free diverge"
+  by (metis deadlock_def deadlock_free_def diverge_no_Vis_trans)
+
 lemma deadlock_free_deadlock: "deadlock_free deadlock = False"
   by (simp add: deadlock_free_def deadlock_trace_to)
 
