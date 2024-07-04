@@ -46,7 +46,7 @@ text \<open> Return statements in an ITree procedure \<close>
 definition proc_ret :: "('s \<Rightarrow> 'a) \<Rightarrow> 's \<Rightarrow> ('e, 'a \<times> 's) itree" where 
   "proc_ret e = (\<lambda> s. Ret (e s, s))"
 
-abbreviation proc_ret_empty :: "'s \<Rightarrow> ('e, unit \<times> 's) itree" where
+abbreviation (input) proc_ret_empty :: "'s \<Rightarrow> ('e, unit \<times> 's) itree" where
 "proc_ret_empty \<equiv> proc_ret (())\<^sub>e"
 
 lemma ret_rbind [simp]: "proc_ret e ;; rbind x = x := e"
@@ -140,6 +140,11 @@ lemma hl_proc_seq_return [hoare_safe]:
   assumes "H{P} C {Q}"
   shows "H{P} C ;; return e {ret. \<guillemotleft>ret\<guillemotright> = e \<and> Q}"
   using assms hl_proc_seq hl_return by fastforce
+
+lemma hl_proc_ignore_return [hoare_safe]:
+  assumes "H{P} C {Q}"
+  shows "H{P} C ;; return e {ret. Q}"
+  by (force intro: hl_proc_seq assms hl_return')
 
 lemma hl_proc_call [hoare_safe]: 
   assumes "\<And> v. H{P \<and> \<guillemotleft>v\<guillemotright> = e} C(v) ;; rbind x {Q}"
