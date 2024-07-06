@@ -8,7 +8,6 @@ subsection \<open> Preliminaries \<close>
 
 datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's
 
-
 adhoc_overloading
   tick Term
 
@@ -408,8 +407,9 @@ lemma wbisim_eq_failures:
   shows "failures(P) = failures(Q)"
   by (metis antisym_conv assms wbisim_le_failures wbisim_sym)
 
-definition stable_failures :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" ("failures\<^sub>\<bottom>") where
-"stable_failures P = failures(P) \<union> {(s, X). s \<in> divergences(P) \<and> X \<subseteq> range Ev}"
+definition failures_bot :: "('e, 's) itree \<Rightarrow> (('e, 's) trace \<times> ('e, 's) refusal) set" ("failures\<^sub>\<bottom>") where
+"failures_bot(P) = failures(P) \<union> {(s, X) | X s. s \<in> divergences P} 
+                               "
 
 lemma diverge_no_failures [dest]: "failure_of t diverge \<Longrightarrow> False"
   apply (simp add: failure_of_def prod.case_eq_if)
@@ -462,7 +462,11 @@ lemma failures_Term_iff:
   "(map Ev tr, B \<union> range \<checkmark>) \<in> failures P \<longleftrightarrow> (\<exists> F. P \<midarrow>tr\<leadsto> Vis F \<and> B \<inter> Ev ` pdom F = {})"
   by (auto simp add: failures_def mstep_to_def refuses_Term_iff)
      (metis event.simps(4) trace_last_Ev)+
-  
+
+lemma FD1: "([], {}) \<in> failures\<^sub>\<bottom>(P)"
+  by (auto simp add: failures_bot_def divergences_def failures_def mstep_to_def refuses_def)
+     (metis divergent_trace_toI itree.disc(5) itree.exhaust trace_to_Nil)
+
 text \<open> Refusing all termination events \<close>
 
 lemma "(tr, B \<union> range \<checkmark>) \<in> failures P \<longleftrightarrow> 
@@ -546,6 +550,40 @@ lemma
                          \<union> {([], X) | X. X \<subseteq> range Ev \<and> (\<exists> v. [\<checkmark> v] \<in> traces(P) \<union> traces(Q))}"
   oops
 
+lemma trace_to_no_Vis_Ret_is_diverge: 
+  assumes "P \<midarrow>tr\<leadsto> P'" "\<forall>F. \<not> P \<midarrow>tr\<leadsto> Vis F" "\<forall>x. \<not> P \<midarrow>tr\<leadsto> \<checkmark> x"
+  shows "divergent P'"
+  using assms
+  by (metis append.right_neutral is_VisE itree.collapse(1) itree.exhaust_disc stabilises_def trace_of_Sils trace_to_trans)
+
+lemma nil_trace_to_no_Vis_Ret_is_diverge': 
+  assumes "P \<midarrow>[]\<leadsto> P'" "\<forall>F. \<not> P \<midarrow>[]\<leadsto> Vis F" "\<forall>x. \<not> P \<midarrow>[]\<leadsto> \<checkmark> x"
+  shows "divergent P"
+  by (meson assms(2) assms(3) trace_to_Nil trace_to_no_Vis_Ret_is_diverge)
+
+lemma nodivergent_trace_has_failure: "\<lbrakk> s \<in> traces P; s \<notin> divergences P \<rbrakk> \<Longrightarrow> (s, {}) \<in> failures P"
+  by (auto simp add: in_failures_iff traces_def)
+     (metis diverges_diverge diverges_implies_equal in_divergence_tranI trace_to_no_Vis_Ret_is_diverge)
+
+lemma traces_bot_as_failures_bot: "traces\<^sub>\<bottom>(P) = {s. (s, {}) \<in> failures\<^sub>\<bottom>(P)}"
+  apply (auto simp add: divergence_strict_traces_def failures_bot_def in_failures_iff divergences_alt_def traces_def)
+  apply (metis append_Nil2 list.map_disc_iff trace_to_no_Vis_Ret_is_diverge)
+  done
+
+lemma FD3: "(s @ t, {}) \<in> failures\<^sub>\<bottom>(P) \<Longrightarrow> (s, {}) \<in> failures\<^sub>\<bottom>(P)"
+  using F1b traces_bot_as_failures_bot by fastforce
+
+lemma FD4: "(s, Y) \<in> failures\<^sub>\<bottom> P \<Longrightarrow> X \<subseteq> Y \<Longrightarrow> (s, X) \<in> failures\<^sub>\<bottom> P"
+  by (auto simp add: failures_bot_def, meson F2)
+
+lemma FD5: "(s, X) \<in> failures\<^sub>\<bottom> P \<Longrightarrow>
+       \<forall>c \<in> Y. (s @ [c], {}) \<notin> failures\<^sub>\<bottom> P \<Longrightarrow> (s, X \<union> Y) \<in> failures\<^sub>\<bottom> P"
+  apply (auto simp add: divergence_strict_traces_def failures_bot_def)
+  apply (rule F3)
+   apply simp
+  using nodivergent_trace_has_failure apply fastforce
+  done
+  
 subsection \<open> Determinism \<close>
 
 definition "deterministic P = (divergences P = {} \<and> (\<forall> s a. s @ [a] \<in> traces(P) \<longrightarrow> (s, {a}) \<notin> failures(P)))"
