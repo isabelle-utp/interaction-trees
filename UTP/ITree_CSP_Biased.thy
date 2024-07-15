@@ -25,7 +25,7 @@ proof (cases P rule: itree_cases)
     case (Vis n G)
     with Vis' assms show ?thesis
       by (simp add: extchoice_itree_def bextchoicel_def genchoice_Sils genchoice_Sils')
-         (metis empty_iff map_prod_as_ovrd pfun_override_commute_weak)
+         (metis empty_iff excl_comb_as_ovrd pfun_override_commute_weak)
   next
     case (Ret n x)
     with assms Vis' show ?thesis 

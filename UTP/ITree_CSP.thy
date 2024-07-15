@@ -131,64 +131,69 @@ definition guard :: "bool \<Rightarrow> ('e, unit) itree" where
 
 subsection \<open> External Choice \<close>
 
-definition map_prod :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixl "\<odot>" 100) where
-"map_prod f g = (pdom(g) \<Zndres> f) \<oplus> (pdom(f) \<Zndres> g)"
+text \<open> Combine two partial functions accepting only the disjoint parts of each. \<close>
 
-lemma map_prod_commute: "x \<odot> y = y \<odot> x"
-  apply (auto simp add: fun_eq_iff map_prod_def option.case_eq_if)
+definition excl_comb :: "('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b) \<Rightarrow> ('a \<Zpfun> 'b)" (infixr "\<odot>" 100) where
+"excl_comb f g = (pdom(g) \<Zndres> f) \<oplus> (pdom(f) \<Zndres> g)"
+
+lemma excl_comb_commute: "x \<odot> y = y \<odot> x"
+  apply (auto simp add: fun_eq_iff excl_comb_def option.case_eq_if)
   apply (metis Compl_iff IntD1 IntD2 pdom_pdom_res pfun_override_commute_weak)
   done
 
-lemma map_prod_empty [simp]: "x \<odot> {}\<^sub>p = x" "{}\<^sub>p \<odot> x = x"
-  by (simp_all add: map_prod_def)
+lemma excl_comb_empty [simp]: "x \<odot> {}\<^sub>p = x" "{}\<^sub>p \<odot> x = x"
+  by (simp_all add: excl_comb_def)
 
-lemma map_prod_merge: 
+lemma excl_comb_merge: 
   "f(x \<mapsto> v)\<^sub>p \<odot> g = 
   (if (x \<notin> pdom(g)) then (f \<odot> g)(x \<mapsto> v)\<^sub>p else {x} \<Zndres> (f \<odot> g))"
-  by (auto simp add: map_prod_def)
+  by (auto simp add: excl_comb_def)
      (metis (no_types, opaque_lifting) Compl_Un insert_absorb insert_is_Un)
 
-lemma map_prod_as_ovrd:
+lemma excl_comb_as_ovrd:
   assumes "pdom(f) \<inter> pdom(g) = {}"
   shows "f \<odot> g = f \<oplus> g"
-  by (simp add: map_prod_def assms inf.commute pdom_nres_disjoint)
+  by (simp add: excl_comb_def assms inf.commute pdom_nres_disjoint)
 
-lemma map_prod_pfun_of_map [code]:
-  "map_prod (pfun_of_map f) (pfun_of_map g) = 
+lemma excl_comb_pfun_of_map [code]:
+  "excl_comb (pfun_of_map f) (pfun_of_map g) = 
      pfun_of_map (\<lambda> x. case (f x, g x) of
                        (Some _, Some _) \<Rightarrow> None |
                        (Some y, None) \<Rightarrow> Some y |
                        (None, Some y) \<Rightarrow> Some y |
                        (None, None) \<Rightarrow> None)"
-  by (auto simp add: map_prod_def pdom_def pdom_res_def restrict_map_def oplus_pfun_def map_add_def 
+  by (auto simp add: excl_comb_def pdom_def pdom_res_def restrict_map_def oplus_pfun_def map_add_def 
       pfun_of_map_inject fun_eq_iff option.case_eq_if)
 
-lemma map_prod_pfun_of_alist [code]:
-  "map_prod (pfun_of_alist xs) (pfun_of_alist ys) =
+lemma excl_comb_pfun_of_alist [code]:
+  "excl_comb (pfun_of_alist xs) (pfun_of_alist ys) =
     pfun_of_alist (AList.restrict (- fst ` set xs) ys @ AList.restrict (- fst ` set ys) xs)"
-  by (simp add: map_prod_def pdom_res_alist plus_pfun_alist)
+  by (simp add: excl_comb_def pdom_res_alist plus_pfun_alist)
 
-lemma map_prod_pfun_of_map_alist [code]: "(pfun_of_map f) \<odot> (pfun_of_alist xs) 
+lemma excl_comb_pfun_of_map_alist [code]: "(pfun_of_map f) \<odot> (pfun_of_alist xs) 
   = pfun_of_map
      (\<lambda>x. case f x of None \<Rightarrow> (case map_of xs x of None \<Rightarrow> None | Some x \<Rightarrow> Some x) 
         | Some xa \<Rightarrow> (case map_of xs x of None \<Rightarrow> Some xa | Some x \<Rightarrow> Map.empty x))"
-  by (simp add: pfun_of_alist.abs_eq map_prod_pfun_of_map)
+  by (simp add: pfun_of_alist.abs_eq excl_comb_pfun_of_map)
 
-lemma map_prod_pfun_of_alist_map [code]: "(pfun_of_alist xs) \<odot> (pfun_of_map p)
+lemma excl_comb_pfun_of_alist_map [code]: "(pfun_of_alist xs) \<odot> (pfun_of_map p)
   = pfun_of_map
      (\<lambda>x. case map_of xs x of None \<Rightarrow> (case p x of None \<Rightarrow> None | Some x \<Rightarrow> Some x)
         | Some xa \<Rightarrow> (case p x of None \<Rightarrow> Some xa | Some x \<Rightarrow> Map.empty x))"
-  by (simp add: pfun_of_alist.abs_eq map_prod_pfun_of_map)
+  by (simp add: pfun_of_alist.abs_eq excl_comb_pfun_of_map)
 
-lemma map_prod_Nil_alist [code]: 
+lemma excl_comb_Nil_alist [code]: 
   "(pfun_of_alist []) \<odot> P = P"
   "P \<odot> (pfun_of_alist []) = P"
   by simp_all
 
+definition excl_combs :: "('a \<Zpfun> 'b) list \<Rightarrow> 'a \<Zpfun> 'b" where
+"excl_combs Ps = foldr (\<odot>) Ps {}\<^sub>p"
+
 text \<open> This is like race-free behaviour \<close>
 
 class extchoice = 
-  fixes extchoice :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<box>" 59)
+  fixes extchoice :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixr "\<box>" 59)
 
 text \<open> This is an completion of Hoare's bar operator. \<close>
 
@@ -241,15 +246,15 @@ text \<open> External Choice test cases \<close>
 
 lemma "X \<noteq> Y \<Longrightarrow> (Vis {X \<mapsto> Ret a}\<^sub>p) \<box> (Vis {Y \<mapsto> Ret b}\<^sub>p) = 
        Vis {X \<mapsto> Ret a, Y \<mapsto> Ret b}\<^sub>p"
-  by (auto simp add: genchoice.code map_prod_merge pfun_upd_comm)
+  by (auto simp add: genchoice.code excl_comb_merge pfun_upd_comm)
 
 lemma "(Vis {X \<mapsto> Ret a}\<^sub>p) \<box> (Vis {X \<mapsto> Ret b}\<^sub>p) = 
        deadlock"
-  by (simp add: deadlock_def map_prod_merge)
+  by (simp add: deadlock_def excl_comb_merge)
 
 lemma "X \<noteq> Y \<Longrightarrow> (Sil (Vis {X \<mapsto> Ret a}\<^sub>p)) \<box> (Sil (Vis {Y \<mapsto> Ret b}\<^sub>p)) = 
        Sil (Sil (Vis {X \<mapsto> Ret a, Y \<mapsto> Ret b}\<^sub>p))"
-  by (simp add: genchoice.code extchoice_itree_def map_prod_merge pfun_upd_comm)
+  by (simp add: genchoice.code extchoice_itree_def excl_comb_merge pfun_upd_comm)
 
 text \<open> This requires weak bisimulation \<close>
 
@@ -273,7 +278,7 @@ lemma choice_unstable': "unstable Q \<Longrightarrow> P \<box> Q = Sil (P \<box>
 lemma choice_commutative:
   fixes P Q :: "('e, 's) itree"
   shows "P \<box> Q = Q \<box> P"
-  by (simp add: extchoice_itree_def genchoice_commutative map_prod_commute)
+  by (simp add: extchoice_itree_def genchoice_commutative excl_comb_commute)
 
 text \<open> External choice is commutative, but currently not associative. This is because when we
   have two competing return values, external choice deadlocks. However, since a return takes 
@@ -296,7 +301,7 @@ lemma choice_RetE [elim]:
 
 lemma extchoice_Vis_bind:
   "(Vis F \<box> Vis G) \<bind> R = (Vis F \<bind> R) \<box> (Vis G \<bind> R)"
-  by (simp add: map_prod_def)
+  by (simp add: excl_comb_def)
 
 lemma 
   assumes "is_Vis P" "is_Vis Q" "\<^bold>I(P) \<inter> \<^bold>I(Q) = {}"
@@ -307,7 +312,7 @@ proof -
   hence "pdom(F) \<inter> pdom(G) = {}"
     using assms(3) by force
   thus ?thesis
-    by (simp add: P Q map_prod_as_ovrd Un_commute pdom_nres_disjoint)
+    by (simp add: P Q excl_comb_as_ovrd Un_commute pdom_nres_disjoint)
 qed
 
 lemma trace_to_Nil_extchoice: "P \<midarrow>[]\<leadsto> P' \<Longrightarrow> P \<box> Q \<midarrow>[]\<leadsto> P' \<box> Q"
@@ -319,8 +324,8 @@ lemma choice_Ret_Ret: "\<checkmark> x \<box> \<checkmark> y = (if x = y then \<c
 lemma choice_Ret_Vis: "\<checkmark> x \<box> Vis G = \<checkmark> x"
   by (simp add: extchoice_itree_def genchoice.ctr(1))
 
-lemma pran_map_prod: "pran (F \<odot> G) \<subseteq> pran F \<union> pran G"
-  by (auto simp add: map_prod_def)
+lemma pran_excl_comb: "pran (F \<odot> G) \<subseteq> pran F \<union> pran G"
+  by (auto simp add: excl_comb_def)
      (metis Un_iff pfun_split_domain pran_override)+
 
 lemma stabilises_retvals_extchoice:
@@ -368,7 +373,7 @@ proof -
       case (Vis G)
       with Vis_P' PQ show ?thesis
         by (auto simp add: choice_Sils choice_Sils')
-           (meson Un_iff in_mono pran_map_prod)
+           (meson Un_iff in_mono pran_excl_comb)
     qed
   qed
 qed
@@ -441,6 +446,8 @@ consts
   interleave :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<interleave>" 55)
   gparallel :: "'a \<Rightarrow> 'e set \<Rightarrow> 'a \<Rightarrow> 'a" ("_ \<parallel>\<^bsub>_\<^esub> _" [55, 0, 56] 56)
 
+term parallel
+
 definition "gpar_csp P cs Q \<equiv> par P cs Q \<bind> (\<lambda> (x, y). Ret ())"
 
 abbreviation inter_csp :: "('e, unit) itree \<Rightarrow> ('e, unit) itree \<Rightarrow> ('e, unit) itree" where
@@ -491,7 +498,7 @@ qed
 definition Interleave :: "'i set \<Rightarrow> ('i \<Rightarrow> ('e, unit) itree) \<Rightarrow> ('e, unit) itree" where
 "Interleave I P = Finite_Set.fold (\<interleave>) skip (P ` I)"
 
-subsection \<open> Synchronous Parallel Composition \<close>
+subsection \<open> Maximal Synchronous Parallel Composition \<close>
 
 definition syncmerge :: "('a \<Zpfun> 'b) \<Rightarrow> 'a set \<Rightarrow> ('a \<Zpfun> 'c) \<Rightarrow> ('a \<Zpfun> ('b, 'c) andor)" where
 "syncmerge f A g = map_pfun Left ((pdom f \<inter> pdom g) \<Zndres> f) \<oplus> map_pfun Right ((pdom f \<inter> pdom g) \<Zndres> g) \<oplus> map_pfun Both (pfuse f g)"

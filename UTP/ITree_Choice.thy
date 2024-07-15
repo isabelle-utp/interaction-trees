@@ -6,8 +6,10 @@ begin
 
 text \<open> Generalised choice is parametric over a function to merge the choice functions. \<close>
 
+type_synonym ('e, 'a) chomerge = "(('e \<Zpfun> ('e, 'a) itree) \<Rightarrow> ('e \<Zpfun> ('e, 'a) itree) \<Rightarrow> 'e \<Zpfun> ('e, 'a) itree)" 
+
 primcorec 
-  genchoice :: "(('e \<Zpfun> ('e, 'a) itree) \<Rightarrow> ('e \<Zpfun> ('e, 'a) itree) \<Rightarrow> 'e \<Zpfun> ('e, 'a) itree) 
+  genchoice :: "('e, 'a) chomerge 
                 \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree"  where
 "genchoice \<M> P Q =
    (case (P, Q) of 

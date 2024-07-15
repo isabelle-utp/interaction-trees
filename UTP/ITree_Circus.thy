@@ -479,14 +479,14 @@ lemma extchoice_event_block:
   assumes "wb_prism c" "wb_prism d" "c \<nabla> d"
   shows "event_block c A P\<sigma> \<box> event_block d B Q\<sigma> = event_block (c +\<^sub>\<triangle> d) (A <+> B)\<^sub>e (case_sum P\<sigma> Q\<sigma>)"
   using assms
-  by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
+  by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff extchoice_fun_def excl_comb_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
 
 lemma extchoice_inp_where_combine: 
   assumes "wb_prism a" "wb_prism b" "a \<nabla> b"
   shows "input_in_where a A PC \<box> input_in_where b B QD 
          = input_in_where (a +\<^sub>\<triangle> b) (A <+> B)\<^sub>e (case_sum PC QD)"
   using assms
-  by (auto intro!:prism_fun_cong simp add: simp add: input_in_where_prism_fun extchoice_fun_def map_prod_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if fun_eq_iff)
+  by (auto intro!:prism_fun_cong simp add: simp add: input_in_where_prism_fun extchoice_fun_def excl_comb_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if fun_eq_iff)
 
 lemma extchoice_inp_where_combine': 
   assumes "wb_prism a" "wb_prism b" "a \<nabla> b"
