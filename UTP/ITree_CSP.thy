@@ -408,6 +408,13 @@ qed
 lemma pdom_emerge_commute: "pdom (emerge f A g) = pdom (emerge g A f)"
   by (auto simp add: emerge_def)
 
+lemma pdom_emerge: 
+  "pdom (emerge F A G) 
+   = A \<inter> (pdom F \<inter> pdom G) 
+     \<union> - A \<inter> - pdom G \<inter> pdom F 
+     \<union> - A \<inter> - pdom F \<inter> pdom G" 
+  by (simp add: emerge_def)
+
 text \<open> Remove merge function; it can be done otherwise. \<close>
 
 abbreviation "par \<equiv> genpar emerge"
@@ -422,6 +429,33 @@ lemma merge_Vis_left [simp]: "\<lbrakk> e \<notin> E; e \<in> pdom F; e \<notin>
 
 lemma merge_Vis_right [simp]: "\<lbrakk> e \<notin> E; e \<notin> pdom F; e \<in> pdom G \<rbrakk> \<Longrightarrow> merge_Vis F E G(e)\<^sub>p = par (Vis F) E (G(e)\<^sub>p)"
   by (simp add: pmerge_Vis_def emerge_def)
+
+lemma pabs_merge: "(\<lambda> x\<in>A \<bullet> f(x)\<^sub>p) \<oplus> (\<lambda> x\<in>B \<bullet> f(x)\<^sub>p) = (\<lambda> x\<in>A\<union>B \<bullet> f(x)\<^sub>p)" 
+  by (auto simp add: pfun_eq_iff)
+     (metis Int_iff pabs_apply pdom_pabs pfun_app_add pfun_app_add')
+
+lemma merge_Vis_expand: "merge_Vis F A G 
+       = (\<lambda> x \<in> A \<inter> (dom F \<inter> dom G) \<bullet> (par (F(x)\<^sub>p) A (G(x)\<^sub>p)))
+         \<oplus> (\<lambda> x \<in> - A \<inter> - dom G \<inter> dom F \<bullet> (par (F(x)\<^sub>p) A (Vis G)))
+         \<oplus> (\<lambda> x \<in> - A \<inter> - dom F \<inter> dom G \<bullet> (par (Vis F) A (G(x)\<^sub>p)))"
+proof -
+  have "merge_Vis F A G = (\<lambda> x\<in>pdom(merge_Vis F A G) \<bullet> (merge_Vis F A G)(x)\<^sub>p)"
+    by (metis pabs_eta)
+  also have "... = (\<lambda> x \<in> A \<inter> (dom F \<inter> dom G) 
+                          \<union> - A \<inter> - dom G \<inter> dom F 
+                          \<union> - A \<inter> - dom F \<inter> dom G 
+                      \<bullet> (merge_Vis F A G)(x)\<^sub>p)"
+    by (simp add: pdom_emerge)
+  also have "... = (\<lambda> x \<in> A \<inter> (dom F \<inter> dom G) \<bullet> (merge_Vis F A G)(x)\<^sub>p)
+                 \<oplus> (\<lambda> x \<in> - A \<inter> - dom G \<inter> dom F \<bullet> (merge_Vis F A G)(x)\<^sub>p)
+                 \<oplus> (\<lambda> x \<in> - A \<inter> - dom F \<inter> dom G \<bullet> (merge_Vis F A G)(x)\<^sub>p)"
+    by (simp add: pabs_merge)
+  also have "... = (\<lambda> x \<in> A \<inter> (dom F \<inter> dom G) \<bullet> (par (F(x)\<^sub>p) A (G(x)\<^sub>p)))
+                 \<oplus> (\<lambda> x \<in> - A \<inter> - dom G \<inter> dom F \<bullet> (par (F(x)\<^sub>p) A (Vis G)))
+                 \<oplus> (\<lambda> x \<in> - A \<inter> - dom F \<inter> dom G \<bullet> (par (Vis F) A (G(x)\<^sub>p)))"
+    by (auto simp add: pfun_eq_iff)
+  finally show ?thesis .
+qed
 
 lemma par_commute: "par P E Q = (par Q E P) \<bind> (\<lambda> (a, b). Ret (b, a))"
   apply (coinduction arbitrary: P Q rule: itree_strong_coind)
@@ -445,8 +479,6 @@ lemma par_commute: "par P E Q = (par Q E P) \<bind> (\<lambda> (a, b). Ret (b, a
 consts 
   interleave :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<interleave>" 55)
   gparallel :: "'a \<Rightarrow> 'e set \<Rightarrow> 'a \<Rightarrow> 'a" ("_ \<parallel>\<^bsub>_\<^esub> _" [55, 0, 56] 56)
-
-term parallel
 
 definition "gpar_csp P cs Q \<equiv> par P cs Q \<bind> (\<lambda> (x, y). Ret ())"
 
@@ -497,6 +529,12 @@ qed
 
 definition Interleave :: "'i set \<Rightarrow> ('i \<Rightarrow> ('e, unit) itree) \<Rightarrow> ('e, unit) itree" where
 "Interleave I P = Finite_Set.fold (\<interleave>) skip (P ` I)"
+
+lemma sync_par: "range build\<^bsub>a\<^esub> \<subseteq> A \<Longrightarrow> (sync a \<bind> P) \<parallel>\<^bsub>A\<^esub> (sync a \<bind> Q) = sync a \<bind> (\<lambda> x. P x \<parallel>\<^bsub>A\<^esub> Q x)"
+  by (auto simp add: sync_def gpar_csp_def merge_Vis_expand pfun_eq_iff)
+
+lemma outp_inp_par: "\<lbrakk> wb_prism c; range build\<^bsub>c\<^esub> \<subseteq> A \<rbrakk> \<Longrightarrow> (outp c x \<bind> P) \<parallel>\<^bsub>A\<^esub> (inp c \<bind> Q) = outp c x \<bind> (\<lambda> _. P () \<parallel>\<^bsub>A\<^esub> Q x)"
+  by (auto simp add: outp_def inp_in_where_def gpar_csp_def merge_Vis_expand pfun_eq_iff prism_fun_def subsetD)
 
 subsection \<open> Maximal Synchronous Parallel Composition \<close>
 
