@@ -187,6 +187,10 @@ lemma excl_comb_Nil_alist [code]:
   "P \<odot> (pfun_of_alist []) = P"
   by simp_all
 
+lemma excl_comb_transfer [transfer_rule]: 
+  "rel_fun (relt_pfun R) (rel_fun (relt_pfun R) (relt_pfun R)) (\<odot>) (\<odot>)"
+  by (auto simp add: rel_fun_def relt_pfun_iff excl_comb_def)
+
 definition excl_combs :: "('a \<Zpfun> 'b) list \<Rightarrow> 'a \<Zpfun> 'b" where
 "excl_combs Ps = foldr (\<odot>) Ps {}\<^sub>p"
 
@@ -241,6 +245,31 @@ lemma choice_Sils_stable: "stable P \<Longrightarrow> P \<box> (Sils m Q) = Sils
 
 lemma choice_Sils': "P \<box> (Sils m Q) = Sils m (P \<box> Q)"
   by (simp add: extchoice_itree_def genchoice_Sils')
+
+declare pfun.map_transfer [transfer_rule del]
+
+lemma pfun_map_transfer_alt [transfer_rule]: 
+  "\<lbrakk> is_equality Q; is_equality R \<rbrakk> \<Longrightarrow> rel_fun (rel_fun R R') (rel_fun Q (relt_pfun R')) map_pfun map_pfun"
+  by (metis is_equality_def pfun.map_transfer pfun.rel_eq)
+ 
+declare pfun.map_transfer [transfer_rule]
+
+definition "extcheq = (=)"
+
+friend_of_corec extchoice :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
+  "extchoice P Q = (case (P, Q) of 
+      (Vis F, Vis G) \<Rightarrow> Vis (F \<odot> G) |
+      (Sil P', _) \<Rightarrow> Sil (extchoice P' Q) |
+      (_, Sil Q') \<Rightarrow> Sil (extchoice P Q') |
+      (Ret x, Ret y) \<Rightarrow> if extcheq x y then Ret x else Vis {}\<^sub>p |
+      (Ret v, Vis _) \<Rightarrow> Ret v |
+      (Vis _, Ret v) \<Rightarrow> Ret v
+   )"
+    apply (cases P; cases Q)
+            apply (auto simp add: extcheq_def genchoice.ctr extchoice_itree_def)
+   apply transfer_prover
+  apply transfer_prover
+  done
 
 text \<open> External Choice test cases \<close>
 
