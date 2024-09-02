@@ -1,6 +1,10 @@
+section \<open> Interpretation Combinators \<close>
+
 theory ITree_Interp
   imports ITrees "Optics.Optics"
 begin
+
+subsection \<open> Singleton Partial Functions \<close>
 
 definition pfun_singleton :: "('a \<Zpfun> 'b) \<Rightarrow> bool" where
 "pfun_singleton f = (\<exists> k v. f = {k \<mapsto> v}\<^sub>p)" 
@@ -17,6 +21,23 @@ lemma dest_pfsingle_maplet [simp]: "dest_pfsingle {k \<mapsto> v} = (k, v)"
   apply (metis pdom_upd pdom_zero singleton_insert_inj_eq)
   apply (metis pdom_upd pdom_zero pfun_app_upd_1 singleton_insert_inj_eq)
   done  
+
+lemma dest_pfsingle_alist [code]: "dest_pfsingle (pfun_of_alist [(k, v)]) = (k, v)"
+  by simp
+
+subsection \<open> Call-only Interpretation \<close>
+
+corec interp_C :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
+"interp_C a P Q = 
+  (case Q of 
+    Ret x  \<Rightarrow> Ret x 
+  | Sil Q' \<Rightarrow> Sil (interp_C a P Q') 
+  | Vis F  \<Rightarrow> if pfun_singleton F \<and> pdom F \<subseteq> range build\<^bsub>a\<^esub>
+              then let (e, Q') = dest_pfsingle F 
+                   in \<tau> (interp_C a P (P (the (match\<^bsub>a\<^esub> e)) \<bind> (\<lambda> _. Q')))
+              else Vis (map_pfun (interp_C a P) F))"
+
+subsection \<open> Remote Procedure Calls \<close>
 
 definition RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "RPC a v b P = Vis {build\<^bsub>a\<^esub> v \<mapsto> Vis {b x \<Rightarrow> P x}\<^sub>p}" 
@@ -45,6 +66,12 @@ definition is_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 
 lemma is_RPC_RPC [simp]: "is_RPC a b (RPC a v b P)"
   by (auto simp add: RPC_def is_RPC_def prism_fun_def prism_fun_upd_def)
 
+lemma RPC_pdom_in_build: "\<lbrakk> wb_prism a; is_RPC a b (Vis F) \<rbrakk> \<Longrightarrow> pdom F \<subseteq> range build\<^bsub>a\<^esub>"
+  apply (cases "pfun_singleton F")
+  apply (auto simp add: is_RPC_def)
+  apply (metis dest_pfsingle_maplet fst_conv pdom_upd pdom_zero pfun_singleton_def singletonD)
+  done 
+
 definition dest_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('a \<times> ('b \<Rightarrow> ('e, 'r) itree))" where
 "dest_RPC a b P = (let F = un_Vis P; 
                       (e, P') = dest_pfsingle F;  
@@ -53,9 +80,9 @@ definition dest_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow
 
 lemma dest_RPC_RPC [simp]: "\<lbrakk> wb_prism a; wb_prism b \<rbrakk> \<Longrightarrow> dest_RPC a b (RPC a v b P) = (v, P)"
   by (simp add: dest_RPC_def RPC_def)
-  
-definition iter :: "('a \<Rightarrow> ('e, 'a + 'b) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'b) itree"
-  where "iter P s = iterate isl (P \<circ> projl) (Inl s) \<bind> Ret \<circ> projr"
+
+lemma case_itree_RPC: "case_itree R S V (RPC a v b P) = (V (un_Vis (RPC a v b P)))"
+  by (simp add: RPC_def)
 
 (* The funny redness happens when you try to make a monomorphic friend function polymorphic *)
 
@@ -70,30 +97,30 @@ corec interp :: "'e set \<Rightarrow> ('e \<Rightarrow> ('e, 'r) itree) \<Righta
                    in P e \<bind> (\<lambda> _. Sil (interp E P Q'))
               else Vis (map_pfun (interp E P) F))"
 *)
+          
+subsection \<open> RPC Interpretation \<close>
 
-corec interp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('r \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
-"interp a b P Q = 
+corec interp_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
+"interp_RPC a b P Q = 
   (case Q of 
     Ret x  \<Rightarrow> Ret x 
-  | Sil Q' \<Rightarrow> Sil (interp a b P Q') 
+  | Sil Q' \<Rightarrow> Sil (interp_RPC a b P Q') 
   | Vis F  \<Rightarrow> if is_RPC a b (Vis F)
               then let (v, Q') = dest_RPC a b (Vis F)
-                   in \<tau> (interp a b P (P v)) \<bind> (\<lambda> x. \<tau> (interp a b P (Q' x)))
-              else Vis (map_pfun (interp a b P) F))"
+                   in \<tau> (interp_RPC a b P (P v \<bind> Q'))
+              else Vis (map_pfun (interp_RPC a b P) F))"
 
-lemma case_itree_RPC: "case_itree R S V (RPC a v b P) = (V (un_Vis (RPC a v b P)))"
-  by (simp add: RPC_def)
+definition iter :: "('a \<Rightarrow> ('e, 'a + 'b) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'b) itree"
+  where "iter P s = iterate isl (P \<circ> projl) (Inl s) \<bind> Ret \<circ> projr"
 
 chantype ch =
   a :: int
   ar :: int
 
-lemma "interp a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret) = \<tau> (\<tau> (\<checkmark> 6))"
-  apply (subst interp.code)
+lemma "interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret) = \<tau> (\<checkmark> 6)"
+  apply (subst interp_RPC.code)
   apply (simp add: case_itree_RPC)
-  apply (subst interp.code)
-  apply (simp add: case_itree_RPC)
-  apply (subst interp.code)
+  apply (subst interp_RPC.code)
   apply (simp add: case_itree_RPC)
   done
 
@@ -106,11 +133,13 @@ definition pfx :: "'e \<Rightarrow> ('e, 's) itree \<Rightarrow>('e, 's) itree" 
 "pfx e P = Vis {e \<mapsto> P}"
 
 
-lemma "interp b br (\<lambda> n. pfx (build\<^bsub>cnt\<^esub> n) (RPC b (n + 1) br (\<lambda> _. Ret ()))) (RPC b 0 br (\<lambda> _. Ret ())) = undefined"
-  apply (subst interp.code)
+lemma "interp_C b (\<lambda> n. pfx (build\<^bsub>cnt\<^esub> n) (RPC b (n + 1) br (\<lambda> _. Ret ()))) (RPC b 0 br (\<lambda> _. Ret ())) = undefined"
+  apply (subst interp_C.code)
   apply (simp add: case_itree_RPC)
   apply (subst interp.code)
   apply (simp add: case_itree_RPC pfx_def)
+  apply (simp add: RPC_pdom_in_build)
+
   oops
 
 (*
