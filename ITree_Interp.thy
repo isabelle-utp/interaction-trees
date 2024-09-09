@@ -91,8 +91,14 @@ definition is_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 
                              else False) | 
                    _ \<Rightarrow> False)"
 
-lemma is_RPC_RPC [simp]: "\<lbrakk> wb_prism a \<rbrakk> \<Longrightarrow> is_RPC a (RPC a v b P)"
+lemma is_RPC_RPC [simp]: "wb_prism a \<Longrightarrow> is_RPC a (RPC a v b P)"
   by (auto simp add: RPC_def is_RPC_def prism_fun_def prism_fun_upd_def)
+
+lemma not_RPC_deadlock [simp]: "\<not> is_RPC a deadlock"
+  by (simp add: deadlock_def is_RPC_def pfun_singleton_dom)
+
+lemma not_RPC_diverge [simp]: "\<not> is_RPC a diverge"
+  by (simp add: is_RPC_def itree.case_eq_if)
 
 lemma RPC_pdom_in_build: "\<lbrakk> wb_prism a; is_RPC a (Vis F) \<rbrakk> \<Longrightarrow> pdom F \<subseteq> range build\<^bsub>a\<^esub>"
   apply (cases "pfun_singleton F")
@@ -123,6 +129,13 @@ corec interp_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> (
               then let (v, Q') = dest_RPC a b (Vis F)
                    in \<tau> (interp_RPC a b P (P v \<bind> Q'))
               else Vis (map_pfun (interp_RPC a b P) F))"
+
+lemma interp_RPC_diverge: "interp_RPC a b P diverge = diverge"
+  by (metis (no_types, lifting) Sil_fp_divergent diverge.sel interp_RPC.code is_Ret_diverge itree.case_eq_if unstable_diverge)
+
+lemma interp_RPC_deadlock: "interp_RPC a b P deadlock = deadlock"
+  by (simp add: deadlock_def interp_RPC.code)
+     (metis deadlock_def not_RPC_deadlock)
 
 definition iter :: "('a \<Rightarrow> ('e, 'a + 'b) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'b) itree"
   where "iter P s = iterate isl (P \<circ> projl) (Inl s) \<bind> Ret \<circ> projr"
