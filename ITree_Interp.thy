@@ -9,9 +9,16 @@ subsection \<open> Singleton Partial Functions \<close>
 definition pfun_singleton :: "('a \<Zpfun> 'b) \<Rightarrow> bool" where
 "pfun_singleton f = (\<exists> k v. f = {k \<mapsto> v}\<^sub>p)" 
 
+lemma pfun_singleton_dom: "pfun_singleton f \<longleftrightarrow> (\<exists> k. pdom(f) = {k})"
+  by (auto simp add: pfun_singleton_def)
+     (metis insertI1 override_lzero pdom_res_pdom pfun_ovrd_single_upd)
+
 lemma pfun_singleton_maplet [simp]:
   "pfun_singleton {k \<mapsto> v}\<^sub>p"
   by (auto simp add: pfun_singleton_def)
+
+lemma pfun_singleton_entries [code]: "pfun_singleton (pfun_entries A f) = (finite A \<and> card A = 1)"
+  by (auto simp add: pfun_singleton_dom card_1_singleton_iff)
 
 definition dest_pfsingle :: "('a \<Zpfun> 'b) \<Rightarrow> 'a \<times> 'b" where
 "dest_pfsingle f = (THE (k, v). f = {k \<mapsto> v}\<^sub>p)"
@@ -24,6 +31,9 @@ lemma dest_pfsingle_maplet [simp]: "dest_pfsingle {k \<mapsto> v} = (k, v)"
 
 lemma dest_pfsingle_alist [code]: "dest_pfsingle (pfun_of_alist [(k, v)]) = (k, v)"
   by simp
+
+lemma dest_pfsingle_entries [code]: "dest_pfsingle (pfun_entries (set [x]) f) = (x, f x)"
+  by (simp add: pabs_insert_maplet pfun_entries_pabs)
 
 subsection \<open> Call-only Interpretation \<close>
 
@@ -42,6 +52,9 @@ subsection \<open> Remote Procedure Calls \<close>
 definition RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "RPC a v b P = Vis {build\<^bsub>a\<^esub> v \<mapsto> Vis {b x \<Rightarrow> P x}\<^sub>p}" 
 
+lemma RPC_pfun_entries [code]: "RPC a v b P = Vis (pfun_entries {build\<^bsub>a\<^esub> v} (\<lambda> x. Vis {b x \<Rightarrow> P x}\<^sub>p))"
+  by (simp add: RPC_def pabs_insert_maplet pfun_entries_pabs)  
+
 lemma is_Vis_RPC [simp]: "is_Vis (RPC a v b P)"
   by (simp add: RPC_def)
 
@@ -51,25 +64,42 @@ lemma RPC_val_eq: "wb_prism a \<Longrightarrow> RPC a v1 b P1 = RPC a v2 b P2 \<
 lemma RPC_cont_eq: "wb_prism b \<Longrightarrow> RPC a v b P1 = RPC a v b P2 \<Longrightarrow> P1 = P2"
   by (simp add: RPC_def pfun_eq_iff prism_fun_def prism_fun_upd_def fun_eq_iff)
 
+definition prism_matches :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e \<Rightarrow> bool" ("matches\<index>") where
+"prism_matches a e = (match\<^bsub>a\<^esub> e \<noteq> None)"
+
+lemma matches_build [simp]:
+  "wb_prism a \<Longrightarrow> matches\<^bsub>a\<^esub> (build\<^bsub>a\<^esub> v)"
+  by (simp add: prism_matches_def)
+
+(*
 definition is_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'r) itree \<Rightarrow> bool" where
 "is_RPC a b P = (case P of
                    Vis F \<Rightarrow> (if pfun_singleton F
                              then (let (e, P') = dest_pfsingle F 
-                                   in if e \<in> range build\<^bsub>a\<^esub>
+                                   in if matches\<^bsub>a\<^esub> e
                                       then case F e of 
-                                             Vis F' \<Rightarrow> dom F' = range build\<^bsub>b\<^esub> | 
+                                             Vis F' \<Rightarrow> matches\<^bsub>b\<^esub> ` dom F' = {True} | 
                                              _ \<Rightarrow> False
                                       else False)
                              else False) | 
                    _ \<Rightarrow> False)"
+*)
 
-lemma is_RPC_RPC [simp]: "is_RPC a b (RPC a v b P)"
+definition is_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'r) itree \<Rightarrow> bool" where
+"is_RPC a P = (case P of
+                   Vis F \<Rightarrow> (if pfun_singleton F
+                             then (let (e, P') = dest_pfsingle F 
+                                   in matches\<^bsub>a\<^esub> e \<and> is_Vis P')
+                             else False) | 
+                   _ \<Rightarrow> False)"
+
+lemma is_RPC_RPC [simp]: "\<lbrakk> wb_prism a \<rbrakk> \<Longrightarrow> is_RPC a (RPC a v b P)"
   by (auto simp add: RPC_def is_RPC_def prism_fun_def prism_fun_upd_def)
 
-lemma RPC_pdom_in_build: "\<lbrakk> wb_prism a; is_RPC a b (Vis F) \<rbrakk> \<Longrightarrow> pdom F \<subseteq> range build\<^bsub>a\<^esub>"
+lemma RPC_pdom_in_build: "\<lbrakk> wb_prism a; is_RPC a (Vis F) \<rbrakk> \<Longrightarrow> pdom F \<subseteq> range build\<^bsub>a\<^esub>"
   apply (cases "pfun_singleton F")
   apply (auto simp add: is_RPC_def)
-  apply (metis dest_pfsingle_maplet fst_conv pdom_upd pdom_zero pfun_singleton_def singletonD)
+  apply (metis dest_pfsingle_maplet domIff fst_conv pdom_upd pdom_zero pfun_singleton_def prism_matches_def singletonD wb_prism.range_build)
   done 
 
 definition dest_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('a \<times> ('b \<Rightarrow> ('e, 'r) itree))" where
@@ -105,7 +135,7 @@ corec interp_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> (
   (case Q of 
     Ret x  \<Rightarrow> Ret x 
   | Sil Q' \<Rightarrow> Sil (interp_RPC a b P Q') 
-  | Vis F  \<Rightarrow> if is_RPC a b (Vis F)
+  | Vis F  \<Rightarrow> if is_RPC a (Vis F)
               then let (v, Q') = dest_RPC a b (Vis F)
                    in \<tau> (interp_RPC a b P (P v \<bind> Q'))
               else Vis (map_pfun (interp_RPC a b P) F))"
@@ -116,6 +146,10 @@ definition iter :: "('a \<Rightarrow> ('e, 'a + 'b) itree) \<Rightarrow> 'a \<Ri
 chantype ch =
   a :: int
   ar :: int
+
+code_datatype pfun_entries pfun_of_alist pfun_of_map
+
+execute "(\<lambda> x::unit. interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret))"
 
 lemma "interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret) = \<tau> (\<checkmark> 6)"
   apply (subst interp_RPC.code)
