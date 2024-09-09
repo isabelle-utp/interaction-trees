@@ -17,11 +17,8 @@ lemma pfun_singleton_maplet [simp]:
   "pfun_singleton {k \<mapsto> v}\<^sub>p"
   by (auto simp add: pfun_singleton_def)
 
-lemma pfun_singleton_entries: "pfun_singleton (pfun_entries A f) = (finite A \<and> card A = 1)"
-  by (auto simp add: pfun_singleton_dom card_1_singleton_iff)
-
-lemma pfun_singleton_entries_set [code]: "pfun_singleton (pfun_entries (set [x]) f)"
-  by (simp add: pfun_singleton_entries)
+lemma pfun_singleton_alist [code]: "pfun_singleton (pfun_of_alist [(k, v)]) = True"
+  by simp
 
 definition dest_pfsingle :: "('a \<Zpfun> 'b) \<Rightarrow> 'a \<times> 'b" where
 "dest_pfsingle f = (THE (k, v). f = {k \<mapsto> v}\<^sub>p)"
@@ -34,9 +31,6 @@ lemma dest_pfsingle_maplet [simp]: "dest_pfsingle {k \<mapsto> v} = (k, v)"
 
 lemma dest_pfsingle_alist [code]: "dest_pfsingle (pfun_of_alist [(k, v)]) = (k, v)"
   by simp
-
-lemma dest_pfsingle_entries [code]: "dest_pfsingle (pfun_entries (set [x]) f) = (x, f x)"
-  by (simp add: pabs_insert_maplet pfun_entries_pabs)
 
 subsection \<open> Call-only Interpretation \<close>
 
@@ -55,8 +49,9 @@ subsection \<open> Remote Procedure Calls \<close>
 definition RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'a \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree" where
 "RPC a v b P = Vis {build\<^bsub>a\<^esub> v \<mapsto> Vis {b x \<Rightarrow> P x}\<^sub>p}" 
 
-lemma RPC_pfun_entries [code_unfold]: "RPC a v b P = Vis (pfun_entries {build\<^bsub>a\<^esub> v} (\<lambda> x. Vis {b x \<Rightarrow> P x}\<^sub>p))"
-  by (simp add: RPC_def pabs_insert_maplet pfun_entries_pabs)  
+lemma RPC_pfun_alist [code_unfold]: 
+  "RPC a v b P = Vis (pfun_of_alist [(build\<^bsub>a\<^esub> v, Vis {b x \<Rightarrow> P x}\<^sub>p)])"
+  by (simp add: RPC_def pabs_insert_maplet)  
 
 lemma is_Vis_RPC [simp]: "is_Vis (RPC a v b P)"
   by (simp add: RPC_def)
@@ -116,20 +111,6 @@ lemma dest_RPC_RPC [simp]: "\<lbrakk> wb_prism a; wb_prism b \<rbrakk> \<Longrig
 
 lemma case_itree_RPC: "case_itree R S V (RPC a v b P) = (V (un_Vis (RPC a v b P)))"
   by (simp add: RPC_def)
-
-(* The funny redness happens when you try to make a monomorphic friend function polymorphic *)
-
-(*
-corec interp :: "'e set \<Rightarrow> ('e \<Rightarrow> ('e, 'r) itree) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
-"interp E P Q =
-  (case Q of 
-    Ret x  \<Rightarrow> Ret x 
-  | Sil Q' \<Rightarrow> Sil (interp E P Q')
-  | Vis F  \<Rightarrow> if pfun_singleton F \<and> dom F \<subseteq> E
-              then let (e, Q') = dest_pfsingle F
-                   in P e \<bind> (\<lambda> _. Sil (interp E P Q'))
-              else Vis (map_pfun (interp E P) F))"
-*)
           
 subsection \<open> RPC Interpretation \<close>
 
@@ -152,15 +133,10 @@ chantype ch =
 
 code_datatype pfun_entries pfun_of_alist pfun_of_map
 
-primcorec abs_ev :: "('e, 'r) itree \<Rightarrow> (unit, 'r) itree" where
-"abs_ev P = (case P of Sil P' \<Rightarrow> Sil (abs_ev P') | Ret x \<Rightarrow> Ret x | Vis F \<Rightarrow> diverge)"
-
-
 lemma prism_fun_as_map [code_unfold]:
   "wb_prism b \<Longrightarrow> prism_fun b A PB = pfun_of_map (\<lambda> x. case match\<^bsub>b\<^esub> x of None \<Rightarrow> None | Some x \<Rightarrow> if x \<in> A \<and> fst (PB x) then Some (snd (PB x)) else None)"
   by (auto simp add: prism_fun_def pfun_eq_iff domIff pdom.abs_eq option.case_eq_if)
      (metis image_eqI wb_prism.build_match)
-
 
 declare prism_fun_def [code_unfold del]
 
@@ -176,39 +152,11 @@ lemma pfun_map_oplus_alist [code]:
 lemma pfun_app_map [code]: "pfun_app (pfun_of_map f) x = the (f x)"
   by (simp add: domIff option.the_def)
 
-
-definition "test = RPC a 0 ar (\<lambda> x. (Ret 0 :: (ch, int) itree))"
-
-definition "test' = (pfun_entries {build\<^bsub>a\<^esub> 0} (\<lambda> x. Vis {ar x \<Rightarrow> (Ret 0 :: (ch, int) itree)}\<^sub>p))"
-
-lemma "test = test'"
-  apply (simp add: test_def test'_def RPC_pfun_entries)
-
-definition "test2 = {a_C 0 \<mapsto> (Vis {ar x \<Rightarrow> Ret x}\<^sub>p :: (ch, int) itree)}"
-
-definition "test3 = (pfun_app {ar x \<Rightarrow> x}\<^sub>p (ar_C 3))"
-
-
-value "((\<lambda>x. case match\<^bsub>ar\<^esub> x of None \<Rightarrow> None | Some x \<Rightarrow> if x \<in> UNIV \<and> fst (True, x) then Some (snd (True, x)) else None)) (ar_C 2)"
-
-definition "test4 = Vis {ar x \<Rightarrow> (\<lambda> x. (Ret 0 :: (ch, int) itree)) x}\<^sub>p"
-
-value "test"
-
-ML \<open> @{code dest_pfsingle} @{code test} \<close>
-
-export_code test in SML
-
-value "test"
-
-declare pfun_singleton_def [code del]
-
-
-value "(interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret)) :: ((ch, int) itree)"
+value "interp_RPC a ar (\<lambda> n. if n = 0 \<or> n = 1 then Ret 1 else RPC a (n - 1) ar (\<lambda> r. Ret (n + r))) (RPC a 8 ar Ret)"
 
 def_consts MAX_SIL_STEPS = 1000
 
-execute "(\<lambda> x::unit. interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret))"
+execute "(\<lambda> x::unit. interp_RPC a ar (\<lambda> n. if n = 0 \<or> n = 1 then Ret 1 else RPC a (n - 1) ar (\<lambda> r. Ret (n + r))) (RPC a 8 ar Ret))"
 
 lemma "interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret) = \<tau> (\<checkmark> 6)"
   apply (subst interp_RPC.code)
