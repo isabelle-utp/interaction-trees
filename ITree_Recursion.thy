@@ -11,7 +11,7 @@ text \<open> A system of mutually (co)recursive ITrees can be specified as a par
   a value in @{typ "'r"}. This approach allows us to overcome the limitation that corecursive
   definitions may not be mutual.
 
-  The following corecursive definition expands such a system of mutually corecursive equations:
+  The following corecursive definition expands such a system of mutually tail corecursive equations:
 \<close>
 
 corec fixit :: "('n \<Zpfun> ('e, 'n + 'r) itree) \<Rightarrow> ('e, 'n + 'r) itree \<Rightarrow> ('e, 'r) itree" where

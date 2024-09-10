@@ -1,36 +1,8 @@
 section \<open> Interpretation Combinators \<close>
 
 theory ITree_Interp
-  imports ITrees "Optics.Optics"
+  imports ITree_Iteration
 begin
-
-subsection \<open> Singleton Partial Functions \<close>
-
-definition pfun_singleton :: "('a \<Zpfun> 'b) \<Rightarrow> bool" where
-"pfun_singleton f = (\<exists> k v. f = {k \<mapsto> v}\<^sub>p)" 
-
-lemma pfun_singleton_dom: "pfun_singleton f \<longleftrightarrow> (\<exists> k. pdom(f) = {k})"
-  by (auto simp add: pfun_singleton_def)
-     (metis insertI1 override_lzero pdom_res_pdom pfun_ovrd_single_upd)
-
-lemma pfun_singleton_maplet [simp]:
-  "pfun_singleton {k \<mapsto> v}\<^sub>p"
-  by (auto simp add: pfun_singleton_def)
-
-lemma pfun_singleton_alist [code]: "pfun_singleton (pfun_of_alist [(k, v)]) = True"
-  by simp
-
-definition dest_pfsingle :: "('a \<Zpfun> 'b) \<Rightarrow> 'a \<times> 'b" where
-"dest_pfsingle f = (THE (k, v). f = {k \<mapsto> v}\<^sub>p)"
-
-lemma dest_pfsingle_maplet [simp]: "dest_pfsingle {k \<mapsto> v} = (k, v)"
-  apply (auto intro!:the_equality simp add: dest_pfsingle_def)
-  apply (metis pdom_upd pdom_zero singleton_insert_inj_eq)
-  apply (metis pdom_upd pdom_zero pfun_app_upd_1 singleton_insert_inj_eq)
-  done  
-
-lemma dest_pfsingle_alist [code]: "dest_pfsingle (pfun_of_alist [(k, v)]) = (k, v)"
-  by simp
 
 subsection \<open> Call-only Interpretation \<close>
 
@@ -61,13 +33,6 @@ lemma RPC_val_eq: "wb_prism a \<Longrightarrow> RPC a v1 b P1 = RPC a v2 b P2 \<
 
 lemma RPC_cont_eq: "wb_prism b \<Longrightarrow> RPC a v b P1 = RPC a v b P2 \<Longrightarrow> P1 = P2"
   by (simp add: RPC_def pfun_eq_iff prism_fun_def prism_fun_upd_def fun_eq_iff)
-
-definition prism_matches :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e \<Rightarrow> bool" ("matches\<index>") where
-"prism_matches a e = (match\<^bsub>a\<^esub> e \<noteq> None)"
-
-lemma matches_build [simp]:
-  "wb_prism a \<Longrightarrow> matches\<^bsub>a\<^esub> (build\<^bsub>a\<^esub> v)"
-  by (simp add: prism_matches_def)
 
 (*
 definition is_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'r) itree \<Rightarrow> bool" where
@@ -137,65 +102,6 @@ lemma interp_RPC_deadlock: "interp_RPC a b P deadlock = deadlock"
   by (simp add: deadlock_def interp_RPC.code)
      (metis deadlock_def not_RPC_deadlock)
 
-definition iter :: "('a \<Rightarrow> ('e, 'a + 'b) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'b) itree"
-  where "iter P s = iterate isl (P \<circ> projl) (Inl s) \<bind> Ret \<circ> projr"
-
-chantype ch =
-  a :: int
-  ar :: int
-
-code_datatype pfun_entries pfun_of_alist pfun_of_map
-
-lemma prism_fun_as_map [code_unfold]:
-  "wb_prism b \<Longrightarrow> prism_fun b A PB = pfun_of_map (\<lambda> x. case match\<^bsub>b\<^esub> x of None \<Rightarrow> None | Some x \<Rightarrow> if x \<in> A \<and> fst (PB x) then Some (snd (PB x)) else None)"
-  by (auto simp add: prism_fun_def pfun_eq_iff domIff pdom.abs_eq option.case_eq_if)
-     (metis image_eqI wb_prism.build_match)
-
-declare prism_fun_def [code_unfold del]
-
-lemma pfun_alist_oplus_map [code]: 
-  "pfun_of_alist xs \<oplus> pfun_of_map f = pfun_of_map (\<lambda> k. case f k of None \<Rightarrow> map_of xs k | Some v \<Rightarrow> Some v)"
-  by (simp add: map_add_def oplus_pfun.abs_eq pfun_of_alist.abs_eq)
-
-lemma pfun_map_oplus_alist [code]: 
-  "pfun_of_map f \<oplus> pfun_of_alist xs = pfun_of_map (\<lambda> k. if k \<in> set (map fst xs) then map_of xs k else f k)"
-  by (simp add: map_add_def oplus_pfun.abs_eq pfun_of_alist.abs_eq)
-     (metis map_of_eq_None_iff option.case_eq_if option.exhaust option.sel)
-
-lemma pfun_app_map [code]: "pfun_app (pfun_of_map f) x = the (f x)"
-  by (simp add: domIff option.the_def)
-
-value "interp_RPC a ar (\<lambda> n. if n = 0 \<or> n = 1 then Ret 1 else RPC a (n - 1) ar (\<lambda> r. Ret (n + r))) (RPC a 8 ar Ret)"
-
-def_consts MAX_SIL_STEPS = 1000
-
-execute "(\<lambda> x::unit. interp_RPC a ar (\<lambda> n. if n = 0 \<or> n = 1 then Ret 1 else RPC a (n - 1) ar (\<lambda> r. Ret (n + r))) (RPC a 8 ar Ret))"
-
-lemma "interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret) = \<tau> (\<checkmark> 6)"
-  apply (subst interp_RPC.code)
-  apply (simp add: case_itree_RPC)
-  apply (subst interp_RPC.code)
-  apply (simp add: case_itree_RPC)
-  done
-
-chantype ch2 =
-  cnt :: int
-  b :: int
-  br :: unit
-
-definition pfx :: "'e \<Rightarrow> ('e, 's) itree \<Rightarrow>('e, 's) itree" where
-"pfx e P = Vis {e \<mapsto> P}"
-
-
-lemma "interp_C b (\<lambda> n. pfx (build\<^bsub>cnt\<^esub> n) (RPC b (n + 1) br (\<lambda> _. Ret ()))) (RPC b 0 br (\<lambda> _. Ret ())) = undefined"
-  apply (subst interp_C.code)
-  apply (simp add: case_itree_RPC)
-  apply (subst interp.code)
-  apply (simp add: case_itree_RPC pfx_def)
-  apply (simp add: RPC_pdom_in_build)
-
-  oops
-
 (*
 definition interp :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
 "interp c d I P = 
@@ -217,6 +123,7 @@ map_itree ((\<lambda> a. if (build\<^bsub>c\<^esub> a \<in> pdom(F))
     )) P"
 *)
 
+subsection \<open> Control Interpretation \<close>
 
 text \<open> Here, I is effectively pushing the buttons of P, by providing the events that P needs
   to continue. The loop (@{const iter}) steps through each constructor of @{term P}, returning
@@ -287,6 +194,48 @@ definition interp_st
                                 then (s\<^sub>I, F (build\<^bsub>c\<^esub>a)\<^sub>p :: ('e, 'r \<times> 'st) itree) 
                                 else (s\<^sub>I, deadlock)))) (I s\<^sub>0)
     )) (s, Ps s)"
+*)
+
+(*
+chantype ch =
+  a :: int
+  ar :: int
+
+code_datatype pfun_entries pfun_of_alist pfun_of_map
+
+declare prism_fun_as_map [code_unfold]
+declare prism_fun_def [code_unfold del]
+
+value "interp_RPC a ar (\<lambda> n. if n = 0 \<or> n = 1 then Ret 1 else RPC a (n - 1) ar (\<lambda> r. Ret (n + r))) (RPC a 8 ar Ret)"
+
+def_consts MAX_SIL_STEPS = 1000
+
+execute "(\<lambda> x::unit. interp_RPC a ar (\<lambda> n. if n = 0 \<or> n = 1 then Ret 1 else RPC a (n - 1) ar (\<lambda> r. Ret (n + r))) (RPC a 8 ar Ret))"
+
+lemma "interp_RPC a ar (\<lambda> n. Ret (n + 1)) (RPC a 5 ar Ret) = \<tau> (\<checkmark> 6)"
+  apply (subst interp_RPC.code)
+  apply (simp add: case_itree_RPC)
+  apply (subst interp_RPC.code)
+  apply (simp add: case_itree_RPC)
+  done
+
+chantype ch2 =
+  cnt :: int
+  b :: int
+  br :: unit
+
+definition pfx :: "'e \<Rightarrow> ('e, 's) itree \<Rightarrow>('e, 's) itree" where
+"pfx e P = Vis {e \<mapsto> P}"
+
+
+lemma "interp_C b (\<lambda> n. pfx (build\<^bsub>cnt\<^esub> n) (RPC b (n + 1) br (\<lambda> _. Ret ()))) (RPC b 0 br (\<lambda> _. Ret ())) = undefined"
+  apply (subst interp_C.code)
+  apply (simp add: case_itree_RPC)
+  apply (subst interp.code)
+  apply (simp add: case_itree_RPC pfx_def)
+  apply (simp add: RPC_pdom_in_build)
+
+  oops
 *)
 
 end

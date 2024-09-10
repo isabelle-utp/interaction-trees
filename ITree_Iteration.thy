@@ -11,7 +11,8 @@ corec iterate :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightar
 
 abbreviation "loop \<equiv> iterate (\<lambda> s. True)"
 
-abbreviation "iter P \<equiv> loop (\<lambda> _. P) ()"
+definition iter :: "('a \<Rightarrow> ('e, 'a + 'b) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'b) itree" where 
+"iter P s = iterate isl (P \<circ> projl) (Inl s) \<bind> Ret \<circ> projr"
 
 lemma iterate_cond_false [simp]:
   "\<not> (b s) \<Longrightarrow> iterate b P s = Ret s"
