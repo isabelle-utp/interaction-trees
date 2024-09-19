@@ -85,6 +85,12 @@ corollary hl_disj_post:
   shows "\<^bold>{P\<^bold>} S \<^bold>{Q\<^sub>1 \<or> Q2\<^bold>}"
   by (rule hl_strengthen[OF assms], simp)
 
+lemma hl_pre_false [hoare_safe]: "\<^bold>{False\<^bold>} S \<^bold>{P\<^bold>}"
+  by (simp add: hoare_alt_def)
+
+lemma hl_post_true [hoare_safe]: "\<^bold>{P\<^bold>} S \<^bold>{True\<^bold>}"
+  by (simp add: hoare_alt_def)
+
 lemma hl_conj:
   assumes "\<^bold>{P\<^sub>1\<^bold>} S \<^bold>{Q\<^sub>1\<^bold>}" "\<^bold>{P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>2\<^bold>}"
   shows "\<^bold>{P\<^sub>1 \<and> P\<^sub>2\<^bold>} S \<^bold>{Q\<^sub>1 \<and> Q\<^sub>2\<^bold>}"

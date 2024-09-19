@@ -267,6 +267,7 @@ friend_of_corec extchoice :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Righ
    )"
     apply (cases P; cases Q)
             apply (auto simp add: extcheq_def genchoice.ctr extchoice_itree_def)
+   
    apply transfer_prover
   apply transfer_prover
   done
@@ -621,7 +622,7 @@ lemma hide_Sil [simp]: "(\<tau> P) \<setminus> A = \<tau> (P \<setminus> A)"
 lemma hide_sync: "(sync a \<bind> P) \<setminus> {build\<^bsub>a\<^esub> ()} = \<tau> (P ()) \<setminus> {build\<^bsub>a\<^esub> ()}"
   by (simp add: sync_def hide.code)
 
-lemma hide_sync_loop_diverge: "hide (iter (sync a)) {build\<^bsub>a\<^esub> ()} = diverge"
+lemma hide_sync_loop_diverge: "hide (loop (\<lambda> _. sync a) ()) {build\<^bsub>a\<^esub> ()} = diverge"
   apply (coinduction rule:itree_coind, auto)
   apply (simp add: iterate.code, simp add: sync_def)
   apply (metis One_nat_def hide_sync is_Sil_hide itree.disc(5) iterate.code)
