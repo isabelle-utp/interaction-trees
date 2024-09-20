@@ -58,4 +58,13 @@ Outer_Syntax.command @{command_keyword procedure} "define an ITree procedure"
 unbundle Expression_Syntax
 unbundle prog_ndet_syntax
 
+(* Print translation tweaks for syntax *)
+
+translations
+  (* Display sequents using the semantic bracket notation *)
+  "_bigimpl (_asm P) Q" <= "CONST Pure.imp P Q"
+  "_bigimpl (_asms (_asm P) Q) R" <= "_bigimpl (_asm P) (_bigimpl Q R)"
+  (* Hide dollar symbols on program variables *)
+  "x" <= "_sexp_var x"
+
 end
