@@ -84,6 +84,10 @@ lemma for_itree_eval_bounds: "for_itree I P s = for_itree (\<guillemotleft>I s\<
 
 adhoc_overloading uwhile iterate
 
+definition "until_itree P B = P ;; iterate (Not \<circ> B) P"
+
+adhoc_overloading uuntil until_itree
+
 syntax 
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
   "_for_itree"   :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("for _ in _ do _ od")
