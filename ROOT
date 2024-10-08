@@ -26,6 +26,14 @@ session "ITree_VCG" in "UTP/VCG" = "ITree_UTP" +
   theories
     ITree_VCG
 
+session "ITree_Numeric_VCG" in "UTP/VCG/Numeric" = "HOL-Analysis" +
+  options [timeout = 600, document = false]
+  sessions 
+    ITree_VCG
+    "HOL-Number_Theory"
+  theories
+    ITree_Numeric_VCG
+
 session "ITree_RoboChart" in "RoboChart" = "ITree_UTP" +
   options [timeout = 600, document = pdf, document_output = "output"]
   theories
