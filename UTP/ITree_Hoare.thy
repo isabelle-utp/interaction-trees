@@ -109,11 +109,10 @@ lemma hl_cut_inv:
 lemma hl_skip: "\<^bold>{P\<^bold>} Skip \<^bold>{P\<^bold>}"
   by (auto simp add: hoare_alt_def Skip_def)
 
-lemma hl_skip': 
+lemma hl_skip' [hoare_safe]: 
   assumes "`P \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>} Skip \<^bold>{Q\<^bold>}"
   using assms by (auto simp add: hoare_alt_def Skip_def, expr_simp)
-
 
 lemma hl_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{R\<^bold>}"
   by (auto simp add: hoare_ret_def seq_itree_def kleisli_comp_def)

@@ -1,8 +1,10 @@
 section \<open> Verification of Numerical Algorithms \<close>
 
 theory ITree_Numeric_VCG
-  imports "HOL-Analysis.Analysis" "ITree_VCG.ITree_VCG" "HOL-Number_Theory.Number_Theory"
+  imports "Hybrid-Library.Vector_Syntax" "ITree_VCG.ITree_VCG" "HOL-Number_Theory.Number_Theory"
 begin
+
+declare UNIV_enum [code_unfold del]
 
 text \<open> We need instance of default for rat and real to enable code generation \<close>
 

@@ -31,6 +31,7 @@ session "ITree_Numeric_VCG" in "UTP/VCG/Numeric" = "HOL-Analysis" +
   sessions 
     ITree_VCG
     "HOL-Number_Theory"
+    "Hybrid-Library"
   theories
     ITree_Numeric_VCG
 
