@@ -4,12 +4,6 @@ theory ITree_Hoare
   imports ITree_WP
 begin
 
-syntax
-  "_ghost_old" :: "id" \<comment> \<open> A distinguished name for the ghost state ("old") \<close>
-
-parse_translation \<open> 
-  [(@{syntax_const "_ghost_old"}, fn ctx => fn term => Syntax.free "old")]\<close>
-
 text \<open> We introduce theorem attributed for safe Hoare rules and already proven triples \<close>
 
 named_theorems hoare_safe and hoare_lemmas
