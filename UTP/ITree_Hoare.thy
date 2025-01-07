@@ -388,8 +388,9 @@ next
   fix s\<^sub>0
   from assms(2) show "`P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (n s\<^sub>0 - 0))`" by expr_simp
   from assms(3) show "`@(R s\<^sub>0 (n s\<^sub>0 - length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]))) \<longrightarrow> Q`"
-    by expr_auto ( metis One_nat_def Suc_diff_le add.commute diff_diff_cancel diff_diff_left plus_1_eq_Suc
-                  , metis diff_diff_cancel diff_is_0_eq' le_common_total not_less_eq_eq)
+    by expr_auto 
+      (metis One_nat_def Suc_diff_le add.commute diff_diff_cancel diff_diff_left plus_1_eq_Suc
+      , metis diff_is_0_eq' less_Suc_eq_le minus_nat.diff_0 not_less_eq)
 qed
 
 lemma hoare_while_partial [hoare_safe]:

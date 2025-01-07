@@ -142,8 +142,7 @@ proof -
   from assms(2) have 2:"\<And>s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (0 + m s\<^sub>0))`"
     by expr_auto
   from assms(3) have 3:"\<And>s\<^sub>0. `@(R s\<^sub>0 (length [m s\<^sub>0..<n s\<^sub>0 + 1] + m s\<^sub>0)) \<longrightarrow> Q`"
-    by expr_simp
-      (smt (verit) Nat.add_diff_assoc2 add.commute cancel_comm_monoid_add_class.diff_cancel diff_Suc_1 le_Suc_eq le_add_diff_inverse2 not_le_minus)
+    by expr_simp (metis diff_is_0_eq' le_Suc_eq le_add_diff_inverse2 not_less_eq_eq)
   have "H[P] for_inv ([m..<n + 1])\<^sub>e (\<lambda>old i. (@(R old (i + m old)))\<^sub>e) S [Q]"
     by (rule thl_for_inv_prestate, fact 1, fact 2, fact 3)
   thus ?thesis
@@ -165,8 +164,8 @@ proof -
     by expr_auto
   from assms(3) have 3:"\<And>s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0 - length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]))) \<longrightarrow> Q`"
     apply expr_auto
-    apply (smt (verit) One_nat_def Suc_diff_le add.commute diff_diff_cancel diff_diff_left plus_1_eq_Suc)
-    apply (metis cancel_comm_monoid_add_class.diff_zero diff_is_0_eq le_Suc_eq not_le_minus)
+    apply (metis One_nat_def Suc_diff_le Suc_eq_plus1 diff_diff_cancel diff_diff_eq)
+    apply (metis diff_Suc_1' diff_Suc_Suc diff_is_0_eq' not_less_eq_eq)
     done
 
   have "H[P] for_inv (rev [m..<n + 1])\<^sub>e (\<lambda>old i. (@(R old (n old - i)))\<^sub>e) S [Q]"

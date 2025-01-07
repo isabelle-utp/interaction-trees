@@ -267,7 +267,7 @@ proof -
   hence "\<not> (t\<^sub>1 \<ge> map Ev tr)"
     by (meson D1_prefix assms(2) in_divergence_tranI tr(2))
   hence "t\<^sub>1 < map Ev tr"
-    by (metis Prefix_Order.prefixI le_common_total less_list_def map_append tr(1))
+    by (metis Prefix_Order.prefixI append_eq_append_conv2 less_list_def map_append tr(1))
   thus ?thesis
     by (metis Prefix_Order.strict_prefixE' T1b in_tracesI1 tr(2))
 qed
