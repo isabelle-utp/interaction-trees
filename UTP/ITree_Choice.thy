@@ -1,7 +1,7 @@
 section \<open> Generalised Choice \<close>
 
 theory ITree_Choice
-  imports "Interaction_Trees.ITrees" "Optics.Optics" "Z_Toolkit.Channels_Events"
+  imports "Interaction_Trees.ITrees" "Optics.Optics" "Circus_Toolkit.Channels_Events"
 begin
 
 text \<open> Generalised choice is parametric over a function to merge the choice functions. \<close>

@@ -14,6 +14,8 @@ session "ITree_Simulation" in "simulation" = "Interaction_Trees" +
 
 session "ITree_UTP" in "UTP" = "Interaction_Trees" +
   options [timeout = 600, document = false]
+  sessions
+    "Circus_Toolkit"
   theories
     ITree_UTP
     ITree_Countable_Nondeterminism

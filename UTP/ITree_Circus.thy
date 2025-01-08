@@ -149,7 +149,7 @@ lemma swap_self: "vwb_lens x \<Longrightarrow> swap(x, x) = Skip"
   by (simp add: usubst assigns_empty)
 
 lemma swap_commute: "x \<bowtie> y \<Longrightarrow> swap(x, y) = swap(y, x)"
-  by (simp add: usubst usubst_upd_comm)
+  by (simp add: usubst subst_upd_comm)
 
 lemma cond_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b \<langle>\<rho>\<rangle>\<^sub>a) = \<langle>expr_if \<sigma> b \<rho>\<rangle>\<^sub>a"
   by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
