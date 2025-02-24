@@ -24,7 +24,7 @@ codatatype ('e, 'r) itree =
   Sil "('e, 'r) itree" ("\<tau>") | \<comment> \<open> Invisible event \<close>
   Vis "'e \<Zpfun> ('e, 'r) itree" \<comment> \<open> Visible events choosing the continuation \<close>
 
-adhoc_overloading tick Ret
+adhoc_overloading tick \<rightleftharpoons> Ret
 
 syntax
   "_gchoice"      :: "pttrn \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("\<bbar> _ \<in> _ \<rightarrow> _" [0, 0, 100] 100)
@@ -129,7 +129,7 @@ primcorec (exhaustive) bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightar
 lemma map_pfun_alt_def: "map_pfun f g = pfun_of_map (map_option f \<circ> pfun_lookup g)"
   by (simp add: map_pfun_def)
 
-adhoc_overloading bind bind_itree
+adhoc_overloading bind \<rightleftharpoons> bind_itree
 
 lemma bind_Ret [simp, code]: "Ret v \<bind> k = (k v)"
   by (simp add: bind_itree.code)
@@ -145,7 +145,7 @@ definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
 definition seq_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" where 
 "seq_itree P Q = kleisli_comp bind_itree P Q"
 
-adhoc_overloading useq seq_itree
+adhoc_overloading useq \<rightleftharpoons> seq_itree
 
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
