@@ -48,6 +48,19 @@ definition is_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 
                    _ \<Rightarrow> False)"
 *)
 
+definition prism_matches :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e \<Rightarrow> bool" ("matches\<index>") where
+"prism_matches a e = (match\<^bsub>a\<^esub> e \<noteq> None)"
+
+context wb_prism
+begin
+
+  lemma matches_build: "matches (build v)"
+    by (simp add: prism_matches_def match_build)
+
+end
+
+declare wb_prism.matches_build [simp]
+
 definition is_RPC :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 'r) itree \<Rightarrow> bool" where
 "is_RPC a P = (case P of
                    Vis F \<Rightarrow> (if pfun_singleton F
