@@ -515,7 +515,7 @@ definition "gpar_csp P cs Q \<equiv> par P cs Q \<bind> (\<lambda> (x, y). Ret (
 abbreviation inter_csp :: "('e, unit) itree \<Rightarrow> ('e, unit) itree \<Rightarrow> ('e, unit) itree" where
 "inter_csp P Q \<equiv> gpar_csp P {} Q"
 
-adhoc_overloading gparallel gpar_csp and interleave inter_csp
+adhoc_overloading gparallel == gpar_csp and interleave == inter_csp
 
 lemma gpar_csp_commute: "P \<parallel>\<^bsub>E\<^esub> Q = Q \<parallel>\<^bsub>E\<^esub> P"
 proof -
