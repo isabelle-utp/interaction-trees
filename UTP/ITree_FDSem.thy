@@ -9,7 +9,7 @@ subsection \<open> Preliminaries \<close>
 datatype ('e, 's) event = Ev (of_Ev: 'e) | Term 's
 
 adhoc_overloading
-  tick Term
+  tick == Term
 
 type_synonym ('e, 's) trace = "('e, 's) event list"
 type_synonym ('e, 's) refusal = "('e, 's) event set"

@@ -12,7 +12,7 @@ type_synonym 'e process = "('e, unit) itree"
 definition Skip :: "('e, 'r) htree" where
 "Skip = (\<lambda> s. Ret s)"
 
-adhoc_overloading uskip Skip
+adhoc_overloading uskip == Skip
 
 lemma Skip_unit [simp]: 
   "Skip ;; S = S" "S ;; Skip = S"
@@ -44,7 +44,7 @@ lemma Stop_left_zero [simp]: "Stop ;; S = Stop"
 definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
 
-adhoc_overloading utest "assume"
+adhoc_overloading utest == "assume"
 
 lemma assume_true: "\<questiondown>True? = Skip"
   by (simp add: assume_def Skip_def)
@@ -69,7 +69,7 @@ lemma test_false: "\<exclamdown>False! = Stop"
 definition cond_itree :: "('e, 'r, 's) ktree \<Rightarrow> ('r \<Rightarrow> bool) \<Rightarrow> ('e, 'r, 's) ktree \<Rightarrow> ('e, 'r, 's) ktree" where
 "cond_itree P b Q = (\<lambda> s. if b s then P s else Q s)"
 
-adhoc_overloading ucond cond_itree
+adhoc_overloading ucond == cond_itree
 
 text \<open> Similar to @{const Let} in HOL, but it evaluates the assigned expression on the initial state. \<close>
 
@@ -82,11 +82,11 @@ definition for_itree :: "('s \<Rightarrow> 'i list) \<Rightarrow> ('i \<Rightarr
 lemma for_itree_eval_bounds: "for_itree I P s = for_itree (\<guillemotleft>I s\<guillemotright>)\<^sub>e P s"
   by (simp add: for_itree_def)
 
-adhoc_overloading uwhile iterate
+adhoc_overloading uwhile == iterate
 
 definition "until_itree P B = P ;; iterate (Not \<circ> B) P"
 
-adhoc_overloading uuntil until_itree
+adhoc_overloading uuntil == until_itree
 
 syntax 
   "_let_itree" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(let _ \<leftarrow> (_) in (_))" [0, 0, 10] 10)
@@ -103,7 +103,7 @@ translations
 definition assigns :: "('s\<^sub>1, 's\<^sub>2) psubst \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree)" where
 "assigns \<sigma> = (\<lambda> s. Ret (\<sigma> s))"
 
-adhoc_overloading uassigns assigns
+adhoc_overloading uassigns == assigns
 
 named_theorems assigns_combine
 
