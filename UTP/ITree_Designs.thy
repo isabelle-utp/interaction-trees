@@ -16,7 +16,7 @@ definition itree_pre :: "('e, 'r, 's) ktree \<Rightarrow> ('r \<Rightarrow> bool
 lemma itree_pre_div_free: "itree_pre P = (\<lambda> s. div_free (P s))"
   by (simp add: div_free_is_no_divergence itree_pre_def no_divergence_def)
 
-expr_ctr itree_pre
+expr_constructor itree_pre
 
 definition refined_by :: "('e, 'r, 's) ktree \<Rightarrow> ('e, 'r, 's) ktree \<Rightarrow> bool" (infix "\<sqsubseteq>\<^sub>\<D>" 50) where
 "refined_by P Q = (`itree_pre P \<longrightarrow> itree_pre Q` \<and> {(s, s') \<in> itree_rel Q. itree_pre P s} \<subseteq> itree_rel P)"

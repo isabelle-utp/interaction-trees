@@ -1,7 +1,7 @@
 section \<open> Circus Interaction Tree Semantics \<close>
 
 theory ITree_Circus                          
-  imports "ITree_FDSem" "Shallow-Expressions-Z.Shallow_Expressions_Z"
+  imports "ITree_FDSem" "Shallow_Expressions_Z.Shallow_Expressions_Z"
 begin
 
 subsection \<open> Main Operators \<close>

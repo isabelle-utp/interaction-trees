@@ -1,4 +1,4 @@
-session "Interaction_Trees" = "Shallow-Expressions-Z" +
+session "Interaction_Trees" = "Shallow_Expressions_Z" +
   options [timeout = 600, document = pdf, document_output = "output"]
   sessions
     Abstract_Prog_Syntax

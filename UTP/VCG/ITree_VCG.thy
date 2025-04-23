@@ -7,7 +7,7 @@ begin
 
 notation seq_itree (infixr ";" 54)
 
-lit_vars
+declare [[literal_variables]]
 
 setup Explorer_Lib.switch_to_quotes
 
