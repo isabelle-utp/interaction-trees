@@ -41,7 +41,7 @@ lemma thl_skip':
 
 lemma thl_seq: "\<lbrakk> H[P] S\<^sub>1 [Q]; H[Q] S\<^sub>2 [R] \<rbrakk> \<Longrightarrow> H[P] S\<^sub>1 ;; S\<^sub>2 [R]"
   by (auto simp add: thoare_triple_def hl_seq wp)
-     (simp add: hoare_alt_def wp_alt_def seq_itree_def kleisli_comp_def, expr_auto, meson)
+     (simp add: hoare_alt_def wp_alt_def kcomp_itree_def, expr_auto, meson)
 
 lemma thl_seq_inv [hoare_safe]: "\<lbrakk> H[P] S\<^sub>1 [P]; H[P] S\<^sub>2 [P] \<rbrakk> \<Longrightarrow> H[P] S\<^sub>1 ;; S\<^sub>2 [P]"
   by (simp add: thl_seq)

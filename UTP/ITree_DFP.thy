@@ -25,7 +25,7 @@ lemma dfp_assigns [wp]: "dfp \<langle>\<sigma>\<rangle>\<^sub>a = (True)\<^sub>e
   by (simp add: dfp_def assigns_def deadlock_free_Ret SEXP_def)
 
 lemma dfp_seq [wp]: "dfp (P ;; Q) = (dfp P \<and> wlp P (dfp Q))\<^sub>e"
-  by (simp add: dfp_def seq_itree_def kleisli_comp_def deadlock_free_bind_iff wlp_itree_def 
+  by (simp add: dfp_def kcomp_itree_def deadlock_free_bind_iff wlp_itree_def 
                 SEXP_def retvals_def itree_rel_def itree_pred_def)
 
 lemma dfp_event_choice [wp]: "dfp (event_choice F) = (pdom(F) \<noteq> {} \<and> (\<forall> e\<in>pdom(F). dfp(F(\<guillemotleft>e\<guillemotright>)\<^sub>p)\<^sub>e))\<^sub>e"
@@ -48,7 +48,7 @@ lemma deadlock_free_init_iterate:
   assumes "\<^bold>{True\<^bold>} \<langle>\<sigma>\<rangle>\<^sub>a \<^bold>{P\<^bold>}" "\<^bold>{P\<^bold>} C \<^bold>{P\<^bold>}" "`B \<and> P \<longrightarrow> dfp C`"
   shows "deadlock_free ((\<langle>\<sigma>\<rangle>\<^sub>a ;; iterate B C) s)"
   using assms
-  apply (simp add: seq_itree_def kleisli_comp_def deadlock_free_bind_iff assigns_def dfp_def taut_def hoare_alt_def)
+  apply (simp add: kcomp_itree_def deadlock_free_bind_iff assigns_def dfp_def taut_def hoare_alt_def)
   apply (rule deadlock_free_iterate[of B P])
     apply (auto simp add: retvals_def)
   done

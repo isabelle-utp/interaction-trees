@@ -55,10 +55,10 @@ lemma Stop_rel [itree_rel]: "itree_rel Stop = {}"
   by (simp add: itree_rel_def set_eq_iff Stop_pred)
 
 lemma seq_pred [itree_pred]: "\<lbrakk>P ;; Q\<rbrakk>\<^sub>p (s, s') = (\<exists> s\<^sub>0.  \<lbrakk>P\<rbrakk>\<^sub>p (s, s\<^sub>0) \<and> \<lbrakk>Q\<rbrakk>\<^sub>p (s\<^sub>0, s'))"
-  by (auto simp add: itree_rel_defs seq_itree_def kleisli_comp_def)
+  by (auto simp add: itree_rel_defs kcomp_itree_def)
 
 lemma seq_rel [itree_rel]: "itree_rel (P ;; Q) = itree_rel P O itree_rel Q"
-  by (auto simp add: seq_itree_def kleisli_comp_def itree_rel_defs relcomp_unfold)
+  by (auto simp add: kcomp_itree_def itree_rel_defs relcomp_unfold)
 
 lemma cond_itree_pred [itree_pred]: 
   "\<lbrakk>P \<lhd> b \<rhd> Q\<rbrakk>\<^sub>p = (\<lambda> (s, s'). if b s then \<lbrakk>P\<rbrakk>\<^sub>p (s, s') else \<lbrakk>Q\<rbrakk>\<^sub>p (s, s'))"
@@ -76,7 +76,7 @@ lemma iterate_pred [itree_pred]:
 lemma itree_while_pred: 
   "\<lbrakk>while P do C od\<rbrakk>\<^sub>p (s, s') = 
    ((s = s' \<or> (\<exists>xs. xs \<noteq> [] \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> \<lbrakk>C\<rbrakk>\<^sub>p ((s # xs) ! i, xs ! i)) \<and> s' = last xs)) \<and> \<not> P s')"
-  by (simp add: iterate_pred itree_chain_iff_rtc_chain, simp add: itree_pred_def)
+  by (simp add: SEXP_def iterate_pred itree_chain_iff_rtc_chain, simp add: itree_pred_def)
 
 lemma input_in_where_rel [itree_rel]: 
   "wb_prism c \<Longrightarrow> itree_rel (input_in_where c A P) = {(s, s'). \<exists> v \<in> A s. fst (P v) s \<and> (s, s') \<in> itree_rel (snd (P v))}" 

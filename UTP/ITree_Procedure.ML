@@ -34,7 +34,7 @@ fun mk_procedure evT ((((n, p), ot), st), body) ctx =
       val outT = (case snd (dest_funT (fastype_of (read_term ctx body)))
                   of Type (@{type_name itree}, [_, t]) => t | _ => error "Not an ITree type")
       val has_ret = (case outT of Type ("Product_Type.prod", _) => true | _ => false)
-      fun add_ret t = (if has_ret then t else const @{const_name seq_itree} $ t $ (const @{const_abbrev proc_ret_empty}))  
+      fun add_ret t = (if has_ret then t else const @{const_name kcomp_itree} $ t $ (const @{const_abbrev proc_ret_empty}))  
       val pat = read_term ctx p
       val vs = map (fst o dest_Free) (HOLogic.strip_tuple pat)
       val pat' = HOLogic.mk_tuple (map free vs)

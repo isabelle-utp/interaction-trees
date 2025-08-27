@@ -2,7 +2,7 @@ section \<open> Interaction Trees \<close>
 
 theory Interaction_Trees
   imports "HOL-Library.Monad_Syntax" "HOL-Library.BNF_Corec" "HOL-Library.Prefix_Order"
-  "Z_Toolkit.Relation_Toolkit" "Abstract_Prog_Syntax.Abstract_Prog_Syntax"
+  "Z_Toolkit.Relation_Toolkit" 
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -140,12 +140,10 @@ lemma bind_Sil [simp, code]: "Sil t \<bind> k = Sil (t \<bind> k)"
 lemma bind_Vis [simp, code]: "Vis t \<bind> k = Vis (map_pfun (\<lambda> x. bind_itree x k) t)"
   by (auto simp add: bind_itree.ctr option.case_eq_if fun_eq_iff)
 
-definition "kleisli_comp bnd f g = (\<lambda> x. bnd (f x) g)"
+definition kcomp_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" where 
+"kcomp_itree P Q = (\<lambda> s. P s \<bind> Q)"
 
-definition seq_itree :: "('a \<Rightarrow> ('e, 'b) itree) \<Rightarrow> ('b \<Rightarrow> ('e, 'c) itree) \<Rightarrow> 'a \<Rightarrow> ('e, 'c) itree" where 
-"seq_itree P Q = kleisli_comp bind_itree P Q"
-
-adhoc_overloading useq \<rightleftharpoons> seq_itree
+notation kcomp_itree (infixr ">=>" 55)
 
 text \<open> A bind cannot evaluate to simply a @{const Ret} because the @{term P} and @{term Q} must both
   minimally terminate. \<close>
@@ -237,8 +235,8 @@ friend_of_corec bind_itree :: "('e, 'r) itree \<Rightarrow> ('r \<Rightarrow> ('
 
 lemma kcomp_assoc: 
   fixes P :: "('e, 'r, 's) ktree" 
-  shows "(P ;; Q) ;; R = P ;; (Q ;; R)"
-  by (simp add: seq_itree_def kleisli_comp_def fun_eq_iff bind_itree_assoc)
+  shows "(P >=> Q) >=> R = P >=> (Q >=> R)"
+  by (simp add: kcomp_itree_def fun_eq_iff bind_itree_assoc)
 
 subsection \<open> Run \<close>
 

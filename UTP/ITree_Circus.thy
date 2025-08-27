@@ -1,7 +1,7 @@
 section \<open> Circus Interaction Tree Semantics \<close>
 
 theory ITree_Circus                          
-  imports "ITree_FDSem" "Shallow_Expressions_Z.Shallow_Expressions_Z"
+  imports "ITree_FDSem" "Shallow_Expressions_Z.Shallow_Expressions_Z" "Abstract_Prog_Syntax.Abstract_Prog_Syntax"
 begin
 
 subsection \<open> Main Operators \<close>
@@ -14,9 +14,11 @@ definition Skip :: "('e, 'r) htree" where
 
 adhoc_overloading uskip == Skip
 
+adhoc_overloading useq == kcomp_itree
+
 lemma Skip_unit [simp]: 
   "Skip ;; S = S" "S ;; Skip = S"
-  by (simp_all add: seq_itree_def Skip_def kleisli_comp_def bind_itree_right_unit)
+  by (simp_all add: kcomp_itree_def Skip_def bind_itree_right_unit)
 
 text \<open> Like @{const Skip}, but do a single silent step. \<close>
 
@@ -30,7 +32,7 @@ abbreviation Div :: "('e, 'r) htree" where
 "Div \<equiv> (\<lambda> s. diverge)"
 
 lemma Div_left_zero [simp]: "Div ;; P = Div"
-  by (simp add: seq_itree_def kleisli_comp_def)
+  by (simp add: kcomp_itree_def)
 
 lemma traces_deadlock: "traces(deadlock) = {[]}"
   by (auto simp add: deadlock_def traces_Vis)
@@ -39,7 +41,7 @@ abbreviation
 "Stop \<equiv> (\<lambda> s. deadlock)"
 
 lemma Stop_left_zero [simp]: "Stop ;; S = Stop"
-  by (simp add: seq_itree_def kleisli_comp_def)
+  by (simp add: kcomp_itree_def)
 
 definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "assume b = (\<lambda> s. if (b s) then Ret s else diverge)"
@@ -114,25 +116,25 @@ lemma assigns_empty: "\<langle>[\<leadsto>]\<rangle>\<^sub>a = Skip"
   by (simp add: subst_id_def assigns_def Skip_def)
 
 lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P ;; Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) ;; Q"
-  by (simp add: seq_itree_def kleisli_comp_def assigns_def)
+  by (simp add: kcomp_itree_def assigns_def)
 
 lemma assigns_seq_comp [assigns_combine]: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<langle>\<rho>\<rangle>\<^sub>a = \<langle>\<rho> \<circ>\<^sub>s \<sigma>\<rangle>\<^sub>a"
-  by (simp add: seq_itree_def kleisli_comp_def assigns_def subst_comp_def)
+  by (simp add: kcomp_itree_def assigns_def subst_comp_def)
 
 lemma assigns_test: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<exclamdown>b! = \<exclamdown>\<sigma> \<dagger> b! ;; \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: seq_itree_def kleisli_comp_def assigns_def test_def fun_eq_iff expr_defs)
+  by (simp add: kcomp_itree_def assigns_def test_def fun_eq_iff expr_defs)
 
 lemma assigns_assume: "\<langle>\<sigma>\<rangle>\<^sub>a ;; \<questiondown>b? = \<questiondown>\<sigma> \<dagger> b? ;; \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: seq_itree_def kleisli_comp_def assigns_def assume_def fun_eq_iff expr_defs)
+  by (simp add: kcomp_itree_def assigns_def assume_def fun_eq_iff expr_defs)
 
 lemma assigns_Stop: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Stop = Stop"
-  by (simp add: seq_itree_def assigns_def kleisli_comp_def)
+  by (simp add: kcomp_itree_def assigns_def)
 
 lemma assign_Stop: "x := e ;; Stop = Stop"
   by (fact assigns_Stop)
 
 lemma assigns_Step: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Step = Step ;; \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: seq_itree_def assigns_def Step_def kleisli_comp_def Skip_def)
+  by (simp add: kcomp_itree_def assigns_def Step_def Skip_def)
 
 lemma assign_self: "vwb_lens x \<Longrightarrow> x := $x = Skip"
   by (simp add: usubst assigns_empty)
@@ -143,7 +145,7 @@ lemma assign_twice: "vwb_lens x \<Longrightarrow> (x := e;; x := f) = x := f\<lb
 lemma assign_combine: 
   assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
   shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
-  using assms by (simp add: seq_itree_def kleisli_comp_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
+  using assms by (simp add: kcomp_itree_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
 
 lemma swap_self: "vwb_lens x \<Longrightarrow> swap(x, x) = Skip"
   by (simp add: usubst assigns_empty)
@@ -167,7 +169,7 @@ lemma cond_simps:
   "S \<lhd> b \<rhd> (T \<lhd> b \<rhd> U) = S \<lhd> b \<rhd> U"
   "(S \<lhd> b \<rhd> T) ;; U = (S ;; U) \<lhd> b \<rhd> (T ;; U)"
   "x := e ;; (S \<lhd> b \<rhd> T) = (x := e ;; S) \<lhd> b\<lbrakk>e/x\<rbrakk> \<rhd> (x := e ;; T)"
-   by (simp_all add: seq_itree_def cond_itree_def fun_eq_iff kleisli_comp_def assigns_def expr_defs)
+   by (simp_all add: kcomp_itree_def cond_itree_def fun_eq_iff assigns_def expr_defs)
 
 lemma for_empty: "for_itree ([])\<^sub>e P = Skip"
   by (simp add: for_itree_def)
@@ -205,7 +207,7 @@ next
     qed
 
     from 1 2 show ?case
-      by (simp add: for_Cons seq_itree_def kleisli_comp_def del: SEXP_apply)
+      by (simp add: for_Cons kcomp_itree_def del: SEXP_apply)
          (auto intro!: terminates_bind simp add: SEXP_def)
 qed
 
@@ -222,7 +224,7 @@ proof -
 qed
 
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"
-  by (auto simp add: seq_itree_def fun_eq_iff kleisli_comp_def iterate.code cond_itree_def Step_def Skip_def comp_def)
+  by (auto simp add: kcomp_itree_def fun_eq_iff iterate.code cond_itree_def Step_def Skip_def comp_def)
 
 lemma while_True_Skip: "while True do Skip od = Div"
   by (simp add: Skip_def SEXP_def loop_Ret)
@@ -238,7 +240,7 @@ definition anim_process :: "'s::default subst \<Rightarrow> ('e::show, 's, 'a) k
 "anim_process = process"
 
 lemma deadlock_free_processI: "(\<And> s. deadlock_free ((\<langle>\<sigma>\<rangle>\<^sub>a ;; P) s)) \<Longrightarrow> deadlock_free (process \<sigma> P)"
-  by (simp add: process_def seq_itree_def kleisli_comp_def deadlock_free_bind_iff assigns_def deadlock_free_Ret)
+  by (simp add: process_def kcomp_itree_def deadlock_free_bind_iff assigns_def deadlock_free_Ret)
 
 abbreviation "abs_st P \<equiv> P ;; assigns (\<lambda> s. ())"
 
@@ -315,7 +317,7 @@ translations "c?(x):A \<rightarrow> P" == "CONST input_in c (A)\<^sub>e (\<lambd
 translations "c?(x)|P \<rightarrow> Q" == "CONST input_where c (\<lambda> (x). ((P)\<^sub>e, Q))"
 
 lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c?(x) \<rightarrow> P(x) = c?(x) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a ;; P(x))"
-  by (simp add: seq_itree_def input_in_where_def kleisli_comp_def assigns_def)
+  by (simp add: kcomp_itree_def input_in_where_def assigns_def)
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "output c e P = (\<lambda> s. outp c (e s) \<then> P s)"
@@ -324,7 +326,7 @@ syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> lo
 translations "c!(e) \<rightarrow> P" == "CONST output c (e)\<^sub>e P"
 
 lemma assigns_output: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c!(e) \<rightarrow> P = c!(\<sigma> \<dagger> e) \<rightarrow> (\<langle>\<sigma>\<rangle>\<^sub>a ;; P)"
-  by (simp add: seq_itree_def assigns_def kleisli_comp_def output_def expr_defs)
+  by (simp add: kcomp_itree_def assigns_def output_def expr_defs)
 
 lemma output_as_input: "c!(e) \<rightarrow> P = c?(x):{e} \<rightarrow> P"
   by (simp add:output_def input_in_where_def outp_as_inp bind_itree_assoc[THEN sym])
@@ -355,7 +357,7 @@ lemma extchoice_Div: "Div \<box> P = Div"
   by (simp add: choice_diverge extchoice_fun_def)
 
 lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a ;; Q)"
-  by (simp add: seq_itree_def kleisli_comp_def extchoice_fun_def expr_defs assigns_def)
+  by (simp add: kcomp_itree_def extchoice_fun_def expr_defs assigns_def)
 
 no_notation conj  (infixr "&" 35)
 
@@ -406,7 +408,7 @@ lemma Skip_nmods [nmods]: "Skip nmods e"
   by (simp add: Skip_def not_modifies_def)
 
 lemma seq_nmods [nmods]: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> P ;; Q nmods e"
-  by (auto elim!:trace_to_bindE bind_RetE' simp add: seq_itree_def kleisli_comp_def not_modifies_def retvals_def)
+  by (auto elim!:trace_to_bindE bind_RetE' simp add: kcomp_itree_def not_modifies_def retvals_def)
      (metis trace_to_Nil)+
 
 text \<open> The following law ignore the condition when checking for modification. However, if we were

@@ -23,8 +23,8 @@ lemma iterate_body_nonterminates:
   shows "nonterminating (iterate b P s)"
   by (simp add: assms iterate.code)
 
-lemma loop_unfold: "loop P = P ;; (\<tau> \<circ> loop P)"
-  by (simp add: seq_itree_def kleisli_comp_def fun_eq_iff iterate.code)
+lemma loop_unfold: "loop P = P >=> (\<tau> \<circ> loop P)"
+  by (simp add: kcomp_itree_def fun_eq_iff iterate.code)
 
 lemma loop_Ret: "loop Ret = (\<lambda> s. diverge)"
   by (metis Sil_nfp_stabilises bind_Ret comp_apply diverges_then_diverge iterate.code)
@@ -107,7 +107,7 @@ begin
 
 fun itreepow :: "nat \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "itreepow 0 P = Ret" |
-"itreepow (Suc n) P = P ;; itreepow n P"
+"itreepow (Suc n) P = P >=> itreepow n P"
 
 end
 
@@ -594,7 +594,7 @@ qed
 text \<open> There is an ITree chain if-and-only-if there is a reflexive transitive closure (relational) chain \<close>
 
 lemma itree_chain_iff_rtc_chain:
-    "(\<not> P s \<and> s = s' \<or> P s \<and> (\<exists>es. ((P)\<^sub>e, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s') \<and> \<not> P s') =
+    "(\<not> P s \<and> s = s' \<or> P s \<and> (\<exists>es. (P, s) \<turnstile> C \<midarrow>es\<leadsto>\<^sub>\<checkmark> s') \<and> \<not> P s') =
        ((s = s' \<or> (\<exists>xs. \<not> xs = [] 
                       \<and> (\<forall>i<length xs. P ((s # xs) ! i) \<and> (xs ! i) \<in> \<^bold>R(C ((s # xs) ! i))) 
                       \<and> s' = last xs)) 
