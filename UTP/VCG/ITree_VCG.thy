@@ -5,7 +5,7 @@ theory ITree_VCG
   keywords "program" "procedure" :: "thy_decl_block"
 begin
 
-notation seq_itree (infixr ";" 54)
+notation kcomp_itree (infixr ";" 54)
 
 declare [[literal_variables]]
 
