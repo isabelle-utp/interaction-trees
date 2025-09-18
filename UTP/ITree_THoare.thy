@@ -8,14 +8,10 @@ text \<open> Total correctness = partial correctness + termination. Termination 
   the weakest precondition calculus, i.e. @{term "pre S"} is the weakest precondition under
   which @{term S} terminates. \<close>
 
-definition thoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
-"thoare_triple P S Q = (hoare P S Q \<and> `P \<longrightarrow> pre S`)"
+definition thoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
+"thoare_triple P S Q = (hoare_rel P S Q \<and> `P \<longrightarrow> pre S`)"
 
-syntax
-  "_thoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H[_] /_) /[_]")
-
-translations
-  "_thoare P S Q" == "CONST thoare_triple (P)\<^sub>e S (Q)\<^sub>e"
+adhoc_overloading thoare_rel \<rightleftharpoons> thoare_triple
 
 lemma thoare_then_hoare: "H[P] C [Q] \<Longrightarrow> H{P} C {Q}"
   by (simp add: thoare_triple_def)
@@ -37,7 +33,8 @@ lemma thl_skip: "H[P] Skip [P]"
 lemma thl_skip': 
   assumes "`P \<longrightarrow> Q`"
   shows "H[P] Skip [Q]"
-  by (meson assms hl_skip' thl_skip thoare_triple_def)
+  using assms unfolding thoare_triple_def
+  by (simp add: hl_skip' wp)
 
 lemma thl_seq: "\<lbrakk> H[P] S\<^sub>1 [Q]; H[Q] S\<^sub>2 [R] \<rbrakk> \<Longrightarrow> H[P] S\<^sub>1 ;; S\<^sub>2 [R]"
   by (auto simp add: thoare_triple_def hl_seq wp)
@@ -137,8 +134,18 @@ lemma thl_for_to_inv [hoare_safe]:
     "\<And> s\<^sub>0. `P \<longrightarrow> @(R s\<^sub>0 (m s\<^sub>0))`" "\<And> s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0+1 - m s\<^sub>0 + m s\<^sub>0)) \<longrightarrow> Q`"
   shows "H[P] for i = m to n inv @(R old i) do S i od [Q]"
 proof -
-  have 1:"\<And>s\<^sub>0 i. i < length [m s\<^sub>0..<n s\<^sub>0 + 1] \<Longrightarrow> H[@(R s\<^sub>0 (i + m s\<^sub>0))] S ([m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 (i + 1 + m s\<^sub>0))]"
-    by (smt (verit) Suc_eq_plus1 add.commute add_Suc_right assms(1) le_add2 length_upt less_Suc_eq_le less_diff_conv nth_upt)
+  have "\<And>s\<^sub>0 i. i < length [m s\<^sub>0..<n s\<^sub>0 + 1] \<Longrightarrow> H[@(R s\<^sub>0 (i + m s\<^sub>0))] S ([m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 ((i + m s\<^sub>0) + 1))]"
+  proof -
+    fix s\<^sub>0 i
+    assume i:"i < length [m s\<^sub>0..<n s\<^sub>0 + 1]"
+    hence "S ([m s\<^sub>0..<n s\<^sub>0 + 1] ! i) = S (i + m s\<^sub>0)"
+      by (metis add.commute length_upt less_diff_conv nth_upt)
+    thus "H[@(R s\<^sub>0 (i + m s\<^sub>0))] S ([m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 ((i + m s\<^sub>0) + 1))]"
+      using assms(1)[where s\<^sub>0=s\<^sub>0 and i="(i + m s\<^sub>0)"]
+      by (metis Suc_eq_plus1 i le_add2 length_upt less_Suc_eq_le less_diff_conv)
+  qed
+  hence 1:"\<And>s\<^sub>0 i. i < length [m s\<^sub>0..<n s\<^sub>0 + 1] \<Longrightarrow> H[@(R s\<^sub>0 (i + m s\<^sub>0))] S ([m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 (i + 1 + m s\<^sub>0))]"
+    by simp
   from assms(2) have 2:"\<And>s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (0 + m s\<^sub>0))`"
     by expr_auto
   from assms(3) have 3:"\<And>s\<^sub>0. `@(R s\<^sub>0 (length [m s\<^sub>0..<n s\<^sub>0 + 1] + m s\<^sub>0)) \<longrightarrow> Q`"
@@ -155,11 +162,28 @@ lemma thl_for_downto_inv [hoare_safe]:
     "\<And> s\<^sub>0. `P \<longrightarrow> @(R s\<^sub>0 (n s\<^sub>0))`" "\<And> s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0 - (Suc (n s\<^sub>0) - (m s\<^sub>0)))) \<longrightarrow> Q`"
   shows "H[P] for i = n downto m inv @(R old i) do S i od [Q]"
 proof -
-  have 1:"\<And>s\<^sub>0 i. i < length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]) \<Longrightarrow> H[@(R s\<^sub>0 (n s\<^sub>0 - i))] S (rev [m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 (n s\<^sub>0 - (i + 1)))]"
-    apply (auto simp add: rev_nth nth_append)
-    apply (smt (verit) Nat.add_diff_assoc2 add.commute assms(1) diff_diff_left diff_le_self le_add2 le_add_diff_inverse2 less_Suc_eq_le plus_1_eq_Suc)
-    apply (smt (verit) One_nat_def assms(1) cancel_ab_semigroup_add_class.add_diff_cancel_left' cancel_comm_monoid_add_class.diff_cancel cancel_comm_monoid_add_class.diff_zero diff_diff_left diff_le_self less_diff_conv linordered_semidom_class.add_diff_inverse nat_less_le not_less_eq)
-    done
+  have "\<And>s\<^sub>0 i. i < length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]) \<Longrightarrow> H[@(R s\<^sub>0 (n s\<^sub>0 - i))] S (rev [m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 ((n s\<^sub>0 - i) - 1))]"
+  proof -
+    fix s\<^sub>0 i 
+    assume i:"i < length (rev [m s\<^sub>0..<n s\<^sub>0 + 1])"    
+    show "H[@(R s\<^sub>0 (n s\<^sub>0 - i))] S (rev [m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 ((n s\<^sub>0 - i) - 1))]"
+    proof (cases "m s\<^sub>0 \<le> n s\<^sub>0")
+      case True
+      hence "length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]) = (n s\<^sub>0 - m s\<^sub>0) + 1"
+        by simp      
+      with True i have "((rev [m s\<^sub>0..<n s\<^sub>0 + 1]) ! i) = n s\<^sub>0 - i"
+        by (simp del: upt_Suc add: rev_nth) 
+      with True i show ?thesis
+        by (metis add.commute add_le_imp_le_diff assms(1) diff_le_self length_rev
+            length_upt less_diff_conv less_eq_iff_succ_less)
+      next
+      case False
+      then show ?thesis
+        using i by force
+    qed
+  qed
+  hence 1:"\<And>s\<^sub>0 i. i < length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]) \<Longrightarrow> H[@(R s\<^sub>0 (n s\<^sub>0 - i))] S (rev [m s\<^sub>0..<n s\<^sub>0 + 1] ! i) [@(R s\<^sub>0 (n s\<^sub>0 - (i + 1)))]"
+    by simp
   from assms(2) have 2:"\<And>s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(R s\<^sub>0 (n s\<^sub>0 - 0))`"
     by expr_auto
   from assms(3) have 3:"\<And>s\<^sub>0. `@(R s\<^sub>0 (n s\<^sub>0 - length (rev [m s\<^sub>0..<n s\<^sub>0 + 1]))) \<longrightarrow> Q`"
@@ -191,6 +215,7 @@ proof -
   show ?thesis
     using partial thoareI wS_term by fastforce
 qed
+
 
 definition while_inv_var :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a::wellorder) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 [code_unfold]: "while_inv_var B I V P = iterate B P"
@@ -226,23 +251,23 @@ lemma hl_frame_rule':
 lemma thl_while_inv_prestate [hoare_safe]:
   assumes 
     \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term old}. \<close>
-    "\<And> old z. H[P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I old) \<and> V < \<guillemotleft>z\<guillemotright>]" 
-    "\<And> old. `P \<and> \<guillemotleft>old\<guillemotright> = $\<^bold>v \<longrightarrow> @(I old)`" 
-    "\<And> old. `(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I old)) \<longrightarrow> Q`"
+    "\<And> s z. H[P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I s) \<and> V < \<guillemotleft>z\<guillemotright>]" 
+    "\<And> s. `P \<and> \<guillemotleft>s\<guillemotright> = $\<^bold>v \<longrightarrow> @(I s)`" 
+    "\<And> s. `(P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I s)) \<longrightarrow> Q`"
   shows "H[P]while B inv @(I old) var V do S od[Q]"
 proof (rule_tac thl_prestate)
-  fix old
-  show "H[\<guillemotleft>old\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>] while B inv @(I old) var V do S od [Q]"
+  fix s
+  show "H[\<guillemotleft>s\<guillemotright> = $\<^bold>v \<and> P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk>] while B inv @(I old) var V do S od [Q]"
   proof -
-    have "\<And> z. H[(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [(P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)) \<and> V < \<guillemotleft>z\<guillemotright>]"
+    have "\<And> z. H[(P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s)) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [(P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s)) \<and> V < \<guillemotleft>z\<guillemotright>]"
     proof (simp, rule thl_frame_rule')
       fix z
-      show "S nmods P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk>"
+      show "S nmods P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk>"
         by (expr_simp add: not_modifies_def)
-      show "\<And> z. H[P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I old) \<and> V < \<guillemotleft>z\<guillemotright>]"
+      show "\<And> z. H[P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s) \<and> B \<and> V = \<guillemotleft>z\<guillemotright>] S [@(I s) \<and> V < \<guillemotleft>z\<guillemotright>]"
         by (fact assms(1))
     qed
-    hence w:"H[P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)] while B do S od [\<not> B \<and> P\<lbrakk>\<guillemotleft>old\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I old)]"
+    hence w:"H[P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s)] while B do S od [\<not> B \<and> P\<lbrakk>\<guillemotleft>s\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s)]"
       by (rule thl_while)
     from assms(2-3) show ?thesis
       unfolding while_inv_var_def
@@ -267,7 +292,8 @@ proof -
   with assms show ?thesis
     apply simp
     apply (rule hl_while_inv)
-    by (simp add: hl_while_inv)
+      apply (simp_all add: hl_while_inv)
+    done
 qed
 
 lemma thl_via_wlp_wp: "H[P] S [Q] = `P \<longrightarrow> (wlp S Q \<and> pre S)`"
