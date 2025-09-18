@@ -14,20 +14,10 @@ named_theorems hoare_safe and hoare_lemmas
 definition hoare_rel_triple :: "('s\<^sub>1 \<Rightarrow> bool) \<Rightarrow> ('s\<^sub>1 \<Rightarrow> ('e, 's\<^sub>2) itree) \<Rightarrow> ('s\<^sub>1 \<Rightarrow> 's\<^sub>2 \<Rightarrow> bool) \<Rightarrow> bool" where
 "hoare_rel_triple P C Q = (\<forall> s s' es. P s \<and> C s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s s')"
 
-abbreviation hoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
-"hoare_triple P C Q \<equiv> hoare_rel_triple P C (\<lambda> x. Q)"
+adhoc_overloading hoare_rel \<rightleftharpoons> hoare_rel_triple
 
-lemma hoare_triple_def: "hoare_triple P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
+lemma hoare_triple_def: "hoare P S Q = (itree_rel S \<subseteq> spec \<top>\<^sub>S P Q)"
   by (auto simp add: hoare_rel_triple_def itree_rel_def spec_def itree_pred_def retvals_def)
-
-syntax 
-  "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H{_} /_) /{_}")
-  "_hoare"           :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2\<^bold>{_\<^bold>} /_) /\<^bold>{_\<^bold>}")
-
-translations
-  "H{P} C {Q}" => "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> _ghost_old. (Q)\<^sub>e)"
-  "H{P} C {Q}" <= "CONST hoare_rel_triple (P)\<^sub>e C (\<lambda> old. (Q)\<^sub>e)"
-  "H{P} C {Q}" <= "CONST hoare_triple (P)\<^sub>e C (Q)\<^sub>e"
 
 lemma hoare_alt_def: "\<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>} \<longleftrightarrow> (\<forall> s s' es. P s \<and> S s \<midarrow>es\<leadsto> \<checkmark> s' \<longrightarrow> Q s')"
   by (auto simp add: hoare_rel_triple_def spec_def itree_rel_defs retvals_def subset_iff)
@@ -38,7 +28,7 @@ lemma hoare_ret_def: "\<^bold>{P\<^bold>} C \<^bold>{Q\<^bold>} \<longleftrighta
 lemma hoareI: "\<lbrakk> \<And> s s' es. \<lbrakk> P s; S s \<midarrow>es\<leadsto> \<checkmark> s' \<rbrakk> \<Longrightarrow> Q s' \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S \<^bold>{Q\<^bold>}"
   by (auto simp add: hoare_alt_def)
 
-lemma hoare_ref_by: "hoare_triple P C Q \<longleftrightarrow> (P\<^sup>< \<longrightarrow> Q\<^sup>>)\<^sub>e \<sqsubseteq> \<lbrakk>C\<rbrakk>\<^sub>p"
+lemma hoare_ref_by: "hoare P C Q \<longleftrightarrow> (P\<^sup>< \<longrightarrow> Q\<^sup>>)\<^sub>e \<sqsubseteq> \<lbrakk>C\<rbrakk>\<^sub>p"
   by (auto simp add: hoare_triple_def itree_rel_def spec_def ref_by_fun_def ref_by_bool_def)
 
 lemma hl_prestate:

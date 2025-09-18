@@ -9,7 +9,7 @@ text \<open> Total correctness = partial correctness + termination. Termination 
   which @{term S} terminates. \<close>
 
 definition thoare_triple :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" where
-"thoare_triple P S Q = (hoare_triple P S Q \<and> `P \<longrightarrow> pre S`)"
+"thoare_triple P S Q = (hoare P S Q \<and> `P \<longrightarrow> pre S`)"
 
 syntax
   "_thoare" :: "logic \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("(2H[_] /_) /[_]")
