@@ -1,7 +1,7 @@
 section \<open> Execute Terminating ITrees \<close>
 
 theory ITree_Exec
-  imports ITree_Eval ITree_Divergence
+  imports ITree_Eval
   keywords "execute" :: "thy_decl_block"
 begin
 

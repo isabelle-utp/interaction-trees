@@ -2,6 +2,8 @@ section \<open> ITree UTP Meta-Theory \<close>
 
 theory ITree_UTP
   imports     
+    ITree_Eval
+    ITree_Exec
     ITree_Choice
     ITree_Parallel
     ITree_CSP

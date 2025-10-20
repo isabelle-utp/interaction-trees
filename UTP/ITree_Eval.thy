@@ -1,7 +1,7 @@
 subsection \<open> Evaluating ITrees \<close>
 
 theory ITree_Eval
-  imports Interaction_Trees
+  imports "Interaction_Trees.ITrees"
 begin
 
 text \<open> The following type encodes the possible results obtained from a given event trace. \<close>
