@@ -2,7 +2,7 @@ section \<open> Execute Terminating ITrees \<close>
 
 theory ITree_Exec
   imports ITree_Eval
-  keywords "execute" :: "thy_decl_block"
+  keywords "execute" :: "diag"
 begin
 
 definition rem_Sils :: "('e, 's) itree \<Rightarrow> ('e, 's) itree" where
