@@ -281,7 +281,7 @@ lemma thl_while_inv_var [hoare_safe]:
   unfolding while_inv_var_def
   by (auto intro!: thl_conseq[OF _ assms(2) assms(3)] thl_while assms(1))
 
-text \<open> The next law is a degenerate partial correctness law, which ignores the variant. \<close>
+text \<open> The next two laws are degenerate partial correctness laws, which ignore the variant. \<close>
 
 lemma hl_while_inv_var [hoare_safe]:
   assumes "\<^bold>{I \<and> B\<^bold>} S \<^bold>{I\<^bold>}" "`P \<longrightarrow> I`" "`(\<not> B \<and> I) \<longrightarrow> Q`"
@@ -295,6 +295,22 @@ proof -
       apply (simp_all add: hl_while_inv)
     done
 qed
+
+lemma hl_while_inv_var_prestate [hoare_safe]:
+  assumes 
+    \<comment> \<open> The notation @{term "P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk>"} means the @{term P} holds on the initial state @{term s\<^sub>0}. \<close>
+    "\<And> s\<^sub>0. \<^bold>{P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> @(I s\<^sub>0) \<and> B\<^bold>} S \<^bold>{@(I s\<^sub>0)\<^bold>}" 
+    "\<And> s\<^sub>0. `P \<and> \<guillemotleft>s\<^sub>0\<guillemotright> = $\<^bold>v \<longrightarrow> @(I s\<^sub>0)`" 
+    "\<And> s\<^sub>0. `(P\<lbrakk>\<guillemotleft>s\<^sub>0\<guillemotright>/\<^bold>v\<rbrakk> \<and> \<not> B \<and> @(I s\<^sub>0)) \<longrightarrow> Q`"
+  shows "\<^bold>{P\<^bold>}while B inv @(I old) var V do S od\<^bold>{Q\<^bold>}"
+proof -
+  have 1: "while B inv @(I old) var V do S od = while B inv @(I old) do S od"
+    by (simp add: while_inv_def while_inv_var_def)
+  have 2: "\<^bold>{P\<^bold>}while B inv @(I old) do S od\<^bold>{Q\<^bold>}"
+    using assms(1,2,3) hl_while_inv_prestate by blast
+  from 1 2 show ?thesis by simp
+qed
+
 
 lemma thl_via_wlp_wp: "H[P] S [Q] = `P \<longrightarrow> (wlp S Q \<and> pre S)`"
   by (simp add: thoare_triple_def hl_via_wlp, expr_auto)
