@@ -1,7 +1,9 @@
 section \<open> Circus Interaction Tree Semantics \<close>
 
 theory ITree_Circus                          
-  imports "ITree_FDSem" "Shallow_Expressions_Z.Shallow_Expressions_Z" "Abstract_Prog_Syntax.Abstract_Prog_Syntax"
+  imports "ITree_FDSem" 
+    "Shallow_Expressions_Z.Shallow_Expressions_Z" 
+    "Circus_Toolkit.IsaCircus_Syntax"
 begin
 
 subsection \<open> Main Operators \<close>
@@ -9,16 +11,16 @@ subsection \<open> Main Operators \<close>
 type_synonym ('e, 's) action = "('e, 's) htree"
 type_synonym 'e process = "('e, unit) itree"
 
-definition Skip :: "('e, 'r) htree" where
-"Skip = (\<lambda> s. Ret s)"
+definition Skip_itree :: "('e, 'r) htree" where
+"Skip_itree = (\<lambda> s. Ret s)"
 
-adhoc_overloading uskip == Skip
+adhoc_overloading Skip \<rightleftharpoons> Skip_itree
 
-adhoc_overloading useq == kcomp_itree
+adhoc_overloading useq \<rightleftharpoons> kcomp_itree
 
 lemma Skip_unit [simp]: 
   "Skip ;; S = S" "S ;; Skip = S"
-  by (simp_all add: kcomp_itree_def Skip_def bind_itree_right_unit)
+  by (simp_all add: kcomp_itree_def Skip_itree_def bind_itree_right_unit)
 
 text \<open> Like @{const Skip}, but do a single silent step. \<close>
 
@@ -26,7 +28,7 @@ definition Step :: "('e, 'r) htree" where
 "Step = \<tau> \<circ> Skip"
 
 lemma straces_Skip: "traces\<^sub>s (Skip) = ({[], [\<checkmark> [\<leadsto>]]})\<^sub>e"
-  by (simp add: Skip_def straces_def traces_Ret, expr_simp)
+  by (simp add: Skip_itree_def straces_def traces_Ret, expr_simp)
 
 abbreviation Div :: "('e, 'r) htree" where
 "Div \<equiv> (\<lambda> s. diverge)"
@@ -37,8 +39,9 @@ lemma Div_left_zero [simp]: "Div ;; P = Div"
 lemma traces_deadlock: "traces(deadlock) = {[]}"
   by (auto simp add: deadlock_def traces_Vis)
 
-abbreviation 
-"Stop \<equiv> (\<lambda> s. deadlock)"
+abbreviation "Stop_itree \<equiv> (\<lambda> s. deadlock)"
+
+adhoc_overloading Stop \<rightleftharpoons> Stop_itree
 
 lemma Stop_left_zero [simp]: "Stop ;; S = Stop"
   by (simp add: kcomp_itree_def)
@@ -49,7 +52,7 @@ definition "assume" :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" wh
 adhoc_overloading utest == "assume"
 
 lemma assume_true: "\<questiondown>True? = Skip"
-  by (simp add: assume_def Skip_def)
+  by (simp add: assume_def Skip_itree_def)
 
 lemma assume_false: "\<questiondown>False? = Div"
   by (simp add: assume_def)
@@ -63,7 +66,7 @@ syntax "_test" :: "logic \<Rightarrow> logic" ("\<exclamdown>_!")
 translations "_test b" == "CONST test (b)\<^sub>e"
 
 lemma test_true: "\<exclamdown>True! = Skip"
-  by (simp add: test_def Skip_def)
+  by (simp add: test_def Skip_itree_def)
 
 lemma test_false: "\<exclamdown>False! = Stop"
   by (simp add: test_def)
@@ -110,10 +113,10 @@ adhoc_overloading uassigns == assigns
 named_theorems assigns_combine
 
 lemma assigns_id: "\<langle>id\<rangle>\<^sub>a = Skip"
-  by (simp add: assigns_def Skip_def)
+  by (simp add: assigns_def Skip_itree_def)
 
 lemma assigns_empty: "\<langle>[\<leadsto>]\<rangle>\<^sub>a = Skip"
-  by (simp add: subst_id_def assigns_def Skip_def)
+  by (simp add: subst_id_def assigns_def Skip_itree_def)
 
 lemma assigns_seq: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P ;; Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) ;; Q"
   by (simp add: kcomp_itree_def assigns_def)
@@ -134,7 +137,7 @@ lemma assign_Stop: "x := e ;; Stop = Stop"
   by (fact assigns_Stop)
 
 lemma assigns_Step: "\<langle>\<sigma>\<rangle>\<^sub>a ;; Step = Step ;; \<langle>\<sigma>\<rangle>\<^sub>a"
-  by (simp add: kcomp_itree_def assigns_def Step_def Skip_def)
+  by (simp add: kcomp_itree_def assigns_def Step_def Skip_itree_def)
 
 lemma assign_self: "vwb_lens x \<Longrightarrow> x := $x = Skip"
   by (simp add: usubst assigns_empty)
@@ -154,10 +157,10 @@ lemma swap_commute: "x \<bowtie> y \<Longrightarrow> swap(x, y) = swap(y, x)"
   by (simp add: usubst subst_upd_comm)
 
 lemma cond_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b \<langle>\<rho>\<rangle>\<^sub>a) = \<langle>expr_if \<sigma> b \<rho>\<rangle>\<^sub>a"
-  by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
+  by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_itree_def)
 
 lemma cond1_assigns [assigns_combine]: "(cond_itree \<langle>\<sigma>\<rangle>\<^sub>a b Skip) = \<langle>expr_if \<sigma> b [\<leadsto>]\<rangle>\<^sub>a"
-  by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_def)
+  by (auto simp add: assigns_def cond_itree_def fun_eq_iff expr_defs Skip_itree_def)
 
 lemma assign_cond: "if b then x := e else x := f fi = x := (if b then e else f)"
   by (simp add: assigns_combine usubst, simp add: expr_if_def SEXP_def)
@@ -187,7 +190,7 @@ lemma terminates_for_itree:
   shows "R 0 s \<Longrightarrow> terminates (for_itree (\<guillemotleft>xs\<guillemotright>)\<^sub>e S s)"
 using assms proof (induct xs arbitrary: R s)
   case Nil
-  then show ?case by (simp add: for_empty Skip_def terminates_Ret del: SEXP_apply)
+  then show ?case by (simp add: for_empty Skip_itree_def terminates_Ret del: SEXP_apply)
 next
   case (Cons a xs) 
   have 1: "terminates (S a s)"
@@ -224,10 +227,10 @@ proof -
 qed
 
 lemma while_unfold: "while b do S od = (S ;; Step ;; while b do S od) \<lhd> b \<rhd> Skip"
-  by (auto simp add: kcomp_itree_def fun_eq_iff iterate.code cond_itree_def Step_def Skip_def comp_def)
+  by (auto simp add: kcomp_itree_def fun_eq_iff iterate.code cond_itree_def Step_def Skip_itree_def comp_def)
 
 lemma while_True_Skip: "while True do Skip od = Div"
-  by (simp add: Skip_def SEXP_def loop_Ret)
+  by (simp add: Skip_itree_def SEXP_def loop_Ret)
 
 text \<open> Hide the state of an action to produce a process \<close>
 
@@ -334,30 +337,24 @@ lemma output_as_input: "c!(e) \<rightarrow> P = c?(x):{e} \<rightarrow> P"
 lemma trace_of_deadlock: "deadlock \<midarrow>t\<leadsto> P \<Longrightarrow> (t, P) = ([], deadlock)"
   by (auto simp add: deadlock_def)
 
-instantiation "fun" :: (type, extchoice) extchoice
-begin
+definition "ExtChoice_ktree P Q = (\<lambda> s. extchoice_itree (P s) (Q s))"
 
-definition extchoice_fun :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'a \<Rightarrow> 'b" where
-"extchoice_fun P Q \<equiv> (\<lambda> s. extchoice (P s) (Q s))"
-
-instance ..
-
-end
+adhoc_overloading ExtChoice \<rightleftharpoons> ExtChoice_ktree
 
 lemma extchoice_Stop [simp]: "Stop \<box> P = P"
-  by (auto simp add: extchoice_fun_def fun_eq_iff)
+  by (auto simp add: ExtChoice_ktree_def fun_eq_iff)
 
 lemma extchoice_Stop' [simp]: "P \<box> Stop = P"
-  by (auto simp add: extchoice_fun_def fun_eq_iff)
+  by (auto simp add: ExtChoice_ktree_def fun_eq_iff)
 
 lemma extchoice_commutative: "(P :: ('s, 'e) htree) \<box> Q = Q \<box> P"
-  by (simp add: extchoice_fun_def fun_eq_iff choice_commutative)
+  by (simp add: ExtChoice_ktree_def fun_eq_iff choice_commutative)
 
 lemma extchoice_Div: "Div \<box> P = Div"
-  by (simp add: choice_diverge extchoice_fun_def)
+  by (simp add: choice_diverge ExtChoice_ktree_def)
 
 lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a ;; Q)"
-  by (simp add: kcomp_itree_def extchoice_fun_def expr_defs assigns_def)
+  by (simp add: kcomp_itree_def ExtChoice_ktree_def expr_defs assigns_def)
 
 no_notation conj  (infixr "&" 35)
 
@@ -405,7 +402,7 @@ lemma assigns_nmods [nmods]: "\<sigma> \<dagger> (e)\<^sub>e = (e)\<^sub>e \<Lon
   by (simp add: assigns_nmods_iff)
 
 lemma Skip_nmods [nmods]: "Skip nmods e"
-  by (simp add: Skip_def not_modifies_def)
+  by (simp add: Skip_itree_def not_modifies_def)
 
 lemma seq_nmods [nmods]: "\<lbrakk> P nmods e; Q nmods e \<rbrakk> \<Longrightarrow> P ;; Q nmods e"
   by (auto elim!:trace_to_bindE bind_RetE' simp add: kcomp_itree_def not_modifies_def retvals_def)
@@ -485,14 +482,14 @@ lemma extchoice_event_block:
   assumes "wb_prism c" "wb_prism d" "c \<nabla> d"
   shows "event_block c A P\<sigma> \<box> event_block d B Q\<sigma> = event_block (c +\<^sub>\<triangle> d) (A <+> B)\<^sub>e (case_sum P\<sigma> Q\<sigma>)"
   using assms
-  by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff extchoice_fun_def excl_comb_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
+  by (auto intro!:prism_fun_cong simp add: event_block_def fun_eq_iff ExtChoice_ktree_def excl_comb_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if)
 
 lemma extchoice_inp_where_combine: 
   assumes "wb_prism a" "wb_prism b" "a \<nabla> b"
   shows "input_in_where a A PC \<box> input_in_where b B QD 
          = input_in_where (a +\<^sub>\<triangle> b) (A <+> B)\<^sub>e (case_sum PC QD)"
   using assms
-  by (auto intro!:prism_fun_cong simp add: simp add: input_in_where_prism_fun extchoice_fun_def excl_comb_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if fun_eq_iff)
+  by (auto intro!:prism_fun_cong simp add: simp add: input_in_where_prism_fun ExtChoice_ktree_def excl_comb_as_ovrd prism_diff_implies_indep_funs prism_fun_combine case_sum_prod_dist sum.case_eq_if fun_eq_iff)
 
 lemma extchoice_inp_where_combine': 
   assumes "wb_prism a" "wb_prism b" "a \<nabla> b"

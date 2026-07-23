@@ -34,10 +34,10 @@ lemma test_rel [itree_rel]: "itree_rel (test P) = {(s, s'). s' = s \<and> P s}"
   done
 
 lemma Skip_pred [itree_rel]: "itree_pred Skip = (\<lambda> (s, s'). s = s')"
-  by (auto simp add: itree_rel_defs retvals_def Skip_def)
+  by (auto simp add: itree_rel_defs retvals_def Skip_itree_def)
 
 lemma Skip_rel [itree_rel]: "itree_rel Skip = Id"
-  by (auto simp add: itree_rel_defs retvals_def Skip_def)
+  by (auto simp add: itree_rel_defs retvals_def Skip_itree_def)
 
 lemma assigns_pred [itree_pred]: "\<lbrakk>\<langle>\<sigma>\<rangle>\<^sub>a\<rbrakk>\<^sub>p = (\<lambda> (s, s'). s' = \<sigma> s)"
   by (auto simp add: itree_rel_defs retvals_def assigns_def)

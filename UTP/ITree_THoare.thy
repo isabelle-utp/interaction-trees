@@ -27,8 +27,8 @@ lemma thl_conseq:
      (expr_auto, blast)
 
 lemma thl_skip: "H[P] Skip [P]"
-  by (auto simp add: thoare_triple_def hoare_alt_def terminates_Ret Skip_def)
-     (metis (no_types, lifting) SEXP_def Skip_def tautI wp_Skip)
+  by (auto simp add: thoare_triple_def hoare_alt_def terminates_Ret Skip_itree_def)
+     (metis (no_types, lifting) SEXP_def Skip_itree_def tautI wp_Skip)
 
 lemma thl_skip': 
   assumes "`P \<longrightarrow> Q`"

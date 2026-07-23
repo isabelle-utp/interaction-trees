@@ -13,7 +13,7 @@ lemma dfp_Stop [wp]: "dfp Stop = (False)\<^sub>e"
   by (simp add: dfp_def deadlock_free_deadlock SEXP_def)
 
 lemma dfp_Skip [wp]: "dfp Skip = (True)\<^sub>e"
-  by (simp add: dfp_def Skip_def deadlock_free_Ret SEXP_def)
+  by (simp add: dfp_def Skip_itree_def deadlock_free_Ret SEXP_def)
 
 lemma dfp_assume [wp]: "dfp (assume P) = (True)\<^sub>e"
   by (auto simp add: dfp_def assume_def deadlock_free_Ret deadlock_free_diverge)

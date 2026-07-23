@@ -91,12 +91,12 @@ lemma hl_cut_inv:
   using assms by (rule hl_cut)
 
 lemma hl_skip: "\<^bold>{P\<^bold>} Skip \<^bold>{P\<^bold>}"
-  by (auto simp add: hoare_alt_def Skip_def)
+  by (auto simp add: hoare_alt_def Skip_itree_def)
 
 lemma hl_skip' [hoare_safe]: 
   assumes "`P \<longrightarrow> Q`"
   shows "\<^bold>{P\<^bold>} Skip \<^bold>{Q\<^bold>}"
-  using assms by (auto simp add: hoare_alt_def Skip_def, expr_simp)
+  using assms by (auto simp add: hoare_alt_def Skip_itree_def, expr_simp)
 
 lemma hl_seq: "\<lbrakk> \<^bold>{P\<^bold>} S\<^sub>1 \<^bold>{Q\<^bold>}; \<^bold>{Q\<^bold>} S\<^sub>2 \<^bold>{R\<^bold>} \<rbrakk> \<Longrightarrow> \<^bold>{P\<^bold>} S\<^sub>1 ;; S\<^sub>2 \<^bold>{R\<^bold>}"
   by (auto simp add: hoare_ret_def kcomp_itree_def)
@@ -176,7 +176,7 @@ lemma hl_choice [hoare_safe]:
   using assms
   apply (simp add: hoare_ret_def)
   apply expr_auto
-  apply (metis (mono_tags, lifting) Un_iff extchoice_fun_def in_mono retvals_extchoice)
+  apply (metis (mono_tags, lifting) Un_iff ExtChoice_ktree_def in_mono retvals_extchoice)
   done
 
 lemma hl_input [hoare_safe]: 

@@ -56,7 +56,7 @@ lemma ret_rbind' [simp]: "(P ;; proc_ret e) ;; rbind x = P ;; x := e"
   by (simp add: kcomp_assoc)
 
 lemma ret_drop [simp]: "proc_ret e ;; rdrop = Skip"
-  by (simp add: proc_ret_def rdrop_def Skip_def kcomp_itree_def)
+  by (simp add: proc_ret_def rdrop_def Skip_itree_def kcomp_itree_def)
 
 lemma ret_drop' [simp]: "(P ;; proc_ret e) ;; rdrop = P"
   by (simp add: kcomp_assoc)

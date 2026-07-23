@@ -196,23 +196,12 @@ definition excl_combs :: "('a \<Zpfun> 'b) list \<Rightarrow> 'a \<Zpfun> 'b" wh
 
 text \<open> This is like race-free behaviour \<close>
 
-class extchoice = 
-  fixes extchoice :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixr "\<box>" 59)
-
-text \<open> This is an completion of Hoare's bar operator. \<close>
-
-instantiation itree :: (type, type) extchoice 
-begin
-
-text \<open> cf. RAISE language "interlock" operator -- basic operators of CCS vs. CSP operators. Can
-  this be expressed in terms of operators? \<close>
-
 definition extchoice_itree :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree"  where
 "extchoice_itree = genchoice (\<odot>)"
 
-instance ..
+adhoc_overloading ExtChoice \<rightleftharpoons> extchoice_itree
 
-end
+text \<open> This is an completion of Hoare's bar operator. \<close>
 
 lemma choice_Vis_Vis [simp]: "(Vis F) \<box> (Vis G) = Vis (F \<odot> G)"
   by (simp add: extchoice_itree_def)
@@ -256,11 +245,11 @@ declare pfun.map_transfer [transfer_rule]
 
 definition "extcheq = (=)"
 
-friend_of_corec extchoice :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
-  "extchoice P Q = (case (P, Q) of 
+friend_of_corec extchoice_itree :: "('e, 's) itree \<Rightarrow> ('e, 's) itree \<Rightarrow> ('e, 's) itree" where
+  "extchoice_itree P Q = (case (P, Q) of 
       (Vis F, Vis G) \<Rightarrow> Vis (F \<odot> G) |
-      (Sil P', _) \<Rightarrow> Sil (extchoice P' Q) |
-      (_, Sil Q') \<Rightarrow> Sil (extchoice P Q') |
+      (Sil P', _) \<Rightarrow> Sil (extchoice_itree P' Q) |
+      (_, Sil Q') \<Rightarrow> Sil (extchoice_itree P Q') |
       (Ret x, Ret y) \<Rightarrow> if extcheq x y then Ret x else Vis {}\<^sub>p |
       (Ret v, Vis _) \<Rightarrow> Ret v |
       (Vis _, Ret v) \<Rightarrow> Ret v
@@ -506,32 +495,28 @@ lemma par_commute: "par P E Q = (par Q E P) \<bind> (\<lambda> (a, b). Ret (b, a
   apply (metis (no_types, lifting) map_pfun_apply merge_Vis_left merge_Vis_right pdom.rep_eq pdom_emerge_commute pdom_map_pfun pdom_pmerge_Vis pfun_app.rep_eq)
   done  
 
-consts 
-  interleave :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<interleave>" 55)
-  gparallel :: "'a \<Rightarrow> 'e set \<Rightarrow> 'a \<Rightarrow> 'a" ("_ \<parallel>\<^bsub>_\<^esub> _" [55, 0, 56] 56)
+definition "gpar_csp cs P Q \<equiv> par P cs Q \<bind> (\<lambda> (x, y). Ret ())"
 
-definition "gpar_csp P cs Q \<equiv> par P cs Q \<bind> (\<lambda> (x, y). Ret ())"
+adhoc_overloading
+  Parallel \<rightleftharpoons> gpar_csp
 
-abbreviation inter_csp :: "('e, unit) itree \<Rightarrow> ('e, unit) itree \<Rightarrow> ('e, unit) itree" where
-"inter_csp P Q \<equiv> gpar_csp P {} Q"
 
-adhoc_overloading gparallel == gpar_csp and interleave == inter_csp
 
-lemma gpar_csp_commute: "P \<parallel>\<^bsub>E\<^esub> Q = Q \<parallel>\<^bsub>E\<^esub> P"
+lemma gpar_csp_commute: "P \<lbrakk>E\<rbrakk> Q = Q \<lbrakk>E\<rbrakk> P"
 proof -
-  have "P \<parallel>\<^bsub>E\<^esub> Q = (par P E Q \<bind> (\<lambda>(x, y). Ret ()))"
+  have "P \<lbrakk>E\<rbrakk> Q = (par P E Q \<bind> (\<lambda>(x, y). Ret ()))"
     by (simp add: gpar_csp_def)
   also have "... = (par Q E P \<bind> (\<lambda>(x, y). Ret (y, x))) \<bind> (\<lambda>(x, y). Ret ())"
     by (metis par_commute)
   also have "... = par Q E P \<bind> (\<lambda>(x, y). Ret ())"
     by (simp add: bind_itree_assoc[THEN sym])
        (metis (full_types) case_prod_beta' old.unit.exhaust)
-  also have "... = Q \<parallel>\<^bsub>E\<^esub> P"
+  also have "... = Q \<lbrakk>E\<rbrakk> P"
     by (simp add: gpar_csp_def)
   finally show ?thesis .
 qed
 
-lemma gpar_csp_diverge: "diverge \<parallel>\<^bsub>E\<^esub> P = diverge"
+lemma gpar_csp_diverge: "diverge \<lbrakk>E\<rbrakk> P = diverge"
   by (metis bind_diverge gpar_csp_def genpar_diverge)
 
 lemma interleave_commute:
@@ -557,13 +542,10 @@ next
     by (auto simp add: gpar_csp_def skip_def)
 qed
 
-definition Interleave :: "'i set \<Rightarrow> ('i \<Rightarrow> ('e, unit) itree) \<Rightarrow> ('e, unit) itree" where
-"Interleave I P = Finite_Set.fold (\<interleave>) skip (P ` I)"
-
-lemma sync_par: "range build\<^bsub>a\<^esub> \<subseteq> A \<Longrightarrow> (sync a \<bind> P) \<parallel>\<^bsub>A\<^esub> (sync a \<bind> Q) = sync a \<bind> (\<lambda> x. P x \<parallel>\<^bsub>A\<^esub> Q x)"
+lemma sync_par: "range build\<^bsub>a\<^esub> \<subseteq> A \<Longrightarrow> (sync a \<bind> P) \<lbrakk>A\<rbrakk> (sync a \<bind> Q) = sync a \<bind> (\<lambda> x. P x \<lbrakk>A\<rbrakk> Q x)"
   by (auto simp add: sync_def gpar_csp_def merge_Vis_expand pfun_eq_iff)
 
-lemma outp_inp_par: "\<lbrakk> wb_prism c; range build\<^bsub>c\<^esub> \<subseteq> A \<rbrakk> \<Longrightarrow> (outp c x \<bind> P) \<parallel>\<^bsub>A\<^esub> (inp c \<bind> Q) = outp c x \<bind> (\<lambda> _. P () \<parallel>\<^bsub>A\<^esub> Q x)"
+lemma outp_inp_par: "\<lbrakk> wb_prism c; range build\<^bsub>c\<^esub> \<subseteq> A \<rbrakk> \<Longrightarrow> (outp c x \<bind> P) \<lbrakk>A\<rbrakk> (inp c \<bind> Q) = outp c x \<bind> (\<lambda> _. P () \<lbrakk>A\<rbrakk> Q x)"
   by (auto simp add: outp_def inp_in_where_def gpar_csp_def merge_Vis_expand pfun_eq_iff prism_fun_def subsetD)
 
 subsection \<open> Maximal Synchronous Parallel Composition \<close>
@@ -645,7 +627,7 @@ lemma hide_empty: "hide P {} = P"
 
 subsection \<open> Interruption \<close>
 
-primcorec interrupt :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" (infixl "\<triangle>" 59) where
+primcorec interrupt :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow> ('e, 'a) itree" where
 "interrupt P Q =
    (case (P, Q) of
      (Sil P, _) \<Rightarrow> Sil (interrupt P Q) |
@@ -658,6 +640,8 @@ primcorec interrupt :: "('e, 'a) itree \<Rightarrow> ('e, 'a) itree \<Rightarrow
                      Left P' \<Rightarrow> interrupt P' Q \<comment> \<open> Left side acts independently \<close>
                    | Right Q' \<Rightarrow> Q' \<comment> \<open> Right side acts independently \<close>)
               (emerge (pdom(G) \<Zndres> F) {} G)))"
+
+adhoc_overloading Interrupt \<rightleftharpoons> interrupt
 
 lemma diverge_interrupt_left [simp]: "diverge \<triangle> P = diverge"
   by (coinduction arbitrary: P, auto, metis diverge.ctr itree.case(2))
