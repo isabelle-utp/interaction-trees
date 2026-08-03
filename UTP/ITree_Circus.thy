@@ -3,6 +3,8 @@ section \<open> Circus Interaction Tree Semantics \<close>
 theory ITree_Circus                          
   imports "ITree_FDSem" 
     "Shallow_Expressions_Z.Shallow_Expressions_Z" 
+    "Circus_Toolkit.Name_Utils"
+    "Circus_Toolkit.Injection_Universe"
     "Circus_Toolkit.IsaCircus_Syntax"
 begin
 
@@ -147,7 +149,7 @@ lemma assign_twice: "vwb_lens x \<Longrightarrow> (x := e;; x := f) = x := f\<lb
 
 lemma assign_combine: 
   assumes "vwb_lens x" "vwb_lens y" "x \<bowtie> y"
-  shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk>)"
+  shows "x := e ;; y := f = (x, y) := (e, f\<lbrakk>e/x\<rbrakk> )"
   using assms by (simp add: kcomp_itree_def assigns_def fun_eq_iff expr_defs lens_defs lens_indep_comm)
 
 lemma swap_self: "vwb_lens x \<Longrightarrow> swap(x, x) = Skip"
