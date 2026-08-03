@@ -5,6 +5,8 @@ theory ITree_VCG
   keywords "program" "procedure" :: "thy_decl_block"
 begin
 
+code_datatype pfun_of_alist pfun_of_map pfun_of_pinj pfun_entries
+
 notation kcomp_itree (infixr ";" 54)
 
 declare [[literal_variables]]

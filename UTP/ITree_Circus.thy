@@ -2,8 +2,7 @@ section \<open> Circus Interaction Tree Semantics \<close>
 
 theory ITree_Circus                          
   imports "ITree_FDSem" 
-    "Shallow_Expressions_Z.Shallow_Expressions_Z" 
-    "Circus_Toolkit.Name_Utils"
+    "Shallow_Expressions_Z.Shallow_Expressions_Z"
     "Circus_Toolkit.Injection_Universe"
     "Circus_Toolkit.IsaCircus_Syntax"
 begin
