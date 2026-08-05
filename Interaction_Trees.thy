@@ -382,6 +382,11 @@ inductive_cases
   trace_to_RetE [elim]: "Ret x \<midarrow>tr\<leadsto> P" and
   trace_to_SilE [elim]: "Sil P \<midarrow>tr\<leadsto> P'"
 
+text \<open> Basic trace sets from ITrees: more complex models are possible \<close>
+
+definition itree_traces :: "('e, 's) itree \<Rightarrow> 'e list set" where
+"itree_traces P = {tr. \<exists> P'. P \<midarrow>tr\<leadsto> P'}"
+
 lemma trace_to_Sils [intro]: "P \<midarrow>tr\<leadsto> P' \<Longrightarrow> Sils n P \<midarrow>tr\<leadsto> P'"
   by (induct n, auto)
 
@@ -636,6 +641,70 @@ text \<open> Termination is deterministic. \<close>
 lemma termination_determinsitic: "\<lbrakk> P \<midarrow>tr\<leadsto> \<checkmark> x; P \<midarrow>tr\<leadsto> \<checkmark> y \<rbrakk> \<Longrightarrow> x = y"
   by (induct tr arbitrary: P, auto)
      (metis Sils_to_Ret Vis_Cons_trns trace_to_ConsE trace_to_singleE)
+
+lemma prefix_closed_itree_traces: "prefix_closed (itree_traces P)"
+  by (simp add: itree_traces_def prefix_closed_def, meson less_eq_list_def trace_to_prefix_closed)
+
+subsection \<open> ITrees from Trace Sets \<close>
+
+text \<open> Construct an ITree that can perform the given set of traces. No account is made for 
+  termination, deadlock, or more complex behaviours. \<close>
+
+primcorec trace_itree :: "'e list set \<Rightarrow> ('e, 's) itree" where
+"trace_itree E = Vis (map_pfun (\<lambda> x. trace_itree (tls E x)) (pId_on (hds E)))"
+
+lemma trace_itree_empty [simp]: "trace_itree {} = Vis {\<mapsto>}"
+  by (subst trace_itree.code, simp add: hds_def map_pfun_as_pabs)
+  
+lemma trace_itree_single: "trace_itree A \<midarrow>[a]\<leadsto> P' \<longleftrightarrow> (a \<in> hds A \<and> P' = trace_itree (tls A a))"
+proof -
+  have 1: "trace_itree A = Vis (map_pfun (\<lambda>x. trace_itree (tls A x)) (pId_on (hds A)))"
+    by (metis trace_itree.code)
+  have 2: "Vis (map_pfun (\<lambda>x. trace_itree (tls A x)) (pId_on (hds A))) \<midarrow>[a]\<leadsto> P' \<longleftrightarrow> (a \<in> hds A \<and> P' = trace_itree (tls A a))"
+    by (metis (lifting) Vis_Cons_trns itree.simps(9) list.distinct(1) map_pfun_apply pdom_map_pfun pdom_pId_on pfun_app_pId trace_itree.code trace_to.simps)
+  show ?thesis
+    by (metis "1" "2")
+qed
+
+lemma trace_of_trace_itree:  "t \<in> A \<Longrightarrow> \<exists>P'::('e, 's) itree. trace_itree A \<midarrow>t\<leadsto> P'"
+proof (induct t arbitrary: A)
+  case Nil
+  then show ?case by blast
+next
+  case (Cons a t)
+  obtain P' :: "('e, 's) itree" where "trace_itree (tls A a) \<midarrow>t\<leadsto> P'"
+    by (metis Cons.hyps Cons.prems mem_Collect_eq tls_def)
+  hence "trace_itree A \<midarrow>a # t\<leadsto> P'"
+    by (metis (lifting) Cons.prems append_Cons append_Nil hds_def mem_Collect_eq trace_itree_single trace_to_trans)
+  then show ?case
+    by blast 
+qed
+
+lemma trace_itree_of_trace: "\<lbrakk> trace_itree A \<midarrow>t\<leadsto> P'; [] \<in> A; prefix_closed A \<rbrakk> \<Longrightarrow> t \<in> A"
+proof (induct t arbitrary: A P')
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a t)
+  from Cons(2) obtain Q where Q:"trace_itree A \<midarrow>[a]\<leadsto> Q" "Q \<midarrow>t\<leadsto> P'"
+    by (meson trace_to_ConsE)
+  hence a_hds: "a \<in> hds A" and Qt: "Q = trace_itree (tls A a)" 
+    by (simp_all add: trace_itree_single)
+    
+  from Cons a_hds Q Qt show ?case 
+    apply (simp add: trace_itree_single prefix_closed_def)
+    apply (metis (lifting) Nil_in_tls_prefix_closed Sublist.Cons_prefix_Cons mem_Collect_eq prefix_closed_def tls_def)
+  done
+qed
+
+text \<open> We can embed any prefix closed set of traces into an interaction tree. This means that ITrees 
+  can be used as a surrogate for any trace based property, where code generation is necessary. \<close>
+
+lemma itree_traces: 
+  assumes "prefix_closed E" "[] \<in> E"
+  shows "itree_traces (trace_itree E) = E"
+  by (simp add: itree_traces_def set_eq_iff)
+     (meson assms(1,2) trace_itree_of_trace trace_of_trace_itree)
 
 subsection \<open> Initial Events \<close>
 
