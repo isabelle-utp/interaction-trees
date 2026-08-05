@@ -573,7 +573,7 @@ subsection \<open> Hiding \<close>
 
 text \<open> Could we prioritise events to keep determinism? \<close>
 
-corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree" (infixl "\<setminus>" 90) where
+corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree" where
 "hide P A = 
   (case P of
     Vis F \<Rightarrow> 
@@ -586,10 +586,12 @@ corec hide :: "('e, 'a) itree \<Rightarrow> 'e set \<Rightarrow> ('e, 'a) itree"
     Sil P \<Rightarrow> Sil (hide P A) |
     Ret x \<Rightarrow> Ret x)"
 
+adhoc_overloading Hide \<rightleftharpoons> hide
+
 lemma is_Ret_loop [simp]: "is_Ret (loop F s) = False"
   by (metis bind_itree.disc_iff(1) comp_apply itree.disc(2) iterate.code)
 
-lemma is_Ret_hide [simp]: "is_Ret (P \<setminus> A) = is_Ret P"
+lemma is_Ret_hide [simp]: "is_Ret (P \<Zhide> A) = is_Ret P"
   by (auto simp add: hide.code deadlock_def itree.case_eq_if)
 
 lemma is_Sil_hide [simp]: "is_Sil (hide P E) = (is_Sil P \<or> (is_Vis P \<and> card (E \<inter> pdom(un_Vis P)) = 1))"
@@ -598,10 +600,10 @@ lemma is_Sil_hide [simp]: "is_Sil (hide P E) = (is_Sil P \<or> (is_Vis P \<and> 
 lemma is_Vis_hide [simp]: "is_Vis (hide P E) = (is_Vis P \<and> (card (E \<inter> pdom(un_Vis P)) \<noteq> 1 \<or> E \<inter> pdom(un_Vis P) = {}))"
   by (auto elim!: stableE simp add: hide.code itree.case_eq_if deadlock_def)
 
-lemma hide_Sil [simp]: "(\<tau> P) \<setminus> A = \<tau> (P \<setminus> A)"
+lemma hide_Sil [simp]: "(\<tau> P) \<Zhide> A = \<tau> (P \<Zhide> A)"
   by (metis (no_types, lifting) hide.code itree.simps(11))
 
-lemma hide_sync: "(sync a \<bind> P) \<setminus> {build\<^bsub>a\<^esub> ()} = \<tau> (P ()) \<setminus> {build\<^bsub>a\<^esub> ()}"
+lemma hide_sync: "(sync a \<bind> P) \<Zhide> {build\<^bsub>a\<^esub> ()} = \<tau> (P ()) \<Zhide> {build\<^bsub>a\<^esub> ()}"
   by (simp add: sync_def hide.code)
 
 lemma hide_sync_loop_diverge: "hide (loop (\<lambda> _. sync a) ()) {build\<^bsub>a\<^esub> ()} = diverge"
@@ -716,8 +718,7 @@ primcorec rename :: "('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e
     Sil P \<Rightarrow> Sil (rename \<rho> P) |
     Vis F \<Rightarrow> Vis (map_pfun (rename \<rho>) (F \<circ>\<^sub>p graph_pfun ((pdom F \<lhd>\<^sub>r \<rho>)\<inverse>))))"
 
-abbreviation rename':: "('e\<^sub>1, 'a) itree \<Rightarrow> ('e\<^sub>1 \<leftrightarrow> 'e\<^sub>2) \<Rightarrow> ('e\<^sub>2, 'a) itree" ("_\<lbrace>_\<rbrace>" 59) where
-"rename' P \<rho> \<equiv> rename \<rho> P"
+adhoc_overloading Rename \<rightleftharpoons> rename
 
 lemma rename_deadlock [simp]: "rename \<rho> deadlock = deadlock"
   by (simp add: deadlock_def rename.code)
