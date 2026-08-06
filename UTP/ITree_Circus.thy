@@ -61,6 +61,10 @@ lemma assume_false: "\<questiondown>False? = Div"
 definition test :: "('s \<Rightarrow> bool) \<Rightarrow> ('e, 's) htree" where
 "test b = (\<lambda> s. if (b s) then Ret s else deadlock)"
 
+abbreviation "GuardITree b P \<equiv> test b ;; P"
+
+adhoc_overloading Guard \<rightleftharpoons> GuardITree
+
 abbreviation (input) "assert b \<equiv> test b"
 
 syntax "_test" :: "logic \<Rightarrow> logic" ("\<exclamdown>_!")
@@ -264,6 +268,10 @@ definition input_map_in_where :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<
 
 abbreviation "input c P \<equiv> input_in_where c (UNIV)\<^sub>e (\<lambda> e. ((True)\<^sub>e, P e))"
 
+definition "InputPrefixITree c A P = input_in_where c (\<lambda> s. A) P" 
+
+adhoc_overloading InputPrefix \<rightleftharpoons> InputPrefixITree
+
 (*
 definition input :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('a \<Rightarrow> ('e, 's) htree) \<Rightarrow> ('e, 's) htree" where
 "input c P = (\<lambda> s. inp c \<bind> (\<lambda> x. P x s))"
@@ -297,16 +305,6 @@ term inp_list
 lemma "wb_prism c \<Longrightarrow> input_where c P = (\<lambda>s. inp_list_where c enum_class.enum (\<lambda> v. fst (P v) s) \<bind> (\<lambda>x. snd (P x) s))"
 *)
 
-bundle Circus_Syntax
-begin
-
-unbundle Expression_Syntax
-
-no_notation disj (infixr "|" 30)
-no_notation conj (infixr "&" 35)
-
-end
-
 unbundle Circus_Syntax
 
 syntax 
@@ -325,6 +323,13 @@ lemma assigns_input: "\<langle>\<sigma>\<rangle>\<^sub>a ;; c?(x) \<rightarrow> 
 
 definition "output" :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
 "output c e P = (\<lambda> s. outp c (e s) \<then> P s)"
+
+adhoc_overloading OutputPrefix \<rightleftharpoons> "output"
+
+definition SyncPrefixITree :: "(unit \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> ('e, 's) htree \<Rightarrow> ('e, 's) htree" where
+"SyncPrefixITree c P = output c (\<lambda> s. ()) P"
+
+adhoc_overloading SyncPrefix \<rightleftharpoons> SyncPrefixITree
 
 syntax "_output" :: "id \<Rightarrow> logic \<Rightarrow> logic \<Rightarrow> logic" ("_!'(_') \<rightarrow> _" [90, 0, 91] 91)
 translations "c!(e) \<rightarrow> P" == "CONST output c (e)\<^sub>e P"
@@ -356,14 +361,6 @@ lemma extchoice_Div: "Div \<box> P = Div"
 
 lemma assigns_extchoice: "\<langle>\<sigma>\<rangle>\<^sub>a ;; (P \<box> Q) = (\<langle>\<sigma>\<rangle>\<^sub>a ;; P) \<box> (\<langle>\<sigma>\<rangle>\<^sub>a ;; Q)"
   by (simp add: kcomp_itree_def ExtChoice_ktree_def expr_defs assigns_def)
-
-no_notation conj  (infixr "&" 35)
-
-syntax
-  "_cguard" :: "logic \<Rightarrow> logic \<Rightarrow> logic" ("_ & _" [50, 51] 50)
-
-translations
-  "_cguard b P" == "(CONST test (b)\<^sub>e) ;; P"
 
 text \<open> The frame operator deletes updates made outside of the frame @{term a}. \<close>
 
