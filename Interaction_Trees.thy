@@ -146,6 +146,9 @@ lemma filter_itree_comp: "filter_itree P (filter_itree Q t) = filter_itree (\<la
       pdom_pdom_res pdom_res_apply)
   done
 
+definition restrict_itree :: "'e set \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
+"restrict_itree A = filter_itree (\<lambda> x. x \<in> A)"
+
 subsection \<open> Kleisli Trees and Monads \<close>
 
 type_synonym ('e, 'r, 's) ktree = "'r \<Rightarrow> ('e, 's) itree"
