@@ -101,6 +101,13 @@ lemma promote_rel [itree_pred]:
   by (auto elim!: trace_to_bindE bind_RetE' simp add: itree_pred_def retvals_def promote_itree_def lens_override_def)
      (metis bind_Ret trace_to_bind_left)
 
+lemma itree_pred_match [simp]: 
+  "match_itree (e)\<^sub>e (case_option P Q) = (if e = None then P else (let v \<leftarrow> the e in Q v) fi)" 
+  by (simp add: match_itree_def let_itree_def cond_itree_def option.case_eq_if fun_eq_iff)
+
+lemma let_itree_pred [itree_pred]: "\<lbrakk>let_itree e P\<rbrakk>\<^sub>p = (\<lambda> (s, s'). let v = e s in \<lbrakk>P v\<rbrakk>\<^sub>p (s, s'))"
+  by (simp add: let_itree_def itree_pred_def)
+
 ML_file \<open>Lens_Rel_Utils.ML\<close>
 
 method rename_rel_alpha_vars = tactic \<open> Lens_Rel_Utils.rename_rel_alpha_vars \<close>
