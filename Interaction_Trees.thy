@@ -111,6 +111,41 @@ theorem itree_strong_coind'[elim, consumes 1, case_names RetF SilF VisF Ret Sil 
 text \<open> Up-to technique would add a functor on. Respectful closure and enhancement. 
  cf. "Coinduction all the way up". Davide Sangiorgi. Replace @{term "R \<subseteq> F(R)"} prove @{term "R \<subseteq> C(F(R))"}. \<close>
 
+subsection \<open> ITree Filter \<close>
+
+primcorec (exhaustive) filter_itree :: "('e \<Rightarrow> bool) \<Rightarrow> ('e, 'r) itree \<Rightarrow> ('e, 'r) itree" where
+"filter_itree P t = 
+   (case t of 
+      Ret v \<Rightarrow> Ret v | 
+      Sil t' \<Rightarrow> Sil (filter_itree P t') |
+      Vis f  \<Rightarrow> Vis (map_pfun (filter_itree P) ((Collect P) \<Zdres> f)))"
+
+lemma filter_itree_True: "filter_itree (\<lambda> x. True) P = P"
+  apply (coinduction arbitrary: P rule: itree_strong_coind)
+  apply simp_all
+  apply (metis filter_itree.simps(4) itree.disc(1) itree.sel(1))
+  apply (metis filter_itree.code itree.simps(11))
+  apply (metis (no_types, lifting) ext filter_itree.simps(6) inf_commute itree.disc(9) itree.sel(3) itree.simps(12) map_pfun_apply pabs_eta pdom_map_pfun pdom_pabs
+      pdom_res_pdom pdom_res_twice)
+  done
+
+lemma filter_itree_Vis_False: "filter_itree (\<lambda> x. False) (Vis f) = Vis {\<mapsto>}"
+  by (simp add: filter_itree.code)
+
+lemma filter_itree_comp: "filter_itree P (filter_itree Q t) = filter_itree (\<lambda> x. P x \<and> Q x) t"
+  apply (coinduction arbitrary: t rule: itree_strong_coind)
+  apply (simp_all add: itree.case_eq_if)
+  apply (metis filter_itree.disc_iff(1) filter_itree.simps(4) itree.disc(1) itree.sel(1))
+   apply (metis (lifting) filter_itree.disc_iff(1,2) filter_itree.simps(5) itree.case_eq_if itree.disc(5) itree.sel(2))
+  apply auto
+  apply (smt (z3) Int_iff filter_itree.ctr(3) filter_itree.disc_iff(3) itree.case_eq_if itree.disc(9) itree.sel(3) itree.simps(12) mem_Collect_eq pdom_map_pfun
+      pdom_pdom_res)
+  apply (smt (z3) Int_iff filter_itree.disc_iff(1,3) filter_itree.simps(6) itree.case_eq_if itree.disc(9) itree.distinct_disc(6) itree.sel(3) mem_Collect_eq pdom_map_pfun
+      pdom_pdom_res)
+  apply (smt (z3) Int_iff filter_itree.disc_iff(1,2,3) filter_itree.simps(6) itree.case_eq_if itree.disc(9) itree.sel(3) map_pfun_apply mem_Collect_eq pdom_map_pfun
+      pdom_pdom_res pdom_res_apply)
+  done
+
 subsection \<open> Kleisli Trees and Monads \<close>
 
 type_synonym ('e, 'r, 's) ktree = "'r \<Rightarrow> ('e, 's) itree"
